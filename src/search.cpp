@@ -337,6 +337,10 @@ namespace Search {
 			moveCount++;
 			thread.nodes++;
 			
+			// Check Extensions
+			bool givesCheck = thread.board.inCheck();
+			if (!doSE && givesCheck)
+				extension = 1;
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
