@@ -66,7 +66,7 @@ namespace Search {
 			return 500000 + score;
 		}
 		else if (move == ss->killer){
-			return 400000;
+			return KILLER_VALUE;
 		}
 		else {
 			// Quiet non killers
@@ -337,15 +337,22 @@ namespace Search {
 			moveCount++;
 			thread.nodes++;
 			
+			bool givesCheck = thread.board.inCheck();			
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && !thread.board.inCheck()){
-				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount] + !isPV;
+			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && move.score() <= KILLER_VALUE){
+				int baseLmr = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+				int reduction = baseLmr - ss->historyScore / (isQuiet ? LMR_QUIET_DIVISOR : LMR_NOISY_DIVISOR);
+				// reduction += !improving;
+				// reduction -= isPV;
+				// reduction -= inCheck;
+				// reduction -= givesCheck;
 
-				score = -search<false>(newDepth-reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+				int reducedDepth = std::clamp(newDepth - reduction, 1, newDepth);
+				score = -search<false>(reducedDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
-				if (score > alpha)
+				if (score > alpha && reducedDepth < newDepth)
 					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 			}
 			else if (!isPV || moveCount > 1){

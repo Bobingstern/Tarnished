@@ -32,6 +32,8 @@ constexpr int SE_DOUBLE_MARGIN = 32;
 // constexpr int HIST_CAPTURE_MULT_THRESHOLD = -1700;
 
 constexpr int LMR_MIN_DEPTH = 2;
+constexpr int LMR_QUIET_DIVISOR = 9000;
+constexpr int LMR_NOISY_DIVISOR = 6000;
 
 constexpr int HISTORY_QUADRATIC_BONUS = 20;
 
