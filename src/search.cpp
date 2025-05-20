@@ -343,9 +343,9 @@ namespace Search {
 			// Late Move Reduction
 			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && move.score() <= KILLER_VALUE){
 				int baseLmr = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
-				int reduction = baseLmr - ss->historyScore / (isQuiet ? LMR_QUIET_DIVISOR : LMR_NOISY_DIVISOR);
-				// reduction += !improving;
-				// reduction -= isPV;
+				int reduction = baseLmr;
+				reduction += !improving;
+				reduction -= isPV;
 				// reduction -= inCheck;
 				// reduction -= givesCheck;
 
