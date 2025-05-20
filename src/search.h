@@ -126,7 +126,7 @@ struct ThreadInfo {
 	}
 	void updateCorrhist(Board &board, int bonus){
 		int &entry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN).getBits()) % PAWN_CORR_HIST_ENTRIES];
-		int clamped = std::clamp(bonus, -MAX_CORR_HIST, MAX_CORR_HIST);
+		int clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
 		entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
 	}
 	// History getters

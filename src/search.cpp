@@ -415,7 +415,7 @@ namespace Search {
 			if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
 				&& !(ttFlag == TTFlag::BETA_CUT && ss->staticEval >= bestScore) 
 				&& !(ttFlag == TTFlag::FAIL_LOW && ss->staticEval <= bestScore)) {
-				int bonus = (bestScore - rawStaticEval) * depth * CORR_HIST_FACTOR / 1024;
+				int bonus = (bestScore - ss->staticEval) * depth * CORR_HIST_FACTOR / 1024;
 				thread.updateCorrhist(thread.board, bonus);
 			}
 				
