@@ -98,20 +98,37 @@ namespace Search {
 			return ttEntry->score;
 		}
 
-		int score = network.inference(&thread.board, &thread.accumulator);
-		if (ply >= MAX_PLY)
-			return score;
+		int rawStaticEval = -INFINITE;
+		bool inCheck = thread.board.inCheck();
+		ss->eval = network.inference(&thread.board, &thread.accumulator);
+		if (!inCheck) {
+			rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, &thread.accumulator);
+			ss->staticEval = thread.correctStaticEval(thread.board, rawStaticEval);
+			ss->eval = ss->staticEval;
+
+			if (ttHit 
+				&& (ttEntry->flag == TTFlag::EXACT
+					|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= ss->eval)
+					|| (ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= ss->eval))) {
+				ss->eval = ttEntry->score;
+			}
+		}
+
+		
 		// if (isPV)
 		// 	ss->pv.length = 0;
 
-		if (score >= beta)
-			return score;
-		if (score > alpha)
-			alpha = score;
+		if (ss->eval >= beta)
+			return ss->eval;
+		if (ss->eval > alpha)
+			alpha = ss->eval;
 
-		int bestScore = score;
+		if (ply >= MAX_PLY)
+			return alpha;
+
+		int bestScore = ss->eval;
 		int moveCount = 0;
-		bool inCheck = thread.board.inCheck();
+		
 
 		Movelist moves;
 		movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, thread.board);
@@ -142,7 +159,7 @@ namespace Search {
 			MakeMove(thread.board, thread.accumulator, move);
 			thread.nodes++;
 			moveCount++;
-			score = -qsearch<isPV>(ply+1, -beta, -alpha, ss+1, thread, limit);
+			int score = -qsearch<isPV>(ply+1, -beta, -alpha, ss+1, thread, limit);
 			UnmakeMove(thread.board, thread.accumulator, move);
 
 			if (score > bestScore){
@@ -193,15 +210,28 @@ namespace Search {
 		bool canIIR = hashMove && depth >= IIR_MIN_DEPTH;
 
 		int bestScore = -INFINITE;
+		int rawStaticEval = -INFINITE;
 		int score = bestScore;
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
 
-		if (!inCheck){
-			ss->staticEval = network.inference(&thread.board, &thread.accumulator);;
-		}
-		else {
-			ss->staticEval = -INFINITE;
+		if (moveIsNull(ss->excluded)){
+			if (inCheck){
+				ss->eval = -INFINITE;
+				ss->staticEval = -INFINITE;
+			}
+			else {
+				rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, &thread.accumulator);
+				ss->staticEval = thread.correctStaticEval(thread.board, rawStaticEval);
+				ss->eval = ss->staticEval;
+
+				if (ttHit 
+					&& (ttEntry->flag == TTFlag::EXACT
+						|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= ss->eval)
+						|| (ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= ss->eval))) {
+					ss->eval = ttEntry->score;
+				}
+			}
 		}
 
 		ss->conthist = nullptr;
@@ -214,14 +244,14 @@ namespace Search {
 		
 		if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)){
 			// Reverse Futility Pruning
-			if (ss->staticEval - RFP_MARGIN * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH)
-				return ss->staticEval;
+			if (ss->eval - RFP_MARGIN * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH)
+				return ss->eval;
 
 			// Null Move Pruning
 			Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^ thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
-			if (depth >= 2 && ss->staticEval >= beta && ply > thread.minNmpPly && !nonPawns.empty()){
+			if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()){
 				// Sirius formula
-				const int reduction = NMP_BASE_REDUCTION + depth / NMP_REDUCTION_SCALE + std::min(2, (ss->staticEval-beta)/NMP_EVAL_SCALE);
+				const int reduction = NMP_BASE_REDUCTION + depth / NMP_REDUCTION_SCALE + std::min(2, (ss->eval-beta)/NMP_EVAL_SCALE);
 				thread.board.makeNullMove();
 				int nmpScore = -search<false>(depth-reduction, ply+1, -beta, -beta + 1, ss+1, thread, limit);
 				thread.board.unmakeNullMove();
@@ -411,11 +441,14 @@ namespace Search {
 		if (moveIsNull(ss->excluded)){
 			// Update correction history
 			bool isBestQuiet = thread.board.at<PieceType>(bestMove.to()) == PieceType::NONE || bestMove.typeOf() == Move::ENPASSANT;
-			// if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
-			// 	&& !(ttFlag == TTFlag::BETA_CUT && ss->staticEval >= bestScore) 
-			// 	&& !(ttFlag == TTFlag::FAIL_LOW && ss->staticEval <= bestScore))
-			// 	thread.updateCorrhist(thread.board, bestScore - eval);
-			*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
+			if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
+				&& !(ttFlag == TTFlag::BETA_CUT && ss->staticEval >= bestScore)
+				&& !(ttFlag == TTFlag::FAIL_LOW && ss->staticEval <= bestScore)) {
+				int bonus = (bestScore - ss->staticEval) * depth * CORR_HIST_FACTOR / 1024;
+				thread.updateCorrhist(thread.board, bonus);
+			}
+				
+			*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, rawStaticEval, ttFlag, depth);
 		}
 		return bestScore;
 

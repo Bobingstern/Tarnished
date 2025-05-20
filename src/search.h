@@ -59,6 +59,7 @@ struct PVList {
 struct Stack {
     PVList pv;
     chess::Move killer;
+    int    eval;
     int    staticEval;
     int    historyScore;
     Move excluded{};
@@ -126,7 +127,7 @@ struct ThreadInfo {
 	}
 	void updateCorrhist(Board &board, int bonus){
 		int &entry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN).getBits()) % PAWN_CORR_HIST_ENTRIES];
-		int clamped = std::clamp(bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+		int clamped = std::clamp(bonus, -CORR_HIST_LIMIT, CORR_HIST_LIMIT);
 		entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
 	}
 	// History getters
@@ -151,7 +152,6 @@ struct ThreadInfo {
 	}
 	int correctStaticEval(Board &board, int eval){
 		int pawnEntry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN).getBits()) % PAWN_CORR_HIST_ENTRIES];
-
 		int correction = 0;
 		correction += PAWN_CORR_WEIGHT * pawnEntry;
 

@@ -2,6 +2,10 @@
 
 #include "external/chess.hpp"
 #include <vector>
+#include <stdint.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
 
 using namespace chess;
 
@@ -15,6 +19,7 @@ struct TTEntry {
 	uint64_t zobrist;
 	chess::Move move;
 	int score;
+	int staticEval;
 	uint8_t flag;
 	uint8_t depth;
 	TTEntry(){
@@ -23,13 +28,15 @@ struct TTEntry {
 		this->score = 0;
 		this->flag = 0;
 		this->depth = 0;
+		this->staticEval = -32766;
 	}
-	TTEntry(uint64_t key, chess::Move best, int score, uint8_t flag, uint8_t depth){
+	TTEntry(uint64_t key, chess::Move best, int score, int eval, uint8_t flag, uint8_t depth){
 		this->zobrist = key;
 		this->move = best;
 		this->score = score;
 		this->flag = flag;
 		this->depth = depth;
+		this->staticEval = eval;
 	}
 };
 
