@@ -125,7 +125,7 @@ struct ThreadInfo {
 			updateEntry(( *(ss-1)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
 	}
 	void updateCorrhist(Board &board, int bonus){
-		int &entry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN).getBits()) % PAWN_CORR_HIST_ENTRIES];
+		int &entry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN, board.sideToMove()).getBits()) % PAWN_CORR_HIST_ENTRIES];
 		int clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
 		entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
 	}
@@ -150,7 +150,7 @@ struct ThreadInfo {
 		return hist;
 	}
 	int correctStaticEval(Board &board, int eval){
-		int pawnEntry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN).getBits()) % PAWN_CORR_HIST_ENTRIES];
+		int pawnEntry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN, board.sideToMove()).getBits()) % PAWN_CORR_HIST_ENTRIES];
 
 		int correction = 0;
 		correction += PAWN_CORR_WEIGHT * pawnEntry;
