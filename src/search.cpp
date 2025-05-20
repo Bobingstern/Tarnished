@@ -98,20 +98,14 @@ namespace Search {
 			return ttEntry->score;
 		}
 
-		int rawStaticEval = -INFINITE;
+		int rawStaticEval = network.inference(&thread.board, &thread.accumulator);
 		bool inCheck = thread.board.inCheck();
-		ss->eval = network.inference(&thread.board, &thread.accumulator);
 		if (!inCheck) {
-			rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, &thread.accumulator);
 			ss->staticEval = thread.correctStaticEval(thread.board, rawStaticEval);
 			ss->eval = ss->staticEval;
-
-			if (ttHit 
-				&& (ttEntry->flag == TTFlag::EXACT
-					|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= ss->eval)
-					|| (ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= ss->eval))) {
-				ss->eval = ttEntry->score;
-			}
+		}
+		else {
+			ss->eval = rawStaticEval;
 		}
 
 		
@@ -221,16 +215,9 @@ namespace Search {
 				ss->staticEval = -INFINITE;
 			}
 			else {
-				rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, &thread.accumulator);
+				rawStaticEval = network.inference(&thread.board, &thread.accumulator);
 				ss->staticEval = thread.correctStaticEval(thread.board, rawStaticEval);
 				ss->eval = ss->staticEval;
-
-				if (ttHit 
-					&& (ttEntry->flag == TTFlag::EXACT
-						|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= ss->eval)
-						|| (ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= ss->eval))) {
-					ss->eval = ttEntry->score;
-				}
 			}
 		}
 

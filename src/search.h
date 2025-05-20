@@ -59,8 +59,8 @@ struct PVList {
 struct Stack {
     PVList pv;
     chess::Move killer;
-    int    eval;
-    int    staticEval;
+    int    eval = -INFINITE;
+    int    staticEval = -INFINITE;
     int    historyScore;
     Move excluded{};
     MultiArray<int16_t, 64, 6, 2> *conthist;
