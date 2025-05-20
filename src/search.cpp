@@ -341,11 +341,11 @@ namespace Search {
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && move.score() <= KILLER_VALUE){
+			if (depth >= LMR_MIN_DEPTH && moveCount >= 4){
 				int baseLmr = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
-				int reduction = baseLmr;
+				int reduction = baseLmr + !isPV;
 				reduction += !improving;
-				reduction -= isPV;
+				// reduction -= isPV;
 				// reduction -= inCheck;
 				// reduction -= givesCheck;
 
