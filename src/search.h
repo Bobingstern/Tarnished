@@ -126,8 +126,8 @@ struct ThreadInfo {
 	}
 	void updateCorrhist(Board &board, int bonus){
 		int &entry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN).getBits()) % PAWN_CORR_HIST_ENTRIES];
-		int clamped = std::clamp(bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
-		entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+		int clamped = std::clamp(bonus, -MAX_CORR_HIST, MAX_CORR_HIST);
+		entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
 	}
 	// History getters
 	int getHistory(Color c, Move m){
@@ -155,7 +155,7 @@ struct ThreadInfo {
 		int correction = 0;
 		correction += PAWN_CORR_WEIGHT * pawnEntry;
 
-		int corrected = eval + correction / CORR_HIST_SCALE;
+		int corrected = eval + correction / 65536;
 		return std::clamp(corrected, GETTING_MATED + 1, FOUND_MATE - 1);
 	}
 	void reset(){

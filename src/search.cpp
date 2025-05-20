@@ -98,20 +98,24 @@ namespace Search {
 			return ttEntry->score;
 		}
 
-		int score = network.inference(&thread.board, &thread.accumulator);
-		if (ply >= MAX_PLY)
-			return score;
-		// if (isPV)
-		// 	ss->pv.length = 0;
-
-		if (score >= beta)
-			return score;
-		if (score > alpha)
-			alpha = score;
-
-		int bestScore = score;
-		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
+		int rawStaticEval = network.inference(&thread.board, &thread.accumulator);
+		ss->staticEval = rawStaticEval;
+		if (!inCheck){
+			ss->staticEval = thread.correctStaticEval(thread.board, rawStaticEval);
+		}
+
+		if (ply >= MAX_PLY)
+			return ss->staticEval;
+
+		if (ss->staticEval >= beta)
+			return ss->staticEval;
+		if (ss->staticEval > alpha)
+			alpha = ss->staticEval;
+
+		int bestScore = ss->staticEval;
+		int moveCount = 0;
+		
 
 		Movelist moves;
 		movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, thread.board);
@@ -142,7 +146,7 @@ namespace Search {
 			MakeMove(thread.board, thread.accumulator, move);
 			thread.nodes++;
 			moveCount++;
-			score = -qsearch<isPV>(ply+1, -beta, -alpha, ss+1, thread, limit);
+			int score = -qsearch<isPV>(ply+1, -beta, -alpha, ss+1, thread, limit);
 			UnmakeMove(thread.board, thread.accumulator, move);
 
 			if (score > bestScore){
@@ -193,17 +197,16 @@ namespace Search {
 		bool canIIR = hashMove && depth >= IIR_MIN_DEPTH;
 
 		int bestScore = -INFINITE;
+		int rawStaticEval = GETTING_MATED;
 		int score = bestScore;
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
 
-		if (!inCheck){
-			ss->staticEval = network.inference(&thread.board, &thread.accumulator);;
+		ss->staticEval = rawStaticEval;
+		if (!inCheck && moveIsNull(ss->excluded)){
+			rawStaticEval = network.inference(&thread.board, &thread.accumulator);
+			ss->staticEval = thread.correctStaticEval(thread.board, rawStaticEval);
 		}
-		else {
-			ss->staticEval = -INFINITE;
-		}
-
 		ss->conthist = nullptr;
 
 		// Improving heurstic
@@ -249,8 +252,6 @@ namespace Search {
 		// What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
 		// and use some sort of data generation method to create a pruning heuristic
 		// with something like sigmoid(C dot I) >= 0.75 ?
-
-		
 
 
 		Move bestMove = Move::NO_MOVE;
@@ -411,10 +412,13 @@ namespace Search {
 		if (moveIsNull(ss->excluded)){
 			// Update correction history
 			bool isBestQuiet = thread.board.at<PieceType>(bestMove.to()) == PieceType::NONE || bestMove.typeOf() == Move::ENPASSANT;
-			// if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
-			// 	&& !(ttFlag == TTFlag::BETA_CUT && ss->staticEval >= bestScore) 
-			// 	&& !(ttFlag == TTFlag::FAIL_LOW && ss->staticEval <= bestScore))
-			// 	thread.updateCorrhist(thread.board, bestScore - eval);
+			if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
+				&& !(ttFlag == TTFlag::BETA_CUT && ss->staticEval >= bestScore) 
+				&& !(ttFlag == TTFlag::FAIL_LOW && ss->staticEval <= bestScore)) {
+				int bonus = (bestScore - rawStaticEval) * depth * CORR_HIST_FACTOR / 1024;
+				thread.updateCorrhist(thread.board, bonus);
+			}
+				
 			*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
 		}
 		return bestScore;
