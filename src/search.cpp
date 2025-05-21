@@ -88,6 +88,9 @@ namespace Search {
 	template<bool isPV>
 	int qsearch(int ply, int alpha, const int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
 		//bool isPV = alpha != beta - 1;
+		if (ply >= MAX_PLY)
+			return network.inference(&thread.board, &thread.accumulator);;
+
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
 		bool ttHit = ttEntry->zobrist == thread.board.hash();
 		if (!isPV && ttHit
@@ -99,21 +102,22 @@ namespace Search {
 		}
 
 		bool inCheck = thread.board.inCheck();
-		int rawStaticEval = network.inference(&thread.board, &thread.accumulator);
-		ss->staticEval = rawStaticEval;
-		if (!inCheck){
-			ss->staticEval = thread.correctStaticEval(thread.board, rawStaticEval);
+		int rawStaticEval, eval;
+		if (inCheck){
+			rawStaticEval = -INFINITE;
+			eval = -INFINITE + ply;
 		}
+		else {
+			rawStaticEval = network.inference(&thread.board, &thread.accumulator);
+			eval = thread.correctStaticEval(thread.board, rawStaticEval);
+			if (eval >= beta)
+				return !isMateScore(eval) && !isMateScore(beta) ? (eval + beta) / 2 : eval;
+			if (eval > alpha)
+				alpha = eval;
+		}
+		
 
-		if (ply >= MAX_PLY)
-			return ss->staticEval;
-
-		if (ss->staticEval >= beta)
-			return ss->staticEval;
-		if (ss->staticEval > alpha)
-			alpha = ss->staticEval;
-
-		int bestScore = ss->staticEval;
+		int bestScore = eval;
 		int moveCount = 0;
 		
 
@@ -203,9 +207,13 @@ namespace Search {
 		bool inCheck = thread.board.inCheck();
 
 		ss->staticEval = rawStaticEval;
-		if (!inCheck && moveIsNull(ss->excluded)){
-			rawStaticEval = network.inference(&thread.board, &thread.accumulator);
-			ss->staticEval = thread.correctStaticEval(thread.board, rawStaticEval);
+		if (moveIsNull(ss->excluded)){
+			if (inCheck)
+				ss->staticEval = rawStaticEval = -INFINITE;
+			else {
+				rawStaticEval = network.inference(&thread.board, &thread.accumulator);
+				ss->staticEval = thread.correctStaticEval(thread.board, rawStaticEval);
+			}
 		}
 		ss->conthist = nullptr;
 
@@ -411,7 +419,7 @@ namespace Search {
 
 		if (moveIsNull(ss->excluded)){
 			// Update correction history
-			bool isBestQuiet = thread.board.at<PieceType>(bestMove.to()) == PieceType::NONE || bestMove.typeOf() == Move::ENPASSANT;
+			bool isBestQuiet = !thread.board.isCapture(bestMove);
 			if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
 				&& (ttFlag == TTFlag::EXACT 
 					|| ttFlag == TTFlag::BETA_CUT && bestScore > ss->staticEval 

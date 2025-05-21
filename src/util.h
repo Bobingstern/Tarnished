@@ -83,7 +83,7 @@ static uint64_t calculatePawnHash(Board &board) {
 }
 
 constexpr int hashIndex(uint64_t key, int tableSize) {
-    return (int)(key & 0x7FFFFFFF) % tableSize;
+    return (key & 0x7FFFFFFF) % tableSize;
 }
 
 constexpr int getPawnHashIndex(Board &board, int tableSize) {
