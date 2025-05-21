@@ -413,8 +413,9 @@ namespace Search {
 			// Update correction history
 			bool isBestQuiet = thread.board.at<PieceType>(bestMove.to()) == PieceType::NONE || bestMove.typeOf() == Move::ENPASSANT;
 			if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
-				&& !(ttFlag == TTFlag::BETA_CUT && ss->staticEval >= bestScore) 
-				&& !(ttFlag == TTFlag::FAIL_LOW && ss->staticEval <= bestScore)) {
+				&& (ttFlag == TTFlag::EXACT 
+					|| ttFlag == TTFlag::BETA_CUT && bestScore > ss->staticEval 
+					|| ttFlag == TTFlag::FAIL_LOW && bestScore < ss->staticEval)) {
 				int bonus = (bestScore - ss->staticEval) * depth / 8;
 				thread.updateCorrhist(thread.board, bonus);
 			}

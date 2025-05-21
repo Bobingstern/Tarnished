@@ -129,6 +129,7 @@ struct ThreadInfo {
 		int clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
 		entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
 	}
+	
 	// History getters
 	int getHistory(Color c, Move m){
 		return history[(int)c][m.from().index()][m.to().index()];
@@ -155,7 +156,7 @@ struct ThreadInfo {
 		int correction = 0;
 		correction += PAWN_CORR_WEIGHT * pawnEntry;
 
-		int corrected = eval + correction / 2048;
+		int corrected = eval + correction / 512;
 		return std::clamp(corrected, GETTING_MATED + 1, FOUND_MATE - 1);
 	}
 	void reset(){
