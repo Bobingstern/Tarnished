@@ -85,6 +85,7 @@ struct ThreadInfo {
 	MultiArray<int, 64, 6, 6, 2> capthist;
 	
 	MultiArray<int, PAWN_CORR_HIST_ENTRIES, 2> pawnCorrhist;
+	uint64_t pawnKey;
 
 	ThreadInfo(ThreadType type, TTable &TT, std::atomic<bool> &abort) : type(type), TT(TT), abort(abort) {
 		abort.store(false, std::memory_order_relaxed);
@@ -97,6 +98,7 @@ struct ThreadInfo {
 		bestMove = Move::NO_MOVE;
 		minNmpPly = 0;
 		rootDepth = 0;
+		pawnKey = 0ULL;
 		//ttHits = 0;
 	}
 	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history), 
@@ -125,7 +127,7 @@ struct ThreadInfo {
 			updateEntry(( *(ss-1)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
 	}
 	void updateCorrhist(Board &board, int bonus){
-		int &entry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN, board.sideToMove()).getBits()) % PAWN_CORR_HIST_ENTRIES];
+		int &entry = pawnCorrhist[board.sideToMove()][getPawnHashIndex(board, PAWN_CORR_HIST_ENTRIES)];
 		int clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
 		entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
 	}
@@ -150,12 +152,12 @@ struct ThreadInfo {
 		return hist;
 	}
 	int correctStaticEval(Board &board, int eval){
-		int pawnEntry = pawnCorrhist[board.sideToMove()][murmurHash3(board.pieces(PieceType::PAWN, board.sideToMove()).getBits()) % PAWN_CORR_HIST_ENTRIES];
+		int pawnEntry = pawnCorrhist[board.sideToMove()][getPawnHashIndex(board, PAWN_CORR_HIST_ENTRIES)];
 
 		int correction = 0;
 		correction += PAWN_CORR_WEIGHT * pawnEntry;
 
-		int corrected = eval + correction / 65536;
+		int corrected = eval + correction / 2048;
 		return std::clamp(corrected, GETTING_MATED + 1, FOUND_MATE - 1);
 	}
 	void reset(){

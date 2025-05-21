@@ -1,6 +1,7 @@
 #pragma once
 
 #include "external/chess.hpp"
+#include "external/xxhash64.h"
 #include "nnue.h"
 #include <bit>
 #include <vector>
@@ -65,18 +66,19 @@ bool SEE(Board &board, Move &move, int margin);
 static bool moveIsNull(Move m){
 	return m == Move::NO_MOVE;
 }
-
+static uint64_t calculatePawnHash(Board &board) {
+    uint64_t p = (board.pieces(PieceType::PAWN) & board.pieces(PieceType::PAWN, Color::WHITE)).getBits();
+    return XXHash64::hash(&p, 8, 0);
+}
 // Murmur hash
 // sirius yoink
-constexpr uint64_t murmurHash3(uint64_t key)
-{
-    key ^= key >> 33;
-    key *= 0xff51afd7ed558ccd;
-    key ^= key >> 33;
-    key *= 0xc4ceb9fe1a85ec53;
-    key ^= key >> 33;
-    return key;
-};
+constexpr int hashIndex(uint64_t key, int tableSize) {
+    return (int)(key & 0x7FFFFFFF) % tableSize;
+}
+
+constexpr int getPawnHashIndex(Board &board, int tableSize) {
+    return hashIndex(calculatePawnHash(board), tableSize);
+}
 
 // Thanks shawn and stockfish
 template<typename T, std::size_t Size, std::size_t... Sizes>
