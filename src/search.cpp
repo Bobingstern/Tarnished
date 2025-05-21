@@ -111,7 +111,7 @@ namespace Search {
 			rawStaticEval = network.inference(&thread.board, &thread.accumulator);
 			eval = thread.correctStaticEval(thread.board, rawStaticEval);
 			if (eval >= beta)
-				return !isMateScore(eval) && !isMateScore(beta) ? (eval + beta) / 2 : eval;
+				return eval;
 			if (eval > alpha)
 				alpha = eval;
 		}
@@ -206,7 +206,6 @@ namespace Search {
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
 
-		ss->staticEval = rawStaticEval;
 		if (moveIsNull(ss->excluded)){
 			if (inCheck)
 				ss->staticEval = rawStaticEval = -INFINITE;
