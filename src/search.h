@@ -85,7 +85,6 @@ struct ThreadInfo {
 	MultiArray<int, 64, 6, 6, 2> capthist;
 	
 	MultiArray<int, PAWN_CORR_HIST_ENTRIES, 2> pawnCorrhist;
-	uint64_t pawnKey;
 
 	ThreadInfo(ThreadType type, TTable &TT, std::atomic<bool> &abort) : type(type), TT(TT), abort(abort) {
 		abort.store(false, std::memory_order_relaxed);
@@ -98,7 +97,6 @@ struct ThreadInfo {
 		bestMove = Move::NO_MOVE;
 		minNmpPly = 0;
 		rootDepth = 0;
-		pawnKey = 0ULL;
 		//ttHits = 0;
 	}
 	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history), 
