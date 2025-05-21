@@ -225,7 +225,8 @@ bool SEE(Board &board, Move &move, int margin){
 	Bitboard occupied = board.occ() ^ Bitboard::fromSquare(from) ^ Bitboard::fromSquare(to);
 	Color stm = board.sideToMove();
 	Bitboard attackers = attackersTo(board, to, occupied);
-	Bitboard stmAttackers, bb;
+	Bitboard stmAttackers = Bitboard();
+	Bitboard bb = Bitboard();
 	int res = 1;
 	while (true){
 		stm = ~stm;
