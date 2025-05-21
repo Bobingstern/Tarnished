@@ -346,7 +346,12 @@ namespace Search {
 			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && !thread.board.inCheck()){
 				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount] + !isPV;
 
-				score = -search<false>(newDepth-reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+				// Reduce less for improving nodes
+				reduction -= improving;
+
+				int reducedDepth = std::clamp(newDepth-reduction, 1, newDepth-1);
+
+				score = -search<false>(reducedDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
 				if (score > alpha)
 					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
