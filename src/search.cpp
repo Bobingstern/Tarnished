@@ -15,7 +15,7 @@ using namespace chess;
 
 
 namespace Search {
-	std::array<std::array<std::array<int, 219>, MAX_PLY + 1>, 2> lmrTable;
+	std::array<std::array<std::array<int, 32>, 32>, 2> lmrTable;
 
 	bool isWin(int score){
 		return score >= FOUND_MATE;
@@ -28,27 +28,14 @@ namespace Search {
 		return std::abs(score) >= FOUND_MATE;
 	}
 	void fillLmr(){
-		// Weiss formula for reductions is
-		// Captures/Promo: 0.2 + log(depth) * log(movecount) / 3.35
-		// Quiets: 		   1.35 + log(depth) * log(movecount) / 2.75
-		// https://git.nocturn9x.space/Quinniboi10/Prelude/src/commit/a35e41b51043fc2b68a72854f3db9638354f56d7/src/search.cpp#L13
-		// ~77 elo or smth
-		for (int isQuiet = 0;isQuiet<=1;isQuiet++){
-			for (size_t depth=0;depth <= MAX_PLY;depth++){
-				for (int movecount=0;movecount<=218;movecount++){
-					if (depth == 0 || movecount == 0){
-						lmrTable[isQuiet][depth][movecount] = 0;
-						continue;
-					}
-					if (isQuiet){
-						lmrTable[isQuiet][depth][movecount] = 2.01 + std::log(depth) * std::log(movecount) / 2.32;
-					}
-					else {
-						lmrTable[isQuiet][depth][movecount] = 0.38 + std::log(depth) * std::log(movecount) / 3.76;
-					}
-				}
+		// Weiss formula for reductions
+		for (int depth = 1; depth < 32;depth++){
+			for (int movecount=1;movecount < 32 ;movecount++){
+				lmrTable[0][depth][movecount] = 0.38 + std::log(depth) * std::log(movecount) / 3.76;
+				lmrTable[1][depth][movecount] = 2.01 + std::log(depth) * std::log(movecount) / 2.32;
 			}
 		}
+		
 	}
 	int scoreMove(Move &move, Move &ttMove, Stack *ss, ThreadInfo &thread){
 		// MVV-LVA
@@ -345,7 +332,7 @@ namespace Search {
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
 			if (depth >= LMR_MIN_DEPTH && !givesCheck && moveCount > 5){
-				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount] + !isPV;
+				int reduction = lmrTable[!thread.board.isCapture(move)][std::min(31, depth)][std::min(31, moveCount)] + !isPV;
 
 				// Reduce less for improving nodes
 				// reduction += !improving;
