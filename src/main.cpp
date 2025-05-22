@@ -102,7 +102,7 @@ void UCIPosition(Board &board, char *str) {
         // Parse and make move
         std::string m = move;
         Move move_ = uci::uciToMove(board, m);
-        //board.makeMove(move_);
+        board.makeMove(move_);
     }
 
 }
