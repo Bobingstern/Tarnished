@@ -340,10 +340,11 @@ namespace Search {
 			moveCount++;
 			thread.nodes++;
 			
+			bool givesCheck = thread.board.inCheck();
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && !thread.board.inCheck()){
+			if (depth >= LMR_MIN_DEPTH && !givesCheck && moveCount > 3 + isPV){
 				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount] + !isPV;
 
 				score = -search<false>(newDepth-reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
