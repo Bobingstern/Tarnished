@@ -340,17 +340,17 @@ namespace Search {
 			moveCount++;
 			thread.nodes++;
 			
-			//bool givesCheck = thread.board.inCheck();
+			bool givesCheck = thread.board.inCheck();
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && !thread.board.inCheck()){
+			if (depth >= LMR_MIN_DEPTH && !givesCheck && moveCount > (2 + root * 2) ){
 				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount] + !isPV;
 
 				// Reduce less for improving nodes
 				// reduction += !improving;
 
 				// Reduce less for moves that give check or if in check
-				reduction -= inCheck;
+				// reduction -= inCheck;
 				//reduction -= givesCheck;
 
 				int reducedDepth = std::clamp(newDepth-reduction, 1, newDepth-1);
