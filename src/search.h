@@ -61,6 +61,7 @@ struct Stack {
     chess::Move killer;
     int    staticEval;
     int    historyScore;
+    uint64_t pawnKey;
     Move excluded{};
     MultiArray<int16_t, 64, 6, 2> *conthist;
 };
@@ -83,6 +84,8 @@ struct ThreadInfo {
 	MultiArray<int16_t, 64, 6, 2, 64, 6, 2> conthist;
 	// indexed by [stm][moving pt][cap pt][to]
 	MultiArray<int, 64, 6, 6, 2> capthist;
+	// indexed by [stm][pawnhash % entries]
+	MultiArray<int, PAWN_CORR_HIST_ENTRIES, 2> pawnCorrhist;
 	
 	ThreadInfo(ThreadType type, TTable &TT, std::atomic<bool> &abort) : type(type), TT(TT), abort(abort) {
 		abort.store(false, std::memory_order_relaxed);
@@ -121,6 +124,11 @@ struct ThreadInfo {
 		if ((ss-1)->conthist != nullptr)
 			updateEntry(( *(ss-1)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
 	}
+	void updateCorrhist(Stack *ss, Board &board, int bonus){
+		int &entry = pawnCorrhist[board.sideToMove()][ss->pawnKey % PAWN_CORR_HIST_ENTRIES];
+		int clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
+		entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
+	}
 	// History getters
 	int getHistory(Color c, Move m){
 		return history[(int)c][m.from().index()][m.to().index()];
@@ -140,6 +148,15 @@ struct ThreadInfo {
 		if (ss != nullptr && (ss-1)->conthist != nullptr)
 			hist += getConthist((ss-1)->conthist, board, m);
 		return hist;
+	}
+	int correctStaticEval(Stack *ss, Board &board, int eval){
+		int pawnEntry = pawnCorrhist[board.sideToMove()][ss->pawnKey % PAWN_CORR_HIST_ENTRIES];
+
+		int correction = 0;
+		correction += PAWN_CORR_WEIGHT * pawnEntry;
+
+		int corrected = eval + correction / 2048;
+		return std::clamp(corrected, -INFINITE + 1, INFINITE - 1);
 	}
 	void reset(){
 		nodes.store(0, std::memory_order_relaxed);

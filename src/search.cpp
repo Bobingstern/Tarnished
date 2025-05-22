@@ -11,8 +11,81 @@
 using namespace chess;
 
 // Searcher stuff
+// Accumulator wrappers
+void MakeMove(Board &board, Accumulator &acc, Move &move, Search::Stack *ss){
+	PieceType to = board.at<PieceType>(move.to());
+	PieceType from = board.at<PieceType>(move.from());
+	Color stm = board.sideToMove();
 
+	// Pawn key incremental updates
+	ss->pawnKey = (ss-1)->pawnKey;
+	if (from == PieceType::PAWN){
+		// Update pawn zobrist key
+		// Remove from sq pawn
+		ss->pawnKey ^= Zobrist::piece(board.at(move.from()), move.from());
+		if (move.typeOf() == Move::ENPASSANT){
+			// Remove en passant pawn
+			ss->pawnKey ^= Zobrist::piece(Piece(PieceType::PAWN, ~stm), move.to().ep_square());
+		}
+		else if (to == PieceType::PAWN){
+			// Remove to sq pawn
+			ss->pawnKey ^= Zobrist::piece(board.at(move.to()), move.to());
+		}
+		// Add to sq pawn
+		if (move.typeOf() != Move::PROMOTION)
+			ss->pawnKey ^= Zobrist::piece(board.at(move.from()), move.to());
+	}
 
+	board.makeMove(move);
+
+	if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION){
+		// For now just recalculate on special moves like these
+		acc.refresh(board);
+	}
+	else if (move.typeOf() == Move::CASTLING){
+		Square king = move.from();
+		Square kingTo = (king > move.to()) ? king - 2 : king + 2;
+		Square rookTo = (king > move.to()) ? kingTo + 1 : kingTo - 1;
+		// There are basically just 2 quiet moves now
+		// Move king and move rook
+		// Since moves are encoded as king takes rook, its very easy
+		acc.quiet(stm, kingTo, PieceType::KING, move.from(), PieceType::KING);
+		acc.quiet(stm, rookTo, PieceType::ROOK, move.to(), PieceType::ROOK);
+	}
+	else if (to != PieceType::NONE){
+		acc.capture(stm, move.to(), from, move.from(), from, move.to(), to);
+	}
+	else
+		acc.quiet(stm, move.to(), from, move.from(), from);
+
+}
+
+void UnmakeMove(Board &board, Accumulator &acc, Move &move){
+	board.unmakeMove(move);
+
+	PieceType to = board.at<PieceType>(move.to());
+	PieceType from = board.at<PieceType>(move.from());
+	Color stm = board.sideToMove();
+
+	if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION){
+		// For now just recalculate on special moves like these
+		acc.refresh(board);
+	}
+	else if (move.typeOf() == Move::CASTLING){
+		Square king = move.from();
+		Square kingTo = (king > move.to()) ? king - 2 : king + 2;
+		Square rookTo = (king > move.to()) ? kingTo + 1 : kingTo - 1;
+		// There are basically just 2 quiet moves now
+		acc.quiet(stm, move.from(), PieceType::KING, kingTo, PieceType::KING);
+		acc.quiet(stm, move.to(), PieceType::ROOK, rookTo, PieceType::ROOK);
+	}
+	else if (to != PieceType::NONE){
+		acc.uncapture(stm, move.from(), from, move.to(), to, move.to(), from);
+	}
+	else {
+		acc.quiet(stm, move.from(), from, move.to(), from);
+	}
+}
 
 namespace Search {
 	std::array<std::array<std::array<int, 219>, MAX_PLY + 1>, 2> lmrTable;
@@ -98,20 +171,23 @@ namespace Search {
 			return ttEntry->score;
 		}
 
-		int score = network.inference(&thread.board, thread.accumulator);
-		if (ply >= MAX_PLY)
-			return score;
-		// if (isPV)
-		// 	ss->pv.length = 0;
-
-		if (score >= beta)
-			return score;
-		if (score > alpha)
-			alpha = score;
-
-		int bestScore = score;
-		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
+		int rawStaticEval, eval;
+		if (inCheck){
+			rawStaticEval = -INFINITE;
+			eval = -INFINITE + ply;
+		}
+		else {
+			rawStaticEval = network.inference(&thread.board, thread.accumulator);
+			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+			if (eval >= beta)
+				return eval;
+			if (eval > alpha)
+				alpha = eval;
+		}
+
+		int bestScore = eval;
+		int moveCount = 0;
 
 		Movelist moves;
 		movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, thread.board);
@@ -139,10 +215,10 @@ namespace Search {
 				continue;
 
 
-			MakeMove(thread.board, thread.accumulator, move);
+			MakeMove(thread.board, thread.accumulator, move, ss);
 			thread.nodes++;
 			moveCount++;
-			score = -qsearch<isPV>(ply+1, -beta, -alpha, ss+1, thread, limit);
+			int score = -qsearch<isPV>(ply+1, -beta, -alpha, ss+1, thread, limit);
 			UnmakeMove(thread.board, thread.accumulator, move);
 
 			if (score > bestScore){
@@ -193,15 +269,18 @@ namespace Search {
 		bool canIIR = hashMove && depth >= IIR_MIN_DEPTH;
 
 		int bestScore = -INFINITE;
+		int rawStaticEval = GETTING_MATED;
 		int score = bestScore;
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
 
-		if (!inCheck){
-			ss->staticEval = network.inference(&thread.board, thread.accumulator);;
-		}
-		else {
-			ss->staticEval = -INFINITE;
+		if (moveIsNull(ss->excluded)){
+			if (inCheck)
+				ss->staticEval = rawStaticEval = -INFINITE;
+			else {
+				rawStaticEval = network.inference(&thread.board, thread.accumulator);
+				ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+			}
 		}
 
 		ss->conthist = nullptr;
@@ -335,8 +414,7 @@ namespace Search {
 
 			}					
 
-			MakeMove(thread.board, thread.accumulator, move);
-
+			MakeMove(thread.board, thread.accumulator, move, ss);
 			moveCount++;
 			thread.nodes++;
 			
@@ -409,6 +487,17 @@ namespace Search {
 			return inCheck ? -MATE + ply : 0;
 
 		if (moveIsNull(ss->excluded)){
+			// Update correction history
+			bool isBestQuiet = !thread.board.isCapture(bestMove);
+			if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
+				&& (ttFlag == TTFlag::EXACT 
+					|| ttFlag == TTFlag::BETA_CUT && bestScore > ss->staticEval 
+					|| ttFlag == TTFlag::FAIL_LOW && bestScore < ss->staticEval)) {
+				int bonus = (bestScore - ss->staticEval) * depth / 8;
+				thread.updateCorrhist(ss, thread.board, bonus);
+			}
+
+			// Update TT
 			*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
 		}
 		return bestScore;
@@ -445,6 +534,7 @@ namespace Search {
 					return limit.softNodes(threadInfo.nodes) || threadInfo.abort.load(std::memory_order_relaxed);
 			};
 			threadInfo.rootDepth = depth;
+			(ss-1)->pawnKey = resetPawnHash(threadInfo.board);
 			// Aspiration Windows (WIP)
 			if (depth >= MIN_ASP_WINDOW_DEPTH){
 				int delta = INITIAL_ASP_WINDOW;

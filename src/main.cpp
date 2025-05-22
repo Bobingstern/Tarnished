@@ -94,17 +94,15 @@ void UCIPosition(Board &board, char *str) {
         return;
 
     Accumulator acc;
-
+    
     // Loop over the moves and make them in succession
-
     char *move = strtok(str, " ");
     while ((move = strtok(NULL, " "))) {
 
         // Parse and make move
         std::string m = move;
         Move move_ = uci::uciToMove(board, m);
-        board.makeMove(move_);
-        //MakeMove(board, acc);
+        //board.makeMove(move_);
     }
 
 }
