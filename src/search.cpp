@@ -15,7 +15,7 @@ using namespace chess;
 
 
 namespace Search {
-	std::array<std::array<std::array<int, 32>, 32>, 2> lmrTable;
+	std::array<std::array<std::array<int, 256>, MAX_PLY + 1>, 2> lmrTable;
 
 	bool isWin(int score){
 		return score >= FOUND_MATE;
@@ -28,11 +28,11 @@ namespace Search {
 		return std::abs(score) >= FOUND_MATE;
 	}
 	void fillLmr(){
-		// Weiss formula for reductions
-		for (int depth = 1; depth < 32;depth++){
-			for (int movecount=1;movecount < 32 ;movecount++){
-				lmrTable[0][depth][movecount] = 0.38 + std::log(depth) * std::log(movecount) / 3.76;
-				lmrTable[1][depth][movecount] = 2.01 + std::log(depth) * std::log(movecount) / 2.32;
+		// Stormphrax formula for reductions
+		for (int depth = 1; depth <= MAX_PLY + 1;depth++){
+			for (int movecount=1;movecount < 256 ;movecount++){
+				lmrTable[1][depth][movecount] = 0.83 + std::log(depth) * std::log(movecount) / 2.18;
+				lmrTable[0][depth][movecount] = -0.12 + std::log(depth) * std::log(movecount) / 2.48;
 			}
 		}
 		
@@ -331,8 +331,8 @@ namespace Search {
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH && !givesCheck && moveCount > 5){
-				int reduction = lmrTable[!thread.board.isCapture(move)][std::min(31, depth)][std::min(31, moveCount)] + !isPV;
+			if (depth >= LMR_MIN_DEPTH && !givesCheck && moveCount > 3){
+				int reduction = lmrTable[!thread.board.isCapture(move)][depth][moveCount] + !isPV;
 
 				// Reduce less for improving nodes
 				// reduction += !improving;
