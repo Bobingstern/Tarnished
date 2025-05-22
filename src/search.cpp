@@ -41,10 +41,10 @@ namespace Search {
 						continue;
 					}
 					if (isQuiet){
-						lmrTable[isQuiet][depth][movecount] = 1.35 + std::log(depth) * std::log(movecount) / 2.75;
+						lmrTable[isQuiet][depth][movecount] = 2.01 + std::log(depth) * std::log(movecount) / 2.32;
 					}
 					else {
-						lmrTable[isQuiet][depth][movecount] = 0.2 + std::log(depth) * std::log(movecount) / 3.35;
+						lmrTable[isQuiet][depth][movecount] = 0.38 + std::log(depth) * std::log(movecount) / 3.76;
 					}
 				}
 			}
@@ -354,8 +354,8 @@ namespace Search {
 				// reduction -= inCheck;
 				// reduction -= givesCheck;
 
-				// Reduce move for cutnodes
-				reduction += cutnode;
+				// Reduce less for non cutnodes
+				// reduction -= !cutnode;
 
 				int reducedDepth = std::clamp(newDepth-reduction, 1, newDepth-1);
 
