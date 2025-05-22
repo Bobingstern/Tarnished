@@ -6,7 +6,7 @@
 constexpr int16_t MAX_HISTORY = 16383;
 const int16_t DEFAULT_HISTORY = 0;
 // NNUE Parameters
-constexpr int16_t HL_N = 512;
+constexpr int16_t HL_N = 1024;
 constexpr int16_t QA = 255;
 constexpr int16_t QB = 64;
 constexpr int16_t NNUE_SCALE = 400;
