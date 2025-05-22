@@ -63,7 +63,7 @@ namespace Search {
 		else if (to != PieceType::NONE) {
 			int hist = thread.getCapthist(thread.board, move);
 			int score = hist + MVV_VALUES[to];
-			return 500000 + score;
+			return 500000 + score - 800000 * !SEE(thread.board, move, -PawnValue);
 		}
 		else if (move == ss->killer){
 			return 400000;
