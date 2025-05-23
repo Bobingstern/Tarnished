@@ -356,7 +356,7 @@ namespace Search {
 			}
 			pickMove(moves, m_);
 			Move move = moves[m_];
-			bool isQuiet = thread.board.at<PieceType>(move.to()) == PieceType::NONE;
+			bool isQuiet = !thread.board.isCapture(move);
 
 			if (move == ss->excluded)
 				continue;
@@ -427,7 +427,7 @@ namespace Search {
 				// Reduce more if not a PV node
 				reduction += !isPV;
 				// Reduce less the better the node's history score
-				reduction -= ss->historyScore / 8192;
+				reduction -= std::clamp(ss->historyScore / (isQuiet ? 6000 : 3000), -2, 2);
 
 				score = -search<false>(newDepth-reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
