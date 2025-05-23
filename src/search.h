@@ -63,7 +63,7 @@ struct Stack {
     int    historyScore;
     uint64_t pawnKey;
     Move excluded{};
-    MultiArray<int16_t, 64, 6, 2> *conthist;
+    MultiArray<int16_t, 2, 6, 64> *conthist;
 };
 
 void fillLmr();
@@ -81,11 +81,11 @@ struct ThreadInfo {
 
 	std::array<std::array<std::array<int, 64>, 64>, 2> history;
 	// indexed by [prev stm][prev pt][prev to][stm][pt][to]
-	MultiArray<int16_t, 64, 6, 2, 64, 6, 2> conthist;
+	MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
 	// indexed by [stm][moving pt][cap pt][to]
-	MultiArray<int, 64, 6, 6, 2> capthist;
+	MultiArray<int, 2, 6, 6, 64> capthist;
 	// indexed by [stm][pawnhash % entries]
-	MultiArray<int, PAWN_CORR_HIST_ENTRIES, 2> pawnCorrhist;
+	MultiArray<int, 2, PAWN_CORR_HIST_ENTRIES> pawnCorrhist;
 	
 	ThreadInfo(ThreadType type, TTable &TT, std::atomic<bool> &abort) : type(type), TT(TT), abort(abort) {
 		abort.store(false, std::memory_order_relaxed);
@@ -136,10 +136,10 @@ struct ThreadInfo {
 	int getCapthist(Board &board, Move m){
 		return capthist[board.sideToMove()][board.at<PieceType>(m.from())][board.at<PieceType>(m.to())][m.to().index()];
 	}
-	MultiArray<int16_t, 64, 6, 2> *getConthistSegment(Board &board, Move m){
+	MultiArray<int16_t, 2, 6, 64> *getConthistSegment(Board &board, Move m){
 		return &conthist[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
 	}
-	int16_t getConthist(MultiArray<int16_t, 64, 6, 2> *c, Board &board, Move m){
+	int16_t getConthist(MultiArray<int16_t, 2, 6, 64> *c, Board &board, Move m){
 		assert(c != nullptr);
 		return (*c)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
 	}

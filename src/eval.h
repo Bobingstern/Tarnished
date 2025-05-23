@@ -8,8 +8,8 @@
 #include "parameters.h"
 
 using namespace chess;
-constexpr int INFINITE = std::numeric_limits<int>::max();
-constexpr int MATE = 32767;
+constexpr int INFINITE = 32767;
+constexpr int MATE = 32766;
 constexpr int32_t FOUND_MATE  = MATE - MAX_PLY;
 constexpr int32_t GETTING_MATED = -MATE + MAX_PLY;
 
