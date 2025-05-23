@@ -422,7 +422,12 @@ namespace Search {
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
 			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && !thread.board.inCheck()){
-				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount] + !isPV;
+				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+
+				// Reduce more if not a PV node
+				reduction += !isPV;
+				// Reduce less the better the node's history score
+				reduction -= ss->historyScore / 8192;
 
 				score = -search<false>(newDepth-reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
