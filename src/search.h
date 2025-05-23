@@ -61,8 +61,9 @@ struct Stack {
     chess::Move killer;
     int    staticEval;
     int    historyScore;
+    uint64_t pawnKey;
     Move excluded{};
-    MultiArray<int16_t, 64, 6, 2> *conthist;
+    MultiArray<int16_t, 2, 6, 64> *conthist;
 };
 
 void fillLmr();
@@ -80,9 +81,11 @@ struct ThreadInfo {
 
 	std::array<std::array<std::array<int, 64>, 64>, 2> history;
 	// indexed by [prev stm][prev pt][prev to][stm][pt][to]
-	MultiArray<int16_t, 64, 6, 2, 64, 6, 2> conthist;
+	MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
 	// indexed by [stm][moving pt][cap pt][to]
-	MultiArray<int, 64, 6, 6, 2> capthist;
+	MultiArray<int, 2, 6, 6, 64> capthist;
+	// indexed by [stm][pawnhash % entries]
+	MultiArray<int, 2, PAWN_CORR_HIST_ENTRIES> pawnCorrhist;
 	
 	ThreadInfo(ThreadType type, TTable &TT, std::atomic<bool> &abort) : type(type), TT(TT), abort(abort) {
 		abort.store(false, std::memory_order_relaxed);
@@ -90,6 +93,7 @@ struct ThreadInfo {
 		std::memset(&history, 0, sizeof(history));
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
+		pawnCorrhist.fill((int)DEFAULT_HISTORY);
 		nodes = 0;
 		bestMove = Move::NO_MOVE;
 		minNmpPly = 0;
@@ -121,6 +125,11 @@ struct ThreadInfo {
 		if ((ss-1)->conthist != nullptr)
 			updateEntry(( *(ss-1)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
 	}
+	void updateCorrhist(Stack *ss, Board &board, int bonus){
+		int &entry = pawnCorrhist[board.sideToMove()][ss->pawnKey % PAWN_CORR_HIST_ENTRIES];
+		int clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
+		entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
+	}
 	// History getters
 	int getHistory(Color c, Move m){
 		return history[(int)c][m.from().index()][m.to().index()];
@@ -128,10 +137,10 @@ struct ThreadInfo {
 	int getCapthist(Board &board, Move m){
 		return capthist[board.sideToMove()][board.at<PieceType>(m.from())][board.at<PieceType>(m.to())][m.to().index()];
 	}
-	MultiArray<int16_t, 64, 6, 2> *getConthistSegment(Board &board, Move m){
+	MultiArray<int16_t, 2, 6, 64> *getConthistSegment(Board &board, Move m){
 		return &conthist[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
 	}
-	int16_t getConthist(MultiArray<int16_t, 64, 6, 2> *c, Board &board, Move m){
+	int16_t getConthist(MultiArray<int16_t, 2, 6, 64> *c, Board &board, Move m){
 		assert(c != nullptr);
 		return (*c)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
 	}
@@ -141,6 +150,15 @@ struct ThreadInfo {
 			hist += getConthist((ss-1)->conthist, board, m);
 		return hist;
 	}
+	int correctStaticEval(Stack *ss, Board &board, int eval){
+		int pawnEntry = pawnCorrhist[board.sideToMove()][ss->pawnKey % PAWN_CORR_HIST_ENTRIES];
+
+		int correction = 0;
+		correction += PAWN_CORR_WEIGHT * pawnEntry;
+
+		int corrected = eval + correction / 2048;
+		return std::clamp(corrected, -INFINITE + 1, INFINITE - 1);
+	}
 	void reset(){
 		nodes.store(0, std::memory_order_relaxed);
 		bestMove = Move::NO_MOVE;
@@ -149,6 +167,7 @@ struct ThreadInfo {
 				j.fill(0);
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
+		pawnCorrhist.fill((int)DEFAULT_HISTORY);
 	}
 };
 

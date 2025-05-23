@@ -7,6 +7,7 @@
 #include <sstream>
 #include <cassert>
 #include <cstring>
+#include <cstdint>
 
 using namespace chess;
 
@@ -49,10 +50,12 @@ inline void deepFill(std::array<T, N>& arr, const U& value) {
         deepFill(element, value);
     }
 }
-
-
+namespace Search {
+    struct Stack;
+};
 // Accumulator wrapper
-void MakeMove(Board &board, Accumulator &acc, Move &move);
+uint64_t resetPawnHash(Board &board);
+void MakeMove(Board &board, Accumulator &acc, Move &move, Search::Stack *ss);
 void UnmakeMove(Board &board, Accumulator &acc, Move &move);
 // SEE stuff
 void initLookups();

@@ -1704,6 +1704,8 @@ class Zobrist {
 
     static constexpr int MAP_HASH_PIECE[12] = {1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10};
 
+    public:
+        friend class Board;
     [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
         assert(piece < 12);
         return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + square.index()];
@@ -1726,8 +1728,8 @@ class Zobrist {
 
     [[nodiscard]] static U64 sideToMove() noexcept { return RANDOM_ARRAY[780]; }
 
-   public:
-    friend class Board;
+   
+    
 };
 
 }  // namespace chess
