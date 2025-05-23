@@ -93,6 +93,7 @@ struct ThreadInfo {
 		std::memset(&history, 0, sizeof(history));
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
+		pawnCorrhist.fill((int)DEFAULT_HISTORY);
 		nodes = 0;
 		bestMove = Move::NO_MOVE;
 		minNmpPly = 0;
@@ -166,6 +167,7 @@ struct ThreadInfo {
 				j.fill(0);
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
+		pawnCorrhist.fill((int)DEFAULT_HISTORY);
 	}
 };
 
