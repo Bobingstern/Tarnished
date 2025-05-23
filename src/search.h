@@ -124,6 +124,8 @@ struct ThreadInfo {
 		};
 		if ((ss-1)->conthist != nullptr)
 			updateEntry(( *(ss-1)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
+		if ((ss-2)->conthist != nullptr)
+			updateEntry(( *(ss-2)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
 	}
 	void updateCorrhist(Stack *ss, Board &board, int bonus){
 		int &entry = pawnCorrhist[board.sideToMove()][ss->pawnKey % PAWN_CORR_HIST_ENTRIES];
@@ -148,6 +150,8 @@ struct ThreadInfo {
 		int hist = getHistory(board.sideToMove(), m);
 		if (ss != nullptr && (ss-1)->conthist != nullptr)
 			hist += getConthist((ss-1)->conthist, board, m);
+		if (ss != nullptr && (ss-2)->conthist != nullptr)
+			hist += getConthist((ss-2)->conthist, board, m);
 		return hist;
 	}
 	int correctStaticEval(Stack *ss, Board &board, int eval){
