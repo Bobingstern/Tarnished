@@ -33,7 +33,7 @@ constexpr int SE_DOUBLE_MARGIN = 20;
 // constexpr int HIST_CAPTURE_BASE_THRESHOLD = -500;
 // constexpr int HIST_CAPTURE_MULT_THRESHOLD = -1700;
 
-constexpr int LMR_MIN_DEPTH = 2;
+constexpr int LMR_MIN_DEPTH = 3;
 
 constexpr int HISTORY_QUADRATIC_BONUS = 20;
 

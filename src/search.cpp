@@ -30,9 +30,9 @@ namespace Search {
 	void fillLmr(){
 		// Stormphrax formula for reductions
 		for (int depth = 1; depth <= MAX_PLY + 1;depth++){
-			for (int movecount=1;movecount < 256 ;movecount++){
-				lmrTable[1][depth][movecount] = 0.83 + std::log(depth) * std::log(movecount) / 2.18;
-				lmrTable[0][depth][movecount] = -0.12 + std::log(depth) * std::log(movecount) / 2.48;
+			for (int movecount=1; movecount < 256 ;movecount++){
+				lmrTable[1][depth][movecount] = 2.01 + log(depth) * log(movecount) / 2.32;
+				lmrTable[0][depth][movecount] = 0.38 + log(depth) * log(movecount) / 3.76;
 			}
 		}
 		
@@ -331,7 +331,7 @@ namespace Search {
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH && !givesCheck && moveCount > 3){
+			if (depth >= LMR_MIN_DEPTH && moveCount > 2){
 				int reduction = lmrTable[!thread.board.isCapture(move)][depth][moveCount] + !isPV;
 
 				// Reduce less for improving nodes
