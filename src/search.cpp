@@ -331,7 +331,7 @@ namespace Search {
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH && moveCount > 2){
+			if (depth >= LMR_MIN_DEPTH && moveCount > 4){
 				int reduction = lmrTable[!thread.board.isCapture(move)][depth][moveCount] + !isPV;
 
 				// Reduce less for improving nodes
