@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cmath>
 #include "external/chess.hpp"
 #include "search.h"
 #include "parameters.h"
@@ -24,13 +25,12 @@ typedef int32_t Score;
 
 // Stockfish yoink
 // https://github.com/official-stockfish/Stockfish/blob/94e6c0498ff24d0a66fd0817fcbb88855a9b6116/src/uci.cpp#L502
-// Unused for now
 // struct WinRateParams {
 // 	double a;
 // 	double b;
 // };
 
-// WinRateParams winRateParams(Board& board) {
+// static WinRateParams winRateParams(Board& board) {
 
 // 	int material = board.pieces(PieceType::PAWN).count() + 3 * board.pieces(PieceType::KNIGHT).count() + 3 * board.pieces(PieceType::BISHOP).count()
 // 				+ 5 * board.pieces(PieceType::ROOK).count() + 9 * board.pieces(PieceType::QUEEN).count();
@@ -38,8 +38,8 @@ typedef int32_t Score;
 // 	double m = std::clamp(material, 17, 78) / 58.0;
 
 // 	// Return a = p_a(material) and b = p_b(material), see github.com/official-stockfish/WDL_model
-// 	constexpr double as[] = {-13.50030198, 40.92780883, -36.82753545, 386.83004070};
-// 	constexpr double bs[] = {96.53354896, -165.79058388, 90.89679019, 49.29561889};
+// 	constexpr double as[] = {-428.06186120, 717.61123329, -722.51039792, 1255.64109127};
+// 	constexpr double bs[] = {-233.08481501, 418.85027742, -16.86637040, 191.05205470};
 
 // 	double a = (((as[0] * m + as[1]) * m + as[2]) * m) + as[3];
 // 	double b = (((bs[0] * m + bs[1]) * m + bs[2]) * m) + bs[3];
@@ -47,7 +47,7 @@ typedef int32_t Score;
 // 	return {a, b};
 // }
 
-// int winRateModel(Value v, Board& board) {
+// static int winRateModel(int v, Board& board) {
 
 // 	auto [a, b] = winRateParams(board);
 
