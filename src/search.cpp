@@ -427,7 +427,7 @@ namespace Search {
 				// Reduce more if not a PV node
 				reduction += !isPV;
 				// Reduce less the better the node's history score
-				//reduction -= std::clamp(ss->historyScore / (isQuiet ? 6000 : 3000), -2, 2);
+				reduction -= std::clamp(ss->historyScore / (isQuiet ? 9000 : 6000), -2, 2);
 
 				score = -search<false>(newDepth-reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
