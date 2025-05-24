@@ -190,7 +190,10 @@ namespace Search {
 		int moveCount = 0;
 
 		Movelist moves;
-		movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, thread.board);
+		if (!inCheck)
+			movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, thread.board);
+		else
+			movegen::legalmoves(moves, thread.board);
 
 		// Move Scoring
 		for (auto &move : moves){
@@ -233,6 +236,8 @@ namespace Search {
 				break;
 			}
 		}
+		if (!moveCount && inCheck)
+			return -MATE + ply;
 		return bestScore;
 
 	}
@@ -426,8 +431,6 @@ namespace Search {
 
 				// Reduce more if not a PV node
 				reduction += !isPV;
-				// Reduce less the better the node's history score
-				//reduction -= std::clamp(ss->historyScore / (isQuiet ? 6000 : 3000), -2, 2);
 
 				score = -search<false>(newDepth-reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
@@ -481,15 +484,13 @@ namespace Search {
 						continue;
 					thread.updateCapthist(thread.board, noisyMove, malus);
 				}
-				
-				
-				
 				break;
 			}
 			
 		}
-		if (!moveCount)
+		if (!moveCount){
 			return inCheck ? -MATE + ply : 0;
+		}
 
 		if (moveIsNull(ss->excluded)){
 			// Update correction history
@@ -597,8 +598,9 @@ namespace Search {
 			if (score >= FOUND_MATE || score <= GETTING_MATED){
 				std::cout << "mate " << ((score < 0) ? "-" : "") << (MATE - std::abs(score)) / 2 + 1;
 			}
-			else
+			else{
 				std::cout << "cp " << score;
+			}
 
 			std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
 			//UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
