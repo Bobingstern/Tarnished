@@ -356,7 +356,7 @@ namespace Search {
 			}
 			pickMove(moves, m_);
 			Move move = moves[m_];
-			bool isQuiet = thread.board.at<PieceType>(move.to()) == PieceType::NONE;
+			bool isQuiet = !thread.board.isCapture(move);
 
 			if (move == ss->excluded)
 				continue;
@@ -422,7 +422,12 @@ namespace Search {
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
 			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && !thread.board.inCheck()){
-				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount] + !isPV;
+				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+
+				// Reduce more if not a PV node
+				reduction += !isPV;
+				// Reduce less the better the node's history score
+				//reduction -= std::clamp(ss->historyScore / (isQuiet ? 6000 : 3000), -2, 2);
 
 				score = -search<false>(newDepth-reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
@@ -455,8 +460,8 @@ namespace Search {
 				// Butterfly History
 				// Continuation History
 				// Capture History
-				int bonus = HISTORY_QUADRATIC_BONUS * depth * depth;
-				int malus = -bonus; // For now
+				int bonus = std::min(8 * depth * depth + 212 * depth - 150, 2048);
+				int malus = std::min(-(5 * depth * depth + 250 * depth + 66), 1024);
 				if (isQuiet){
 					thread.updateHistory(thread.board.sideToMove(), move, bonus);
 					thread.updateConthist(ss, thread.board, move, bonus);
@@ -469,14 +474,14 @@ namespace Search {
 				}
 				else {
 					thread.updateCapthist(thread.board, move, bonus);
-					// Move this out of else
-					// Test later
-					for (const Move noisyMove : seenCaptures){
-						if (noisyMove == move)
-							continue;
-						thread.updateCapthist(thread.board, noisyMove, malus);
-					}
 				}
+				// Move this out of else
+				for (const Move noisyMove : seenCaptures){
+					if (noisyMove == move)
+						continue;
+					thread.updateCapthist(thread.board, noisyMove, malus);
+				}
+				
 				
 				
 				break;
