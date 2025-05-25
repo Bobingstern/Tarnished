@@ -1,20 +1,22 @@
 
 
 
-
 <p align="center">
 </p>
 <h1 align="center">Tarnished</h1>
 
 UCI Chess Engine written in C++ featuring NNUE evaluation trained from scratch. The name is a reference to a certain video game protagonist
 
-## Estimated Strength
+As of right now, all tests and data generation have been conducted on my personal PCs with the use of [cutechess-cli](https://github.com/cutechess/cutechess/tree/master) but will eventually migrate to [OpenBench](https://github.com/AndyGrant/OpenBench)
 
-| Version | Release Date | [CCRL 40/15](https://www.computerchess.org.uk/ccrl/4040/cgi/compare_engines.cgi?class=None&only_best_in_class=on&num_best_in_class=1&e=Tarnished+1.0-Renown+64-bit&e=Tarnished+2.0-Ambition+64-bit&print=Rating+list&profile_step=50&profile_numbers=1&print=Results+table&print=LOS+table&table_size=100&ct_from_elo=0&ct_to_elo=10000&match_length=30&cross_tables_for_best_versions_only=1&sort_tables=by+rating&diag=0&reference_list=None&recalibrate=no) |
-| --- | --- | --- | --- |
-| 1.0 | 2025-05-10 | 2432 |
-| 2.0 | 2025-05-17 | 3152 |
-| 2.1 | 2025-05-24 | ~3300* |
+## Estimated Strength
+So far, Tarnished can defeat [stash-30](https://github.com/mhouppin/stash-bot) at `40+0.4` which is estimated ~3160 on CCRL. This is not definitive and will be updated when Tarnished gets an official CCRL estimate. Tests were run on an `Intel(R) Core(TM) i7-10700F`. Here are the results after around 750 games
+```
+Engine     | tarnished vs stash-30.0
+TC         | 40+0.04
+Elo        | 37.9 +/- 19.8
+Games      | N: 746 W: 274 L: 193 D: 279 [0.554]
+```
 
 ## Building
 It seems like the `Makefile` is slightly faster than using `CMake` but you may use whichever one you wish. Make sure to have an NNUE file under `network/latest.bin` if you plan on building the project. Tarnished makes use of [incbin](https://github.com/graphitemaster/incbin) to embed the file into the executable itself, removing the need to carry an external network along with it. To build with `make` you may 
@@ -53,22 +55,16 @@ Alternatively, with `CMake`
         - Butterfly History Heuristic
         - 1 ply Continuation History
         - Capture History
-        - SEE Move Ordering
     - Selectivity
         - Reverse Futility Pruning
         - Null Move Pruning
         - Improving Heuristic
         - Late Move Reductions
         - Late Move Pruning
-        - SEE Pruning (qsearch)
-        - Singular Extensions
-            - Double Extensions
-            - Negative Extensions
+        - QS SEE Pruning
         - Terminal Conditions (Mate, Stalemate, 3fold...)
         - Internal Iterative Reductions
  - Misc
-     - Static Evaluation Correction History (Pawn hash indexed)
-     - Soft time management
      - Lazy SMP (functional but not tested thoroughly)
 
 ## Non-standard UCI Commands
@@ -89,10 +85,9 @@ Alternatively, with `CMake`
 
 ## Credits
 - Stockfish Discord Server
-- [MattBench](https://chess.n9x.co/index/) (Thanks Matt for letting me join)
 - [Weiss](https://github.com/TerjeKir/Weiss)
 - [Stash](https://github.com/mhouppin/stash-bot)
-- [Sirius](https://github.com/mcthouacbb/Sirius) (Rand for pointing out many silly mistakes)
-- [Stormphrax](https://github.com/Ciekce/Stormphrax) (Ciekce for helping out with programming details and NNUE things)
-- [Prelude](https://git.nocturn9x.space/Quinniboi10/Prelude)
+- [Sirius](https://github.com/mcthouacbb/Sirius) 
+- [Stormphrax](https://github.com/Ciekce/Stormphrax) (Ciekce is the goat)
+- [Prelude](https://git.nocturn9x.space/Quinniboi10/Prelude) (Especially for base NNUE code)
 - [Bullet](https://github.com/jw1912/bullet)

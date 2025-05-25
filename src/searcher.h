@@ -17,9 +17,6 @@ struct Searcher {
 	std::vector<Search::ThreadInfo> workerInfo;
 	std::vector<std::thread> workers;
 
-	bool showWDL;
-	
-
 	void start(Board &board, Search::Limit limit);
 	void stop();
 
@@ -42,9 +39,5 @@ struct Searcher {
 			nodes += t.nodes;
 		}
 		return nodes + mainInfo->nodes;
-	}
-
-	void toggleWDL(bool x){
-		showWDL = x;
 	}
 };
