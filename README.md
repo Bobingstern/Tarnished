@@ -11,7 +11,7 @@ UCI Chess Engine written in C++ featuring NNUE evaluation trained from scratch. 
 ## Estimated Strength
 
 | Version | Release Date | [CCRL 40/15](https://www.computerchess.org.uk/ccrl/4040/cgi/compare_engines.cgi?class=None&only_best_in_class=on&num_best_in_class=1&e=Tarnished+1.0-Renown+64-bit&e=Tarnished+2.0-Ambition+64-bit&print=Rating+list&profile_step=50&profile_numbers=1&print=Results+table&print=LOS+table&table_size=100&ct_from_elo=0&ct_to_elo=10000&match_length=30&cross_tables_for_best_versions_only=1&sort_tables=by+rating&diag=0&reference_list=None&recalibrate=no) |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | 1.0 | 2025-05-10 | 2432 |
 | 2.0 | 2025-05-17 | 3152 |
 | 2.1 | 2025-05-24 | ~3300* |
@@ -79,6 +79,9 @@ Alternatively, with `CMake`
     - Prints the current position's static evaluation for the side to move
 - `go softnodes <nodes>`
     - Start search with a soft node limit (only checked once per iteration of deepening)
+- `setoption name UCI_ShowWDL value <bool>`
+    - This will display the WDL values computed from the eval. Default is false.
+    - **NOTE:** The centipawn scores are RAW network values and not yet normalized, thus WDL makes use of Stockfish's normalization values. This will be updated soon.
 - `bench`
     - Runs an OpenBench style benchmark on 50 positions. Alternatively run `./tarnished bench`
  - `datagen name Threads value <threads>`
