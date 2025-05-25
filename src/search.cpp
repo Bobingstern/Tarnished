@@ -10,8 +10,9 @@
 
 using namespace chess;
 
-// Searcher stuff
 // Accumulator wrappers
+// Update the accumulators incrementally and track the
+// pawn zobrist key for correction history (stored in the search stack)
 void MakeMove(Board &board, Accumulator &acc, Move &move, Search::Stack *ss){
 	PieceType to = board.at<PieceType>(move.to());
 	PieceType from = board.at<PieceType>(move.from());
@@ -104,8 +105,7 @@ namespace Search {
 		// Weiss formula for reductions is
 		// Captures/Promo: 0.2 + log(depth) * log(movecount) / 3.35
 		// Quiets: 		   1.35 + log(depth) * log(movecount) / 2.75
-		// https://git.nocturn9x.space/Quinniboi10/Prelude/src/commit/a35e41b51043fc2b68a72854f3db9638354f56d7/src/search.cpp#L13
-		// ~77 elo or smth
+		// https://www.chessprogramming.org/Late_Move_Reductions
 		for (int isQuiet = 0;isQuiet<=1;isQuiet++){
 			for (size_t depth=0;depth <= MAX_PLY;depth++){
 				for (int movecount=0;movecount<=218;movecount++){
@@ -127,13 +127,17 @@ namespace Search {
 		// MVV-LVA
 		// TT Move
 		// Killer Move Heuristic
-		// Butterfly History Heuristic
+		// Butterfly History
+		// Continuation History
+		// Capture History
+		// SEE Ordering
 
 		PieceType to = thread.board.at<PieceType>(move.to());
 		if (move == ttMove){
 			return 1000000;
 		}
 		else if (to != PieceType::NONE) {
+			// MVV-Capthist-SEE
 			int hist = thread.getCapthist(thread.board, move);
 			int score = hist + MVV_VALUES[to];
 			return 500000 + score - 800000 * !SEE(thread.board, move, -PawnValue);
@@ -143,7 +147,7 @@ namespace Search {
 		}
 		else {
 			// Quiet non killers
-			// main history + continuation history ~10 1ply
+			// main history + continuation history
 			return thread.getQuietHistory(thread.board, move, ss);
 		}
 		return -1000000;
@@ -160,19 +164,19 @@ namespace Search {
 	}	
 	template<bool isPV>
 	int qsearch(int ply, int alpha, const int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
-		//bool isPV = alpha != beta - 1;
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
 		bool ttHit = ttEntry->zobrist == thread.board.hash();
 		if (!isPV && ttHit
 			&& (ttEntry->flag == TTFlag::EXACT 
 				|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= beta)
 				|| (ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= alpha))){
-			//thread.ttHits ++;
 			return ttEntry->score;
 		}
 
 		bool inCheck = thread.board.inCheck();
 		int rawStaticEval, eval;
+
+		// Get the corrected static eval if not in check
 		if (inCheck){
 			rawStaticEval = -INFINITE;
 			eval = -INFINITE + ply;
@@ -190,6 +194,8 @@ namespace Search {
 		int moveCount = 0;
 
 		Movelist moves;
+
+		// If we're in check, check all evasions
 		if (!inCheck)
 			movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, thread.board);
 		else
@@ -228,8 +234,6 @@ namespace Search {
 				bestScore = score;
 				if (score > alpha){
 					alpha = score;
-					// if (isPV)
-					// 	ss->pv.update(move, (ss+1)->pv);
 				}
 			}
 			if (score >= beta){
@@ -279,6 +283,7 @@ namespace Search {
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
 
+		// Get the corrected static evaluation if we're not in singular search or check
 		if (moveIsNull(ss->excluded)){
 			if (inCheck)
 				ss->staticEval = rawStaticEval = -INFINITE;
@@ -327,14 +332,11 @@ namespace Search {
 			if (canIIR)
 				depth -= 1;
 		}
-
 		
 		// Thought
 		// What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
 		// and use some sort of data generation method to create a pruning heuristic
 		// with something like sigmoid(C dot I) >= 0.75 ?
-
-		
 
 
 		Move bestMove = Move::NO_MOVE;
@@ -380,6 +382,7 @@ namespace Search {
 					break;
 
 				// History Pruning
+				// Failed, will test again later
 				// https://github.com/aronpetko/integral/blob/733036df88408d0d6338d05f7991f46f0527ed4f/src/engine/search/search.cc#L945
 				// https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L614
 				// if (isQuiet && depth <= HIST_PRUNING_DEPTH && ss->historyScore <= HIST_PRUNING_MARGIN * depth){
@@ -415,7 +418,7 @@ namespace Search {
 						extension = 1; // Singular Extension
 				}
 				else if (ttEntry->score >= beta)
-					extension = -2 + isPV;
+					extension = -2 + isPV; // Negative Extension
 
 			}					
 
@@ -478,7 +481,7 @@ namespace Search {
 				else {
 					thread.updateCapthist(thread.board, move, bonus);
 				}
-				// Move this out of else
+				// Always malus captures
 				for (const Move noisyMove : seenCaptures){
 					if (noisyMove == move)
 						continue;
@@ -511,12 +514,10 @@ namespace Search {
 	}
 
 	int iterativeDeepening(Board &board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher){
-		//limit.start();
 		threadInfo.abort.store(false);
 		threadInfo.board = board;
 		threadInfo.accumulator.refresh(threadInfo.board);
 
-		// TODO set nodes and stuff too
 		bool isMain = threadInfo.type == ThreadType::MAIN;
 
 		auto stack = std::make_unique<std::array<Stack, MAX_PLY+3>>();
@@ -541,7 +542,7 @@ namespace Search {
 			};
 			threadInfo.rootDepth = depth;
 			(ss-1)->pawnKey = resetPawnHash(threadInfo.board);
-			// Aspiration Windows (WIP)
+			// Aspiration Windows (WIP untuned)
 			if (depth >= MIN_ASP_WINDOW_DEPTH){
 				int delta = INITIAL_ASP_WINDOW;
 				int alpha  = std::max(lastScore - delta, -INFINITE);
@@ -568,8 +569,6 @@ namespace Search {
 			else
 				score = search<true>(depth, 0, -INFINITE, INFINITE, ss, threadInfo, limit);
 			// ---------------------
-			//std::cout << "Depth " << depth << " Nodes " << threadInfo.nodes << " Hard " << limit.outOfNodes(threadInfo.nodes) << " soft " << limit.softNodes(threadInfo.nodes) << std::endl;
-			//std::cout << threadInfo.board.getFen() << std::endl;
 			if (depth != 1 && aborted()){
 				break;
 			}
@@ -581,7 +580,6 @@ namespace Search {
 			if (oldnodecnt != 0){
 				branchsum += (double)threadInfo.nodes / oldnodecnt;
 				avgbranchfac = branchsum / (depth-1);
-				//std::cout << "Branching factor: " << (double)nodecnt / (double)oldnodecnt << " Average: " << avgbranch / (depth-1) << std::endl;
 			}
 			avgnps = threadInfo.nodes / (limit.timer.elapsed()+1);
 			oldnodecnt = threadInfo.nodes;
@@ -592,21 +590,27 @@ namespace Search {
 			// Reporting
 			uint64_t nodecnt = (*searcher).nodeCount();
 			
-			// MakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
-			// moveEval = network.inference(&threadInfo.board, &threadInfo.accumulator);
+			std::stringstream pvss; // String stream for the mainline
+			Board pvBoard = threadInfo.board; // Test board for WDL and eval normalization since we need the final board state of the mainline
+			for (int i=0;i<lastPV.length;i++){
+				pvss << uci::moveToUci(lastPV.moves[i]) << " ";
+				pvBoard.makeMove(lastPV.moves[i]);
+			}
+
 			std::cout << "info depth " << depth << " score ";
 			if (score >= FOUND_MATE || score <= GETTING_MATED){
 				std::cout << "mate " << ((score < 0) ? "-" : "") << (MATE - std::abs(score)) / 2 + 1;
 			}
-			else{
+			else {
 				std::cout << "cp " << score;
+				if (searcher->showWDL){
+					WDL wdl = computeWDL(score, pvBoard);
+					std::cout << " wdl " << wdl.w << " " << wdl.d << " " << wdl.l;
+				}
 			}
 
 			std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
-			//UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
-			for (int i=0;i<lastPV.length;i++)
-				std::cout << uci::moveToUci(lastPV.moves[i]) << " ";
-			std::cout << std::endl;
+			std::cout << pvss.str() << std::endl;
 
 			if (limit.outOfTimeSoft())
 				break;
@@ -619,10 +623,6 @@ namespace Search {
 		threadInfo.abort.store(true, std::memory_order_relaxed);
 
 		threadInfo.bestMove = lastPV.moves[0];
-		//std::cout << "PRE EVAL ITER DEEP " << threadInfo.bestMove << std::endl;
-		// MakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
-		// moveEval = network.inference(&threadInfo.board, &threadInfo.accumulator);
-		// UnmakeMove(threadInfo.board, threadInfo.accumulator, lastPV.moves[0]);
 		return lastScore;
 	}
 
