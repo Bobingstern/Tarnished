@@ -42,6 +42,8 @@ INCBIN(EVAL, EVALFILE);
 NNUE network;
 
 // Thanks Weiss
+// I will eventaully C++ify the UCI code
+// For now it's a weird mix of C and C++ xd
 void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
 
     // Read in relevant search constraints
@@ -125,12 +127,17 @@ void UCISetOption(Searcher &searcher, char *str) {
     } else if (OptionName(str, "Threads")) {
         searcher.initialize(atoi(OptionValue(str)));
     }
+    else if (OptionName(str, "UCI_ShowWDL")) {
+        std::string opt = OptionValue(str);
+        searcher.toggleWDL(opt == "true");
+    }
 }
 void UCIInfo(){
-    std::cout << "id name Tarnished v2.0 (Ambition)\n";
+    std::cout << "id name Tarnished v2.1 (Ambition)\n";
     std::cout << "id author Anik Patel\n";
     std::cout << "option name Hash type spin default 16 min 2 max 65536\n";
     std::cout << "option name Threads type spin default 1 min 1 max 256\n";
+    std::cout << "option name UCI_ShowWDL type check default false\n";
     std::cout << "uciok" << std::endl; 
 }
 
@@ -176,6 +183,7 @@ int main(int agrc, char *argv[]){
 
     Search::fillLmr();
     Searcher searcher = Searcher();
+    searcher.toggleWDL(false); // Default display wdl
     searcher.initialize(1); // Default one thread
     searcher.reset();
 
