@@ -36,6 +36,7 @@ build
 cmake-build-*
 data
 WDL_model
+weather-factory
 
 # Other stuff
 *.epd

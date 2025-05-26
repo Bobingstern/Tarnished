@@ -114,10 +114,10 @@ namespace Search {
 						continue;
 					}
 					if (isQuiet){
-						lmrTable[isQuiet][depth][movecount] = 1.35 + std::log(depth) * std::log(movecount) / 2.75;
+						lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_QUIET() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_QUIET() / 100.0));
 					}
 					else {
-						lmrTable[isQuiet][depth][movecount] = 0.2 + std::log(depth) * std::log(movecount) / 3.35;
+						lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_NOISY() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_NOISY() / 100.0));
 					}
 				}
 			}
@@ -275,7 +275,7 @@ namespace Search {
 		// http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
     	// https://github.com/jhonnold/berserk/blob/dd1678c278412898561d40a31a7bd08d49565636/src/search.c#L379
     	// https://github.com/PGG106/Alexandria/blob/debbf941889b28400f9a2d4b34515691c64dfae6/src/search.cpp#L636
-		bool canIIR = hashMove && depth >= IIR_MIN_DEPTH;
+		bool canIIR = hashMove && depth >= IIR_MIN_DEPTH();
 
 		int bestScore = -INFINITE;
 		int rawStaticEval = GETTING_MATED;
@@ -303,14 +303,14 @@ namespace Search {
 		
 		if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)){
 			// Reverse Futility Pruning
-			if (ss->staticEval - RFP_MARGIN * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH)
+			if (ss->staticEval - RFP_MARGIN() * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH())
 				return ss->staticEval;
 
 			// Null Move Pruning
 			Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^ thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
 			if (depth >= 2 && ss->staticEval >= beta && ply > thread.minNmpPly && !nonPawns.empty()){
 				// Sirius formula
-				const int reduction = NMP_BASE_REDUCTION + depth / NMP_REDUCTION_SCALE + std::min(2, (ss->staticEval-beta)/NMP_EVAL_SCALE);
+				const int reduction = NMP_BASE_REDUCTION() + depth / NMP_REDUCTION_SCALE() + std::min(2, (ss->staticEval-beta)/NMP_EVAL_SCALE());
 				thread.board.makeNullMove();
 				int nmpScore = -search<false>(depth-reduction, ply+1, -beta, -beta + 1, ss+1, thread, limit);
 				thread.board.unmakeNullMove();
@@ -322,7 +322,7 @@ namespace Search {
 					if (depth <= 15 || thread.minNmpPly > 0)
 						return isWin(nmpScore) ? beta : nmpScore;
 					thread.minNmpPly = ply + (depth - reduction) * 3 / 4;
-					int verification = search<false>(depth-NMP_BASE_REDUCTION, ply+1, beta-1, beta, ss, thread, limit);
+					int verification = search<false>(depth-NMP_BASE_REDUCTION(), ply+1, beta-1, beta, ss, thread, limit);
 					thread.minNmpPly = 0;
 					if (verification >= beta)
 						return verification;
@@ -378,7 +378,7 @@ namespace Search {
 
 			if (!root && bestScore > GETTING_MATED){
 				// Late Move Pruning
-				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE + depth * depth / (2 - improving))
+				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + LMP_DEPTH_SCALE() * depth * depth / (2 - improving))
 					break;
 
 				// History Pruning
@@ -398,13 +398,13 @@ namespace Search {
 			// Sirius conditions
 			// https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
 			bool doSE = !root && moveIsNull(ss->excluded) &&
-						depth >= SE_MIN_DEPTH && ttEntry->move == move && ttEntry->depth >= depth - 3
+						depth >= SE_MIN_DEPTH() && ttEntry->move == move && ttEntry->depth >= depth - 3
 						&& ttEntry->flag != TTFlag::FAIL_LOW && !isMateScore(ttEntry->score);	
 			
 			int extension = 0;
 
 			if (doSE) {
-				int sBeta = std::max(-MATE, ttEntry->score - SE_BETA_SCALE * depth / 16);
+				int sBeta = std::max(-MATE, ttEntry->score - SE_BETA_SCALE() * depth / 16);
 				int sDepth = (depth - 1) / 2;
 				// How good are we without this move
 				ss->excluded = ttEntry->move;
@@ -412,7 +412,7 @@ namespace Search {
 				ss->excluded = Move::NO_MOVE;
 
 				if (seScore < sBeta) {
-					if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN)
+					if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN())
 						extension = 2; // Double extension
 					else
 						extension = 1; // Singular Extension
@@ -429,7 +429,7 @@ namespace Search {
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH && moveCount > 5 && !thread.board.inCheck()){
+			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT() && !thread.board.inCheck()){
 				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
 
 				// Reduce more if not a PV node
@@ -466,8 +466,8 @@ namespace Search {
 				// Butterfly History
 				// Continuation History
 				// Capture History
-				int bonus = std::min(8 * depth * depth + 212 * depth - 150, 2048);
-				int malus = std::min(-(5 * depth * depth + 250 * depth + 66), 1024);
+				int bonus = std::min(HIST_BONUS_QUADRATIC() * depth * depth + HIST_BONUS_LINEAR() * depth - HIST_BONUS_OFFSET(), 2048);
+				int malus = std::min(-(HIST_MALUS_QUADRATIC() * depth * depth + HIST_MALUS_LINEAR() * depth + HIST_MALUS_OFFSET()), 1024);
 				if (isQuiet){
 					thread.updateHistory(thread.board.sideToMove(), move, bonus);
 					thread.updateConthist(ss, thread.board, move, bonus);
@@ -502,7 +502,7 @@ namespace Search {
 				&& (ttFlag == TTFlag::EXACT 
 					|| ttFlag == TTFlag::BETA_CUT && bestScore > ss->staticEval 
 					|| ttFlag == TTFlag::FAIL_LOW && bestScore < ss->staticEval)) {
-				int bonus = (bestScore - ss->staticEval) * depth / 8;
+				int bonus = static_cast<int>((CORRHIST_BONUS_WEIGHT() / 100.0) * (bestScore - ss->staticEval) * depth / 8);
 				thread.updateCorrhist(ss, thread.board, bonus);
 			}
 
@@ -543,8 +543,8 @@ namespace Search {
 			threadInfo.rootDepth = depth;
 			(ss-1)->pawnKey = resetPawnHash(threadInfo.board);
 			// Aspiration Windows (WIP untuned)
-			if (depth >= MIN_ASP_WINDOW_DEPTH){
-				int delta = INITIAL_ASP_WINDOW;
+			if (depth >= MIN_ASP_WINDOW_DEPTH()){
+				int delta = INITIAL_ASP_WINDOW();
 				int alpha  = std::max(lastScore - delta, -INFINITE);
 				int beta = std::min(lastScore + delta, INFINITE);
 				int aspDepth = depth;
@@ -563,7 +563,7 @@ namespace Search {
 						else
 							break;
 					}
-					delta += delta * ASP_WIDENING_FACTOR / 16;
+					delta += delta * ASP_WIDENING_FACTOR() / 16;
 				}
 			}
 			else

@@ -161,7 +161,7 @@ struct ThreadInfo {
 		int pawnEntry = pawnCorrhist[board.sideToMove()][ss->pawnKey % PAWN_CORR_HIST_ENTRIES];
 
 		int correction = 0;
-		correction += PAWN_CORR_WEIGHT * pawnEntry;
+		correction += PAWN_CORR_WEIGHT() * pawnEntry;
 
 		int corrected = eval + correction / 2048;
 		return std::clamp(corrected, -INFINITE + 1, INFINITE - 1);

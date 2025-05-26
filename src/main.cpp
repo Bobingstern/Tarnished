@@ -12,6 +12,7 @@
 #include "timeman.h"
 #include "datagen.h"
 #include "util.h"
+#include "parameters.h"
 
 using namespace chess;
 using namespace std::chrono;
@@ -55,9 +56,9 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     int64_t inc = 0;
 
     SetLimit(str, "movetime",  &mtime); 
-    SetLimit(str, "depth",     &depth);
-    SetLimit(str, "nodes",     &nodes);
-    SetLimit(str, "softnodes",     &softnodes);
+    SetLimit(str, "depth",   &depth);
+    SetLimit(str, "nodes",   &nodes);
+    SetLimit(str, "softnodes",   &softnodes);
 
     if (mtime == 0 && depth == 0){
         SetLimit(str, color == Color::WHITE ? "wtime" : "btime", &ctime);
@@ -131,6 +132,17 @@ void UCISetOption(Searcher &searcher, char *str) {
         std::string opt = OptionValue(str);
         searcher.toggleWDL(opt == "true");
     }
+    // Tunables
+    // For now only supports integers
+    else {
+        Search::fillLmr();
+        for (auto &param : tunables()) {
+            const char *p = param.name.c_str();
+            if (OptionName(str, p)) {
+                param.value = atoi(OptionValue(str));
+            }
+        }
+    }
 }
 void UCIInfo(){
     std::cout << "id name Tarnished v2.1 (Ambition)\n";
@@ -138,6 +150,11 @@ void UCIInfo(){
     std::cout << "option name Hash type spin default 16 min 2 max 65536\n";
     std::cout << "option name Threads type spin default 1 min 1 max 256\n";
     std::cout << "option name UCI_ShowWDL type check default false\n";
+    #ifdef TUNE
+    for (auto &param : tunables()) {
+        std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min << " max " << param.max << std::endl;
+    }
+    #endif
     std::cout << "uciok" << std::endl; 
 }
 
@@ -187,6 +204,10 @@ int main(int agrc, char *argv[]){
     searcher.initialize(1); // Default one thread
     searcher.reset();
 
+#ifdef TUNE
+    printWeatherFactoryConfig();
+#endif
+
     if (agrc > 1){
         std::string arg = argv[1];
         if (arg == "bench")
@@ -196,19 +217,19 @@ int main(int agrc, char *argv[]){
     char str[INPUT_SIZE];
     while (GetInput(str)) {
         switch (HashInput(str)) {
-            case GO         : UCIGo(searcher, board, str);                break;
+            case GO   : UCIGo(searcher, board, str);        break;
             case UCI        : UCIInfo();                                  break;
-            case ISREADY    : std::cout << "readyok" << std::endl;        break;
-            case POSITION   : UCIPosition(board, str);                    break;
-            case SETOPTION  : UCISetOption(searcher, str);                break;
-            case UCINEWGAME : searcher.reset();                           break;
-            case STOP       : searcher.stop();                            break;
-            case QUIT       : searcher.stop();                            return 0;
+            case ISREADY    : std::cout << "readyok" << std::endl;    break;
+            case POSITION   : UCIPosition(board, str);          break;
+            case SETOPTION  : UCISetOption(searcher, str);        break;
+            case UCINEWGAME : searcher.reset();         break;
+            case STOP      : searcher.stop();              break;
+            case QUIT      : searcher.stop();              return 0;
 
             // Non Standard
-            case PRINT      : std::cout << board << std::endl;            break;
-            case EVAL       : UCIEvaluate(board);                         break;
-            case BENCH      : Search::bench();                            break;
+            case PRINT    : std::cout << board << std::endl;      break;
+            case EVAL      : UCIEvaluate(board);                   break;
+            case BENCH    : Search::bench();              break;
             case DATAGEN    : BeginDatagen(str);                          break;
 
         }
