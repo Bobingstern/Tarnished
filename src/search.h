@@ -235,7 +235,7 @@ struct Limit {
 };
 //int search(Board &board, int depth, int ply, int alpha, int beta, Stack *ss, ThreadInfo &thread);
 //int iterativeDeepening(Board board, ThreadInfo &threadInfo, Searcher *searcher);
-int iterativeDeepening(Board &board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher);
+int iterativeDeepening(Board board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher);
 
 void bench();
 } 

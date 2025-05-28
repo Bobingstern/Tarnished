@@ -13,18 +13,18 @@ enum TTFlag {
 
 struct TTEntry {
 	uint64_t zobrist;
-	chess::Move move;
 	int score;
+	uint16_t move;
 	uint8_t flag;
 	uint8_t depth;
 	TTEntry(){
 		this->zobrist = 0;
-		this->move = chess::Move();
+		this->move = 0;
 		this->score = 0;
 		this->flag = 0;
 		this->depth = 0;
 	}
-	TTEntry(uint64_t key, chess::Move best, int score, uint8_t flag, uint8_t depth){
+	TTEntry(uint64_t key, uint16_t best, int score, uint8_t flag, uint8_t depth){
 		this->zobrist = key;
 		this->move = best;
 		this->score = score;

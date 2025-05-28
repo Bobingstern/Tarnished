@@ -37,6 +37,7 @@ cmake-build-*
 data
 WDL_model
 weather-factory
+pytorch 
 
 # Other stuff
 *.epd

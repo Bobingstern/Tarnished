@@ -11,7 +11,7 @@
 #define MAX_PLY 125
 #define BENCH_DEPTH 12
 
-#define TUNE
+//#define TUNE
 
 // Struct for tunable parameters
 struct TunableParam
@@ -28,13 +28,10 @@ std::list<TunableParam>& tunables();
 TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
 void printWeatherFactoryConfig();
 
-#ifdef TUNE
 #define TUNABLE_PARAM(name, val, min, max, step) \
     inline TunableParam& name##Param = addTunableParam(#name, val, min, max, step); \
     inline int name() { return name##Param.value; }
-#else
-    #define SEARCH_PARAM(name, val, min, max, step) constexpr int name = val;
-#endif
+
 
 // NNUE Parameters
 constexpr int16_t HL_N = 512;
