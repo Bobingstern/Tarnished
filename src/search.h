@@ -214,7 +214,8 @@ struct Limit {
 			// this was like ~34 lol
 			movetime = ctime / (inc <= 0 ? 30 : 20) + inc / 2;
 			softtime = movetime * 0.63;
-			movetime -= 15;
+			if (movetime > 75)
+				movetime -= 15;
 		}
 		timer.start();
 	}
