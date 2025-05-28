@@ -721,9 +721,11 @@ namespace Search {
 void Searcher::start(Board &board, Search::Limit limit){
 	mainInfo->nodes = 0;
 	mainThread = std::thread(Search::iterativeDeepening, std::ref(board), std::ref(*mainInfo), limit, this);
-	for (int i=0;i<workerInfo.size();i++){	
-		workerInfo[i].nodes = 0;
-		workers.emplace_back(Search::iterativeDeepening, std::ref(board), std::ref(workerInfo[i]), limit, nullptr);
+	for (auto& info : workerInfo) {
+		info.nodes = 0;
+		pool->enqueue([&, &info = info] {
+			Search::iterativeDeepening(board, info, limit, nullptr);
+		});
 	}
 }
 
@@ -731,20 +733,17 @@ void Searcher::stop(){
 	abort.store(true, std::memory_order_relaxed);
 	if (mainThread.joinable())
 		mainThread.join();
-
-	if (workers.size() > 0)
-		for (std::thread &t : workers){
-			if (t.joinable())
-				t.join();
-		}
-	workers.clear();
 }
 
 void Searcher::initialize(int threads){
-	threads-=1;
 	stop();
+	if (pool)
+		pool->stop();
+	abort.store(false);
+	threads -= 1;
 	workerInfo.clear();
 	for (int i=0;i<threads;i++){
 		workerInfo.emplace_back(ThreadType::SECONDARY, TT, abort);
 	}
+	pool = std::make_unique<ThreadPool>(threads);
 }

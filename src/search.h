@@ -95,6 +95,7 @@ struct ThreadInfo {
 		conthist = other.conthist;
 		capthist = other.capthist;
 		pawnCorrhist = other.pawnCorrhist;
+		accumulator = other.accumulator;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}
 	// --------------- History updaters ---------------------

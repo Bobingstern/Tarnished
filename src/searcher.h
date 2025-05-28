@@ -3,6 +3,7 @@
 #include "external/chess.hpp"
 #include "tt.h"
 #include "search.h"
+#include "threadpool.h"
 #include <atomic>
 #include <vector>
 #include <thread>
@@ -15,7 +16,7 @@ struct Searcher {
 	std::thread mainThread;
 
 	std::vector<Search::ThreadInfo> workerInfo;
-	std::vector<std::thread> workers;
+	std::unique_ptr<ThreadPool> pool;
 
 	bool showWDL;
 	
