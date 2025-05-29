@@ -533,7 +533,7 @@ namespace Search {
 		int oldnodecnt = 0;
 		double branchsum = 0;
 		double avgbranchfac = 0;
-		int smpDepth = isMain ? 0 : thread.threadId % 2;
+		int smpDepth = isMain ? 0 : threadInfo.threadId % 2;
 		int64_t avgnps = 0;
 		for (int depth = 1 + smpDepth;depth<=limit.depth;depth++){
 			auto aborted = [&]() {
