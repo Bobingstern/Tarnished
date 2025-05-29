@@ -164,6 +164,13 @@ namespace Search {
 	}	
 	template<bool isPV>
 	int qsearch(int ply, int alpha, const int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
+
+		if (thread.type == ThreadType::MAIN && (limit.outOfTime() || limit.outOfNodes(thread.nodes))){
+			thread.searcher->stopSearching();
+		}
+		if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1)
+			return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, thread.accumulator) : 0;
+
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
 		bool ttHit = ttEntry->zobrist == thread.board.hash();
 		if (!isPV && ttHit
@@ -208,12 +215,6 @@ namespace Search {
 			move.setScore(scoreMove(move, ttEntry->move, ss, thread));
 		}
 		for (int m_ = 0;m_<moves.size();m_++){
-			if (thread.type == ThreadType::MAIN && (limit.outOfTime() || limit.outOfNodes(thread.nodes)) && thread.rootDepth != 1 ){
-				thread.searcher->stopSearching();
-			}
-			if (thread.stopped || thread.exiting)
-				return bestScore;
-			
 			// Move ordering
 			pickMove(moves, m_);
 			Move move = moves[m_];
@@ -258,7 +259,14 @@ namespace Search {
 		if (!root){
 			if (thread.board.isRepetition(1) || thread.board.isHalfMoveDraw())
 				return 0;
+
+			if (thread.type == ThreadType::MAIN && (limit.outOfTime() || limit.outOfNodes(thread.nodes)) && thread.rootDepth != 1 ){
+				thread.searcher->stopSearching();
+			}
+			if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1)
+				return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, thread.accumulator) : 0;
 		}
+
 
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
@@ -354,12 +362,7 @@ namespace Search {
 		// Other vars
 		bool skipQuiets = false;
 		for (int m_ = 0;m_<moves.size();m_++){
-			if (thread.type == ThreadType::MAIN && (limit.outOfTime() || limit.outOfNodes(thread.nodes)) && thread.rootDepth != 1 ){
-				thread.searcher->stopSearching();
-			}
-			if (thread.stopped || thread.exiting)
-				return bestScore;
-			
+
 			pickMove(moves, m_);
 			Move move = moves[m_];
 			bool isQuiet = !thread.board.isCapture(move);
@@ -530,12 +533,12 @@ namespace Search {
 		int oldnodecnt = 0;
 		double branchsum = 0;
 		double avgbranchfac = 0;
+		int smpDepth = isMain ? 0 : thread.threadId % 2;
 		int64_t avgnps = 0;
-		for (int depth=1;depth<=limit.depth;depth++){
+		for (int depth = 1 + smpDepth;depth<=limit.depth;depth++){
 			auto aborted = [&]() {
 				if (threadInfo.stopped)
 					return true;
-				
 				if (isMain)
 					return limit.outOfTime() || limit.outOfNodes(threadInfo.nodes) || limit.softNodes(threadInfo.nodes);
 				else

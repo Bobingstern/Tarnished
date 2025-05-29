@@ -27,9 +27,9 @@ struct Searcher {
 			return;
 		this->exit();
 		threads.clear();
-		threads.push_back(std::make_unique<Search::ThreadInfo>(ThreadType::MAIN, TT, this));
-        for (size_t i = 0; i < num - 1; i++) {
-            threads.push_back(std::make_unique<Search::ThreadInfo>(ThreadType::SECONDARY, TT, this));
+		threads.push_back(std::make_unique<Search::ThreadInfo>(0, TT, this));
+        for (size_t i = 1; i < num; i++) {
+            threads.push_back(std::make_unique<Search::ThreadInfo>(i, TT, this));
         }
 	}
 

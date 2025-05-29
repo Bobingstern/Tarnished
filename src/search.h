@@ -151,6 +151,7 @@ struct ThreadInfo {
 	MultiArray<int, 2, PAWN_CORR_HIST_ENTRIES> pawnCorrhist;
 	
 	ThreadInfo(ThreadType t, TTable &tt, Searcher *s);
+	ThreadInfo(int id, TTable &tt, Searcher *s);
 	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), history(other.history), 
 											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth) {
 		this->board = other.board;
