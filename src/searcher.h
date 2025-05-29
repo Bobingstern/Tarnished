@@ -70,12 +70,12 @@ struct Searcher {
 	}
 	void resizeTT(uint64_t size){
 		TT.resize(size);
-		TT.clear();
+		TT.clear(threads.size());
 	}
 	void reset(){
 		for (auto &thread : threads)
 			thread.get()->reset();
-		TT.clear();
+		TT.clear(threads.size());
 	}
 
 	uint64_t nodeCount(){
