@@ -282,6 +282,7 @@ int main(int agrc, char *argv[]){
         std::string arg = argv[1];
         if (arg == "bench")
             bench(searcher);
+        searcher.exit();
         return 0;
     }
     char str[INPUT_SIZE];
