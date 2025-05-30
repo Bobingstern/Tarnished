@@ -357,13 +357,19 @@ namespace Search {
 		for (auto &move : moves){
 			move.setScore(scoreMove(move, ttEntry->move, ss, thread));
 		}
-		if (root)
+		if (root) {
 			bestMove = moves[0]; // Guaruntee some random move
+			if (thread.type == ThreadType::SECONDARY) {
+				std::iter_swap(moves.begin(), moves.begin() + thread.threadId);
+			}
+		}
+
 		// Other vars
 		bool skipQuiets = false;
 		for (int m_ = 0;m_<moves.size();m_++){
 
-			pickMove(moves, m_);
+			if (thread.type != ThreadType::SECONDARY || m_ != 0 || !root)
+				pickMove(moves, m_); // We do this so that the swapped moves stays at the front 
 			Move move = moves[m_];
 			bool isQuiet = !thread.board.isCapture(move);
 

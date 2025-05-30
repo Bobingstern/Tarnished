@@ -53,22 +53,22 @@ void Search::ThreadInfo::startSearching() {
 	if (type == ThreadType::MAIN) {
 		searcher->stopSearching();
 		searcher->waitForWorkersFinished();
-
-		ThreadInfo *bestSearcher = this;
-		for (auto &thread : searcher->threads) {
-			if (thread.get()->type == ThreadType::MAIN)
-				continue;
-			int bestDepth = bestSearcher->rootDepth;
-			int bestScore = bestSearcher->threadBestScore;
-			int currentDepth = thread->rootDepth;
-			int currentScore = thread->threadBestScore;
-			if ( (bestDepth == currentDepth && currentScore > bestScore) || (Search::isMateScore(currentScore) && currentScore > bestScore))
-				bestSearcher = thread.get();
-			if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isMateScore(bestScore)))
-				bestSearcher = thread.get();
-			//std::cout << "\nthread: " << thread->threadId << " bm " << uci::moveToUci(thread->bestMove) << " score " << thread->threadBestScore <<std::endl;
-		}
-		std::cout << "\nbestmove " << uci::moveToUci(bestSearcher->bestMove) << std::endl;
+		std::cout << "\nbestmove " << uci::moveToUci(bestMove) << std::endl;
+		// ThreadInfo *bestSearcher = this;
+		// for (auto &thread : searcher->threads) {
+		// 	if (thread.get()->type == ThreadType::MAIN)
+		// 		continue;
+		// 	int bestDepth = bestSearcher->rootDepth;
+		// 	int bestScore = bestSearcher->threadBestScore;
+		// 	int currentDepth = thread->rootDepth;
+		// 	int currentScore = thread->threadBestScore;
+		// 	if ( (bestDepth == currentDepth && currentScore > bestScore) || (Search::isMateScore(currentScore) && currentScore > bestScore))
+		// 		bestSearcher = thread.get();
+		// 	if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isMateScore(bestScore)))
+		// 		bestSearcher = thread.get();
+		// 	//std::cout << "\nthread: " << thread->threadId << " bm " << uci::moveToUci(thread->bestMove) << " score " << thread->threadBestScore <<std::endl;
+		// }
+		// std::cout << "\nbestmove " << uci::moveToUci(bestSearcher->bestMove) << std::endl;
 	}
 }
 
