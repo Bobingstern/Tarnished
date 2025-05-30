@@ -48,6 +48,8 @@ void Search::ThreadInfo::exit() {
 
 void Search::ThreadInfo::startSearching() {
 	nodes = 0;
+	bestMove = Move::NO_MOVE;
+	
 	Search::iterativeDeepening(searcher->board, *this, searcher->limit, searcher);
 
 	if (type == ThreadType::MAIN) {
