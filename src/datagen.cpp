@@ -1,5 +1,6 @@
 #include "datagen.h"
 #include "search.h"
+#include "searcher.h"
 #include "nnue.h"
 #include "tt.h"
 #include "timeman.h"
@@ -136,10 +137,8 @@ void runThread(int ti) {
 	std::vector<ViriEntry> gameBuffer;
 
 	TTable TT;
-	std::atomic<bool> aborted(false);
-	Search::ThreadInfo thread(ThreadType::SECONDARY, TT, aborted);
-	
-
+	std::unique_ptr<Search::ThreadInfo> thread = std::make_unique<Search::ThreadInfo>(ThreadType::SECONDARY, TT, nullptr);
+	thread->stopped = false;
 	moveScoreBuffer.reserve(256);
 	gameBuffer.clear();
 	// Play a game
@@ -148,7 +147,7 @@ void runThread(int ti) {
 	timer.start();
 	for (int G=1;G<1'000'000;G++){
 		Board board;
-		thread.reset();
+		thread->reset();
 		TT.clear();
 		moveScoreBuffer.clear();
 
@@ -166,14 +165,14 @@ void runThread(int ti) {
 			limit.softnodes = SOFT_NODE_COUNT;
 			limit.maxnodes = HARD_NODE_COUNT;
 			limit.start();
-			thread.nodes = 0;
-			thread.bestMove = Move::NO_MOVE;
-			int eval = Search::iterativeDeepening(std::ref(board), std::ref(thread), limit, nullptr);
+			thread->nodes = 0;
+			thread->bestMove = Move::NO_MOVE;
+			int eval = Search::iterativeDeepening(std::ref(board), *thread, limit, nullptr);
 			eval = std::min(std::max(-INFINITE, eval), INFINITE);
 			eval = board.sideToMove() == Color::WHITE ? eval : -eval;
-			Move m = thread.bestMove;
+			Move m = thread->bestMove;
 			moveScoreBuffer.emplace_back(packMove(m), (int16_t)eval);
-			board.makeMove(thread.bestMove);
+			board.makeMove(thread->bestMove);
 			end = board.isGameOver();
 			poses++;
 			cached++;

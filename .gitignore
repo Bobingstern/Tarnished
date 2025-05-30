@@ -36,7 +36,8 @@ build
 cmake-build-*
 data
 WDL_model
-
+pytorch
+weather-factory
 # Other stuff
 *.epd
 *.pgn

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "search.h"
 #include <string.h>
 
 // Yoinked from Weiss
@@ -56,3 +57,5 @@ void SetLimit(const char *str, const char *token, int64_t *limit) {
         *limit = std::stoll(ptr + strlen(token));
     }
 }
+
+void bench(Searcher *searcher);

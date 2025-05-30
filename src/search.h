@@ -11,6 +11,8 @@
 #include <cstring>
 #include <thread>
 #include <algorithm>
+#include <mutex>
+#include <condition_variable>
 
 using namespace chess;
 
@@ -56,17 +58,90 @@ struct Stack {
 };
 
 void fillLmr();
+bool isMateScore(int score);
+struct Limit {
+	TimeLimit timer;
+	int64_t depth;
+	int64_t ctime;
+	int64_t movetime;
+	int64_t maxnodes;
+	int64_t softnodes;
+	int64_t inc;
+	int64_t softtime;
+	bool enableClock;
+	Color color;
+
+	Limit(){
+		depth = 0;
+		ctime = 0;
+		movetime = 0;
+		maxnodes = -1;
+		softnodes = -1;
+		softtime = 0;
+		enableClock = true;
+		inc = 0;
+	}
+	Limit(int64_t depth, int64_t ctime, int64_t movetime, Color color) : depth(depth), ctime(ctime), movetime(movetime), color(color) {
+		
+	}
+	// I will eventually fix this ugly code
+	void start(){
+		enableClock = movetime != 0 || ctime != 0;
+		if (depth == 0)
+			depth = MAX_PLY - 5;
+		if (enableClock)
+			softtime = 0;
+		if (ctime != 0){
+			// Calculate movetime
+			// this was like ~34 lol
+			movetime = ctime / (inc <= 0 ? 30 : 20) + inc / 2;
+			softtime = movetime * 0.63;
+			if (movetime > 75)
+				movetime -= 15;
+		}
+		timer.start();
+	}
+	bool outOfNodes(int64_t cnt){
+		return maxnodes != -1 && cnt > maxnodes;
+	}
+	bool softNodes(int64_t cnt){
+		return softnodes != -1 && cnt > softnodes;
+	}
+	bool outOfTime(){
+		return (enableClock && static_cast<int64_t>(timer.elapsed()) >= movetime);
+	}
+	bool outOfTimeSoft(){
+		if (!enableClock || softtime == 0)
+			return false;
+		return (static_cast<int64_t>(timer.elapsed()) >= softtime);
+	}
+};
 
 struct ThreadInfo {
+	std::thread thread;
 	ThreadType type;
 	TTable &TT;
-	std::atomic<bool> &abort;
+
+	std::mutex mutex;
+    std::condition_variable cv;
+
+    bool searching = false;
+    bool stopped = false;
+    bool exiting = false;
+
 	Board board;
+	Limit limit;
 	Accumulator accumulator;
 	std::atomic<uint64_t> nodes;
 	Move bestMove;
+	int threadBestScore;
 	int minNmpPly;
 	int rootDepth;
+	int completed;
+
+	Searcher *searcher;
+	int threadId;
+
 
 	// indexed by [stm][from][to]
 	MultiArray<int, 2, 64, 64> history;
@@ -77,26 +152,21 @@ struct ThreadInfo {
 	// indexed by [stm][pawnhash % entries]
 	MultiArray<int, 2, PAWN_CORR_HIST_ENTRIES> pawnCorrhist;
 	
-	ThreadInfo(ThreadType type, TTable &TT, std::atomic<bool> &abort) : type(type), TT(TT), abort(abort) {
-		abort.store(false, std::memory_order_relaxed);
-		this->board = Board();
-		history.fill((int)DEFAULT_HISTORY);
-		conthist.fill(DEFAULT_HISTORY);
-		capthist.fill((int)DEFAULT_HISTORY);
-		pawnCorrhist.fill((int)DEFAULT_HISTORY);
-		nodes = 0;
-		bestMove = Move::NO_MOVE;
-		minNmpPly = 0;
-		rootDepth = 0;
-	}
-	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), abort(other.abort), history(other.history), 
-											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth) {
+	ThreadInfo(ThreadType t, TTable &tt, Searcher *s);
+	ThreadInfo(int id, TTable &tt, Searcher *s);
+	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), history(other.history), 
+											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), threadBestScore(other.threadBestScore) {
 		this->board = other.board;
 		conthist = other.conthist;
 		capthist = other.capthist;
 		pawnCorrhist = other.pawnCorrhist;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}
+	void exit();
+	void startSearching();
+	void waitForSearchFinished();
+	void idle();
+
 	// --------------- History updaters ---------------------
 	// Make use of the history gravity formula:
 	// v += bonus - v * abs(bonus) / max_hist
@@ -173,69 +243,14 @@ struct ThreadInfo {
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
 		pawnCorrhist.fill((int)DEFAULT_HISTORY);
+		threadBestScore = -INFINITE;
+		completed = 0;
 	}
 };
 
 
-struct Limit {
-	TimeLimit timer;
-	int64_t depth;
-	int64_t ctime;
-	int64_t movetime;
-	int64_t maxnodes;
-	int64_t softnodes;
-	int64_t inc;
-	int64_t softtime;
-	bool enableClock;
-	Color color;
 
-	Limit(){
-		depth = 0;
-		ctime = 0;
-		movetime = 0;
-		maxnodes = -1;
-		softnodes = -1;
-		softtime = 0;
-		enableClock = true;
-		inc = 0;
-	}
-	Limit(int64_t depth, int64_t ctime, int64_t movetime, Color color) : depth(depth), ctime(ctime), movetime(movetime), color(color) {
-		
-	}
-	// I will eventually fix this ugly code
-	void start(){
-		enableClock = movetime != 0 || ctime != 0;
-		if (depth == 0)
-			depth = MAX_PLY - 5;
-		if (enableClock)
-			softtime = 0;
-		if (ctime != 0){
-			// Calculate movetime
-			// this was like ~34 lol
-			movetime = ctime / (inc <= 0 ? 30 : 20) + inc / 2;
-			softtime = movetime * 0.63;
-			movetime -= 15;
-		}
-		timer.start();
-	}
-	bool outOfNodes(int64_t cnt){
-		return maxnodes != -1 && cnt > maxnodes;
-	}
-	bool softNodes(int64_t cnt){
-		return softnodes != -1 && cnt > softnodes;
-	}
-	bool outOfTime(){
-		return (enableClock && static_cast<int64_t>(timer.elapsed()) >= movetime);
-	}
-	bool outOfTimeSoft(){
-		if (!enableClock || softtime == 0)
-			return false;
-		return (static_cast<int64_t>(timer.elapsed()) >= softtime);
-	}
-};
 //int search(Board &board, int depth, int ply, int alpha, int beta, Stack *ss, ThreadInfo &thread);
 //int iterativeDeepening(Board board, ThreadInfo &threadInfo, Searcher *searcher);
 int iterativeDeepening(Board &board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher);
-
-void bench();
 } 

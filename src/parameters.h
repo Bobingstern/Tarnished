@@ -2,6 +2,14 @@
 
 #define MAX_PLY 125
 #define BENCH_DEPTH 12
+
+// Random big num
+#ifdef _MSC_VER
+    #include <__msvc_int128.hpp>
+using u128 = std::_Unsigned128;
+#else
+using u128 = unsigned __int128;
+#endif
 // History
 constexpr int16_t MAX_HISTORY = 16383;
 const int16_t DEFAULT_HISTORY = 0;
