@@ -270,6 +270,7 @@ namespace Search {
 
 
 		TTEntry ttEntry = thread.TT.getEntryCopy(thread.board.hash());
+		uint64_t testh = thread.board.hash();
 		bool ttHit = moveIsNull(ss->excluded) && ttEntry.zobrist == thread.board.hash();
 		if (!isPV && ttHit && ttEntry.depth >= depth
 			&& (ttEntry.flag == TTFlag::EXACT 
@@ -500,7 +501,6 @@ namespace Search {
 		if (!moveCount){
 			return inCheck ? -MATE + ply : 0;
 		}
-
 		if (moveIsNull(ss->excluded)){
 			// Update correction history
 			bool isBestQuiet = !thread.board.isCapture(bestMove);
@@ -514,7 +514,7 @@ namespace Search {
 
 			// Update TT
 			TTEntry *tableEntry = thread.TT.getEntry(thread.board.hash());
-			*tableEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry.move : bestMove, bestScore, ttFlag, depth);
+			*tableEntry = TTEntry(thread.board.hash(), bestMove, bestScore, ttFlag, depth);
 		}
 		return bestScore;
 

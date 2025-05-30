@@ -2,6 +2,7 @@
 
 #include "external/chess.hpp"
 #include "parameters.h"
+#include "util.h"
 #include <vector>
 #include <thread>
 #include <bitset>
@@ -31,11 +32,14 @@ struct TTEntry {
 		this->depth = 0;
 	}
 	TTEntry(uint64_t key, chess::Move best, int score, uint8_t flag, uint8_t depth){
-		this->zobrist = key;
-		this->move = best;
-		this->score = score;
-		this->flag = flag;
-		this->depth = depth;
+		if (!moveIsNull(best) || key != this->zobrist)
+			this->move = best;
+		if (flag == TTFlag::EXACT || key != this->zobrist || depth > this->depth){
+			this->zobrist = key;
+			this->score = score;
+			this->flag = flag;
+			this->depth = depth;
+		}
 	}
 };
 
