@@ -86,6 +86,10 @@ public:
 		return &table[index(key)];
 	}
 
+	TTEntry getEntryCopy(uint64_t key){
+		return table[index(key)];
+	}
+
 	size_t hashfull() {
 		size_t samples = std::min((uint64_t) 1000, size);
 		size_t hits	= 0;
