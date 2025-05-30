@@ -286,6 +286,7 @@ namespace Search {
 		bool canIIR = hashMove && depth >= IIR_MIN_DEPTH;
 
 		int bestScore = -INFINITE;
+		int oldAlpha = alpha;
 		int rawStaticEval = GETTING_MATED;
 		int score = bestScore;
 		int moveCount = 0;
@@ -504,6 +505,7 @@ namespace Search {
 		if (moveIsNull(ss->excluded)){
 			// Update correction history
 			bool isBestQuiet = !thread.board.isCapture(bestMove);
+			//ttFlag = bestScore >= beta ? TTFlag::BETA_CUT : alpha != oldAlpha ? TTFlag::EXACT : TTFlag::FAIL_LOW;
 			if (!inCheck && (isBestQuiet || moveIsNull(bestMove))
 				&& (ttFlag == TTFlag::EXACT 
 					|| ttFlag == TTFlag::BETA_CUT && bestScore > ss->staticEval 
@@ -514,7 +516,7 @@ namespace Search {
 
 			// Update TT
 			TTEntry *tableEntry = thread.TT.getEntry(thread.board.hash());
-			*tableEntry = TTEntry(thread.board.hash(), bestMove, bestScore, ttFlag, depth);
+			tableEntry->updateEntry(thread.board.hash(), bestMove, bestScore, ttFlag, depth);
 		}
 		return bestScore;
 
