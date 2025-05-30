@@ -365,8 +365,7 @@ namespace Search {
 		bool skipQuiets = false;
 		for (int m_ = 0;m_<moves.size();m_++){
 
-			if (thread.type != ThreadType::SECONDARY || m_ != thread.threadId - 1 || !root)
-				pickMove(moves, m_); // We do this so that the swapped moves stays at the front 
+			pickMove(moves, m_); // We do this so that the swapped moves stays at the front 
 			Move move = moves[m_];
 			bool isQuiet = !thread.board.isCapture(move);
 
@@ -535,9 +534,9 @@ namespace Search {
 		int lastScore = -INFINITE;
 
 		int moveEval = -INFINITE;
-		int smpDepth = isMain ? 0 : threadInfo.threadId % 2;
+		int smpDepth = isMain ? 0 : threadInfo.threadId;
 		int64_t avgnps = 0;
-		for (int depth = 1;depth<=limit.depth;depth++){
+		for (int depth = 1 + smpDepth;depth<=limit.depth;depth++){
 			auto aborted = [&]() {
 				if (threadInfo.stopped)
 					return true;
@@ -586,6 +585,7 @@ namespace Search {
 			threadInfo.completed = depth;
 
 			if (!isMain){
+				std::cout << "\nThread best move " << lastPV.moves[0] << std::endl;
 				continue;
 			}
 
