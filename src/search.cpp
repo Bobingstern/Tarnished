@@ -580,6 +580,7 @@ namespace Search {
 			// Save best scores
 			threadInfo.bestMove = lastPV.moves[0];
 			threadInfo.threadBestScore = lastScore;
+			threadInfo.completed = lastPV.length;
 
 			if (!isMain){
 				continue;

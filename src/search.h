@@ -137,6 +137,7 @@ struct ThreadInfo {
 	int threadBestScore;
 	int minNmpPly;
 	int rootDepth;
+	int completed;
 
 	Searcher *searcher;
 	int threadId;
@@ -243,6 +244,7 @@ struct ThreadInfo {
 		capthist.fill((int)DEFAULT_HISTORY);
 		pawnCorrhist.fill((int)DEFAULT_HISTORY);
 		threadBestScore = -INFINITE;
+		completed = 0;
 	}
 };
 
