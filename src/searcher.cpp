@@ -49,28 +49,28 @@ void Search::ThreadInfo::exit() {
 void Search::ThreadInfo::startSearching() {
 	nodes = 0;
 	bestMove = Move::NO_MOVE;
-	
+
 	Search::iterativeDeepening(searcher->board, *this, searcher->limit, searcher);
 
 	if (type == ThreadType::MAIN) {
 		searcher->stopSearching();
 		searcher->waitForWorkersFinished();
-		std::cout << "\nbestmove " << uci::moveToUci(bestMove) << std::endl;
-		// ThreadInfo *bestSearcher = this;
-		// for (auto &thread : searcher->threads) {
-		// 	if (thread.get()->type == ThreadType::MAIN)
-		// 		continue;
-		// 	int bestDepth = bestSearcher->rootDepth;
-		// 	int bestScore = bestSearcher->threadBestScore;
-		// 	int currentDepth = thread->rootDepth;
-		// 	int currentScore = thread->threadBestScore;
-		// 	if ( (bestDepth == currentDepth && currentScore > bestScore) || (Search::isMateScore(currentScore) && currentScore > bestScore))
-		// 		bestSearcher = thread.get();
-		// 	if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isMateScore(bestScore)))
-		// 		bestSearcher = thread.get();
-		// 	//std::cout << "\nthread: " << thread->threadId << " bm " << uci::moveToUci(thread->bestMove) << " score " << thread->threadBestScore <<std::endl;
-		// }
-		// std::cout << "\nbestmove " << uci::moveToUci(bestSearcher->bestMove) << std::endl;
+		//std::cout << "\nbestmove " << uci::moveToUci(bestMove) << std::endl;
+		ThreadInfo *bestSearcher = this;
+		for (auto &thread : searcher->threads) {
+			if (thread.get()->type == ThreadType::MAIN)
+				continue;
+			int bestDepth = bestSearcher->completed;
+			int bestScore = bestSearcher->threadBestScore;
+			int currentDepth = thread->completed;
+			int currentScore = thread->threadBestScore;
+			if ( (bestDepth == currentDepth && currentScore > bestScore) || (Search::isMateScore(currentScore) && currentScore > bestScore))
+				bestSearcher = thread.get();
+			if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isMateScore(bestScore)))
+				bestSearcher = thread.get();
+			//std::cout << "\nthread: " << thread->threadId << " bm " << uci::moveToUci(thread->bestMove) << " score " << thread->threadBestScore <<std::endl;
+		}
+		std::cout << "\nbestmove " << uci::moveToUci(bestSearcher->bestMove) << std::endl;
 	}
 }
 

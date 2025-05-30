@@ -91,7 +91,8 @@ public:
 		table = static_cast<TTEntry*>(std::malloc(size * sizeof(TTEntry)));
 	}
 	uint64_t index(uint64_t key) { 
-		return static_cast<std::uint64_t>((static_cast<u128>(key) * static_cast<u128>(size)) >> 64);
+		return key % size;
+		//return static_cast<std::uint64_t>((static_cast<u128>(key) * static_cast<u128>(size)) >> 64);
 	}
 
 	TTEntry *getEntry(uint64_t key){

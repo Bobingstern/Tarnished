@@ -231,8 +231,7 @@ void bench(Searcher &searcher){
     for (auto fen : fens){
         timer.start();
         Board board(fen);
-        TTable TT;
-
+        searcher.reset();
         Search::Limit limit = Search::Limit();
         limit.depth = (int64_t)BENCH_DEPTH; limit.movetime = 0; limit.ctime = 0;
         limit.start();

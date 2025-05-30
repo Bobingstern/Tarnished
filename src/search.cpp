@@ -168,8 +168,9 @@ namespace Search {
 		if (thread.type == ThreadType::MAIN && (limit.outOfTime() || limit.outOfNodes(thread.nodes))){
 			thread.searcher->stopSearching();
 		}
-		if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1)
+		if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1){
 			return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, thread.accumulator) : 0;
+		}
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
 		bool ttHit = ttEntry->zobrist == thread.board.hash();
@@ -265,8 +266,9 @@ namespace Search {
 			if (thread.type == ThreadType::MAIN && (limit.outOfTime() || limit.outOfNodes(thread.nodes)) && thread.rootDepth != 1 ){
 				thread.searcher->stopSearching();
 			}
-			if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1)
+			if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1){
 				return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, thread.accumulator) : 0;
+			}
 		}
 
 
@@ -521,6 +523,7 @@ namespace Search {
 			// Update TT
 			//TTEntry *tableEntry = thread.TT.getEntry(thread.board.hash());
 			ttEntry->updateEntry(thread.board.hash(), bestMove, bestScore, ttFlag, depth);
+			//*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
 		}
 		return bestScore;
 
