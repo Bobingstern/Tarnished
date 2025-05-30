@@ -359,16 +359,13 @@ namespace Search {
 		}
 		if (root) {
 			bestMove = moves[0]; // Guaruntee some random move
-			if (thread.type == ThreadType::SECONDARY) {
-				std::iter_swap(moves.begin(), moves.begin() + thread.threadId);
-			}
 		}
 
 		// Other vars
 		bool skipQuiets = false;
 		for (int m_ = 0;m_<moves.size();m_++){
 
-			if (thread.type != ThreadType::SECONDARY || m_ != 0 || !root)
+			if (thread.type != ThreadType::SECONDARY || m_ != thread.threadId - 1 || !root)
 				pickMove(moves, m_); // We do this so that the swapped moves stays at the front 
 			Move move = moves[m_];
 			bool isQuiet = !thread.board.isCapture(move);
