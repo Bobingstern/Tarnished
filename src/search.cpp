@@ -627,9 +627,6 @@ namespace Search {
 				break;
 
 		}
-		if (!isMain) {
-			std::cout << "\nnodes " << threadInfo.nodes << " depth " << threadInfo.completed << " best " << threadInfo.bestMove << std::endl;
-		}
 		// if (isMain){
 		// 	searcher->stopSearching();
 		// 	searcher->waitForWorkersFinished();

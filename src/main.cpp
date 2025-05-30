@@ -165,7 +165,7 @@ void BeginDatagen(char *str){
         threadc = atoi(OptionValue(str));
     }
     std::cout << "Launching Data Generation with " << threadc << " threads" << std::endl;
-    //startDatagen(threadc); 
+    startDatagen(threadc); 
 }
 // Benchmark for OpenBench
 void bench(Searcher &searcher){

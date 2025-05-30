@@ -1,5 +1,6 @@
 #include "datagen.h"
 #include "search.h"
+#include "searcher.h"
 #include "nnue.h"
 #include "tt.h"
 #include "timeman.h"
@@ -124,96 +125,94 @@ uint16_t packMove(Move m){
 	return move;
 }
 
-// void runThread(int ti) {
-// 	std::string filePath = "data/nnue_thread" + std::to_string(ti) + ".vf";
+void runThread(int ti) {
+	std::string filePath = "data/nnue_thread" + std::to_string(ti) + ".vf";
 
-// 	if (!std::filesystem::is_directory("data/"))
-// 		std::filesystem::create_directory("data/");
-// 	std::ofstream outFile(filePath, std::ios::app | std::ios::binary);
+	if (!std::filesystem::is_directory("data/"))
+		std::filesystem::create_directory("data/");
+	std::ofstream outFile(filePath, std::ios::app | std::ios::binary);
 
-// 	int64_t cached = 0;
-// 	std::vector<ScoredMove> moveScoreBuffer;
-// 	std::vector<ViriEntry> gameBuffer;
+	int64_t cached = 0;
+	std::vector<ScoredMove> moveScoreBuffer;
+	std::vector<ViriEntry> gameBuffer;
 
-// 	TTable TT;
-// 	std::atomic<bool> aborted(false);
-// 	Search::ThreadInfo thread(ThreadType::SECONDARY, TT, aborted);
-	
+	TTable TT;
+	std::unique_ptr<Search::ThreadInfo> thread = std::make_unique<Search::ThreadInfo>(ThreadType::SECONDARY, TT, nullptr);
+	thread->stopped = false;
+	moveScoreBuffer.reserve(256);
+	gameBuffer.clear();
+	// Play a game
+	int64_t poses = 0;
+	TimeLimit timer;
+	timer.start();
+	for (int G=1;G<1'000'000;G++){
+		Board board;
+		thread->reset();
+		TT.clear();
+		moveScoreBuffer.clear();
 
-// 	moveScoreBuffer.reserve(256);
-// 	gameBuffer.clear();
-// 	// Play a game
-// 	int64_t poses = 0;
-// 	TimeLimit timer;
-// 	timer.start();
-// 	for (int G=1;G<1'000'000;G++){
-// 		Board board;
-// 		thread.reset();
-// 		TT.clear();
-// 		moveScoreBuffer.clear();
+		for (size_t i=0;i<DATAGEN_RANDOM_MOVES;i++){
+			makeRandomMove(board);
+			if (board.isGameOver().second != GameResult::NONE)
+				break;
+		}
+		MarlinFormat marlin = MarlinFormat(board);
+		std::string startingFen = board.getFen();
+		std::pair<GameResultReason, GameResult> end = board.isGameOver();
 
-// 		for (size_t i=0;i<DATAGEN_RANDOM_MOVES;i++){
-// 			makeRandomMove(board);
-// 			if (board.isGameOver().second != GameResult::NONE)
-// 				break;
-// 		}
-// 		MarlinFormat marlin = MarlinFormat(board);
-// 		std::string startingFen = board.getFen();
-// 		std::pair<GameResultReason, GameResult> end = board.isGameOver();
-
-// 		while (end.second == GameResult::NONE){
-// 			Search::Limit limit = Search::Limit();
-// 			limit.softnodes = SOFT_NODE_COUNT;
-// 			limit.maxnodes = HARD_NODE_COUNT;
-// 			limit.start();
-// 			thread.nodes = 0;
-// 			thread.bestMove = Move::NO_MOVE;
-// 			int eval = Search::iterativeDeepening(std::ref(board), std::ref(thread), limit, nullptr);
-// 			eval = std::min(std::max(-INFINITE, eval), INFINITE);
-// 			eval = board.sideToMove() == Color::WHITE ? eval : -eval;
-// 			Move m = thread.bestMove;
-// 			moveScoreBuffer.emplace_back(packMove(m), (int16_t)eval);
-// 			board.makeMove(thread.bestMove);
-// 			end = board.isGameOver();
-// 			poses++;
-// 			cached++;
+		while (end.second == GameResult::NONE){
+			Search::Limit limit = Search::Limit();
+			limit.softnodes = SOFT_NODE_COUNT;
+			limit.maxnodes = HARD_NODE_COUNT;
+			limit.start();
+			thread->nodes = 0;
+			thread->bestMove = Move::NO_MOVE;
+			int eval = Search::iterativeDeepening(std::ref(board), *thread, limit, nullptr);
+			eval = std::min(std::max(-INFINITE, eval), INFINITE);
+			eval = board.sideToMove() == Color::WHITE ? eval : -eval;
+			Move m = thread->bestMove;
+			moveScoreBuffer.emplace_back(packMove(m), (int16_t)eval);
+			board.makeMove(thread->bestMove);
+			end = board.isGameOver();
+			poses++;
+			cached++;
 
 
-// 		}
-// 		double wdl;
-// 		if (!board.inCheck()){
-// 			marlin.wdl = 1;
-// 		}
-// 		else if (board.sideToMove() == Color::WHITE)
-// 			marlin.wdl = 0;
-// 		else 
-// 			marlin.wdl = 2;
+		}
+		double wdl;
+		if (!board.inCheck()){
+			marlin.wdl = 1;
+		}
+		else if (board.sideToMove() == Color::WHITE)
+			marlin.wdl = 0;
+		else 
+			marlin.wdl = 2;
 
-// 		//ViriEntry game = ViriEntry(marlin, moveScoreBuffer);
-// 		//writeViriformat(outFile, game);
-// 		gameBuffer.emplace_back(marlin, moveScoreBuffer);
+		//ViriEntry game = ViriEntry(marlin, moveScoreBuffer);
+		//writeViriformat(outFile, game);
+		gameBuffer.emplace_back(marlin, moveScoreBuffer);
 
-// 		if (G % 50 == 0){
-// 			std::cout << "Thread: " << ti << " Total Games: " << G << " Positions: " << poses << " Estimated speed " << cached*1000.0/(double)timer.elapsed() << " pos/s" << std::endl;
-// 			timer.start();
-// 			cached = 0;
-// 		}
-// 		if (G % GAMES_BUFFER == 0){
-// 			std::cout << "Thread: " << ti << " writing " << GAMES_BUFFER << " games" << std::endl;
-// 			for (ViriEntry &game : gameBuffer){
-// 				writeViriformat(outFile, game);
-// 			}
-// 			gameBuffer.clear();
-// 		}
-// 		//std::cout << "Finished " << G << " games" << std::endl;
-// 	}
-// }	
+		if (G % 50 == 0){
+			std::cout << "Thread: " << ti << " Total Games: " << G << " Positions: " << poses << " Estimated speed " << cached*1000.0/(double)timer.elapsed() << " pos/s" << std::endl;
+			timer.start();
+			cached = 0;
+		}
+		if (G % GAMES_BUFFER == 0){
+			std::cout << "Thread: " << ti << " writing " << GAMES_BUFFER << " games" << std::endl;
+			for (ViriEntry &game : gameBuffer){
+				writeViriformat(outFile, game);
+			}
+			gameBuffer.clear();
+		}
+		//std::cout << "Finished " << G << " games" << std::endl;
+	}
+}	
 
-// void startDatagen(size_t tcount){
-// 	std::vector<std::thread> threads;
+void startDatagen(size_t tcount){
+	std::vector<std::thread> threads;
 
-// 	for (size_t i=0;i<tcount-1;i++){
-// 		threads.emplace_back(runThread, i);
-// 	}
-// 	runThread(tcount-1);
-// }
+	for (size_t i=0;i<tcount-1;i++){
+		threads.emplace_back(runThread, i);
+	}
+	runThread(tcount-1);
+}
