@@ -539,7 +539,7 @@ namespace Search {
 		int moveEval = -INFINITE;
 		int smpDepth = isMain ? 0 : threadInfo.threadId;
 		int64_t avgnps = 0;
-		for (int depth = 1 + smpDepth;depth<=limit.depth;depth++){
+		for (int depth = 1;depth<=limit.depth;depth++){
 			auto aborted = [&]() {
 				if (threadInfo.stopped)
 					return true;
