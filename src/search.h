@@ -58,7 +58,7 @@ struct Stack {
 };
 
 void fillLmr();
-
+bool isMateScore(int score);
 struct Limit {
 	TimeLimit timer;
 	int64_t depth;
@@ -134,6 +134,7 @@ struct ThreadInfo {
 	Accumulator accumulator;
 	std::atomic<uint64_t> nodes;
 	Move bestMove;
+	int threadBestScore;
 	int minNmpPly;
 	int rootDepth;
 
@@ -153,7 +154,7 @@ struct ThreadInfo {
 	ThreadInfo(ThreadType t, TTable &tt, Searcher *s);
 	ThreadInfo(int id, TTable &tt, Searcher *s);
 	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), history(other.history), 
-											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth) {
+											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), threadBestScore(other.threadBestScore) {
 		this->board = other.board;
 		conthist = other.conthist;
 		capthist = other.capthist;
@@ -241,6 +242,7 @@ struct ThreadInfo {
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
 		pawnCorrhist.fill((int)DEFAULT_HISTORY);
+		threadBestScore = -INFINITE;
 	}
 };
 

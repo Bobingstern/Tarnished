@@ -530,12 +530,9 @@ namespace Search {
 		int lastScore = -INFINITE;
 
 		int moveEval = -INFINITE;
-		int oldnodecnt = 0;
-		double branchsum = 0;
-		double avgbranchfac = 0;
 		int smpDepth = isMain ? 0 : threadInfo.threadId % 2;
 		int64_t avgnps = 0;
-		for (int depth = 1 + smpDepth;depth<=limit.depth;depth++){
+		for (int depth = 1;depth<=limit.depth;depth++){
 			auto aborted = [&]() {
 				if (threadInfo.stopped)
 					return true;
@@ -580,13 +577,10 @@ namespace Search {
 			lastScore = score;
 			lastPV = ss->pv;
 
-			// Maybe useful info for diagnostics
-			if (oldnodecnt != 0){
-				branchsum += (double)threadInfo.nodes / oldnodecnt;
-				avgbranchfac = branchsum / (depth-1);
-			}
-			avgnps = threadInfo.nodes / (limit.timer.elapsed()+1);
-			oldnodecnt = threadInfo.nodes;
+			// Save best scores
+			threadInfo.bestMove = lastPV.moves[0];
+			threadInfo.threadBestScore = lastScore;
+
 			if (!isMain){
 				continue;
 			}
@@ -612,18 +606,20 @@ namespace Search {
 						std::cout << " wdl " << wdl.w << " " << wdl.d << " " << wdl.l;
 					}
 				}
-
+				std::cout << " hashfull " << searcher->TT.hashfull();
 				std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
 				std::cout << pvss.str() << std::endl;
-			}
+			}	
 			if (limit.outOfTimeSoft())
 				break;
 
 		}
-		
-		if (isMain){
-			std::cout << "bestmove " << uci::moveToUci(lastPV.moves[0]) << std::endl;
-		}
+
+		// if (isMain){
+		// 	searcher->stopSearching();
+		// 	searcher->waitForWorkersFinished();
+		// 	std::cout << "bestmove " << uci::moveToUci(lastPV.moves[0]) << std::endl;
+		// }
 
 		threadInfo.bestMove = lastPV.moves[0];
 		return lastScore;

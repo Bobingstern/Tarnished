@@ -86,4 +86,14 @@ public:
 		return &table[index(key)];
 	}
 
+	size_t hashfull() {
+		size_t samples = std::min((uint64_t) 1000, size);
+		size_t hits	= 0;
+		for (size_t sample = 0; sample < samples; sample++)
+			hits += table[sample].zobrist != 0;
+		size_t hash = (int) (hits / (double) samples * 1000);
+		assert(hash <= 1000);
+		return hash;
+	}
+
 };

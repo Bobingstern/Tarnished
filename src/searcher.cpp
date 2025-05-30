@@ -54,6 +54,19 @@ void Search::ThreadInfo::startSearching() {
 		searcher->stopSearching();
 		searcher->waitForWorkersFinished();
 
+		ThreadInfo *bestSearcher = this;
+		for (auto &thread : searcher->threads) {
+			int bestDepth = bestSearcher->rootDepth;
+			int bestScore = bestSearcher->threadBestScore;
+			int currentDepth = thread->rootDepth;
+			int currentScore = thread->threadBestScore;
+			if (bestDepth == currentDepth && currentScore > bestScore || (Search::isMateScore(currentScore) && currentScore > bestScore))
+				bestSearcher = thread.get();
+			if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isMateScore(bestScore)))
+				bestSearcher = thread.get();
+			//std::cout << "thread: " << thread->threadId << " bestmove " << thread->bestMove << " score " << thread->threadBestScore <<std::endl;
+		}
+		std::cout << "bestmove " << bestSearcher->bestMove << std::endl;
 	}
 }
 
