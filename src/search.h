@@ -51,6 +51,7 @@ struct Stack {
     PVList pv;
     chess::Move killer;
     int    staticEval;
+    int    eval;
     int    historyScore;
     uint64_t pawnKey;
     Move excluded{};

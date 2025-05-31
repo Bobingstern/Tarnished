@@ -21,6 +21,7 @@ enum TTFlag {
 struct TTEntry {
 	uint32_t zobrist;
 	int score;
+	int16_t staticEval;
 	uint16_t move;
 	uint8_t flag;
 	uint8_t depth;
@@ -30,16 +31,18 @@ struct TTEntry {
 		this->score = 0;
 		this->flag = 0;
 		this->depth = 0;
+		this->staticEval = -32767;
 	}
-	TTEntry(uint64_t key, chess::Move best, int score, uint8_t flag, uint8_t depth){
+	TTEntry(uint64_t key, chess::Move best, int score, int16_t eval, uint8_t flag, uint8_t depth){
 		this->move = best.move();
 		this->zobrist = static_cast<uint32_t>(key);
 		this->score = score;
 		this->flag = flag;
 		this->depth = depth;
+		this->staticEval = eval;
 		
 	}
-	void updateEntry(uint64_t key, chess::Move best, int score, uint8_t flag, uint8_t depth) {
+	void updateEntry(uint64_t key, chess::Move best, int score, int16_t eval, uint8_t flag, uint8_t depth) {
 		uint32_t key32 = static_cast<uint32_t>(key);
 		if (!moveIsNull(best) || key32 != this->zobrist)
 			this->move = best.move();
@@ -48,6 +51,7 @@ struct TTEntry {
 			this->score = score;
 			this->flag = flag;
 			this->depth = depth;
+			this->staticEval = eval;
 		}
 	}
 };
