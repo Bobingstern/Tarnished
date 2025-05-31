@@ -247,6 +247,7 @@ namespace Search {
 				bestScore = score;
 				if (score > alpha){
 					alpha = score;
+					qBestMove = move;
 					ttFlag = TTFlag::EXACT;
 				}
 			}
