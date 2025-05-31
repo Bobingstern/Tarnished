@@ -208,6 +208,8 @@ namespace Search {
 
 		int bestScore = eval;
 		int moveCount = 0;
+		Move qBestMove = Move::NO_MOVE;
+		uint8_t ttFlag = TTFlag::FAIL_LOW;
 
 		Movelist moves;
 
@@ -245,14 +247,19 @@ namespace Search {
 				bestScore = score;
 				if (score > alpha){
 					alpha = score;
+					ttFlag = TTFlag::EXACT;
 				}
 			}
 			if (score >= beta){
+				ttFlag = TTFlag::BETA_CUT;
 				break;
 			}
 		}
 		if (!moveCount && inCheck)
 			return -MATE + ply;
+
+		ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, 0);
+
 		return bestScore;
 
 	}
