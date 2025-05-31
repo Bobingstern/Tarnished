@@ -195,8 +195,8 @@ namespace Search {
 			// TT Static Eval
 			if (ttHit && (
 				ttEntry->flag == TTFlag::EXACT || 
-				(ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= ss->staticEval) ||
-				(ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= ss->staticEval)
+				(ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= eval) ||
+				(ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= eval)
 			)) 
 				eval = ttEntry->score;
 
