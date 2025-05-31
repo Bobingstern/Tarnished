@@ -190,8 +190,16 @@ namespace Search {
 			eval = -INFINITE + ply;
 		}
 		else {
-			rawStaticEval = network.inference(&thread.board, thread.accumulator);
+			rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, thread.accumulator);
 			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+			// TT Static Eval
+			if (ttHit && (
+				ttEntry->flag == TTFlag::EXACT || 
+				(ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= eval) ||
+				(ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= eval)
+			)) 
+				eval = ttEntry->score;
+
 			if (eval >= beta)
 				return eval;
 			if (eval > alpha)
@@ -297,11 +305,21 @@ namespace Search {
 
 		// Get the corrected static evaluation if we're not in singular search or check
 		if (moveIsNull(ss->excluded)){
-			if (inCheck)
+			if (inCheck){
 				ss->staticEval = rawStaticEval = -INFINITE;
+				ss->eval = -INFINITE;
+			}
 			else {
-				rawStaticEval = network.inference(&thread.board, thread.accumulator);
+				rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, thread.accumulator);
 				ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+				ss->eval = ss->staticEval;
+				// TT Static Eval
+				if (ttHit && (
+					ttEntry->flag == TTFlag::EXACT || 
+					(ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= ss->staticEval) ||
+					(ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= ss->staticEval)
+				)) 
+					ss->eval = ttEntry->score;
 			}
 		}
 
@@ -315,14 +333,14 @@ namespace Search {
 		
 		if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)){
 			// Reverse Futility Pruning
-			if (ss->staticEval - RFP_MARGIN * (depth - improving) >= beta && depth <= RFP_MAX_DEPTH)
-				return ss->staticEval;
+			if (depth <= RFP_MAX_DEPTH && ss->eval - RFP_MARGIN * (depth - improving) >= beta)
+				return ss->eval;
 
 			// Null Move Pruning
 			Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^ thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
-			if (depth >= 2 && ss->staticEval >= beta && ply > thread.minNmpPly && !nonPawns.empty()){
+			if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()){
 				// Sirius formula
-				const int reduction = NMP_BASE_REDUCTION + depth / NMP_REDUCTION_SCALE + std::min(2, (ss->staticEval-beta)/NMP_EVAL_SCALE);
+				const int reduction = NMP_BASE_REDUCTION + depth / NMP_REDUCTION_SCALE + std::min(2, (ss->eval-beta)/NMP_EVAL_SCALE);
 				thread.board.makeNullMove();
 				int nmpScore = -search<false>(depth-reduction, ply+1, -beta, -beta + 1, ss+1, thread, limit);
 				thread.board.unmakeNullMove();
@@ -521,7 +539,7 @@ namespace Search {
 
 			// Update TT
 			//TTEntry *tableEntry = thread.TT.getEntry(thread.board.hash());
-			ttEntry->updateEntry(thread.board.hash(), bestMove, bestScore, ttFlag, depth);
+			ttEntry->updateEntry(thread.board.hash(), bestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, depth);
 			//*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
 		}
 		return bestScore;
