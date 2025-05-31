@@ -69,6 +69,7 @@ static bool moveIsNull(Move m){
 	return m == Move::NO_MOVE;
 }
 
+
 // Murmur hash
 // sirius yoink
 constexpr uint64_t murmurHash3(uint64_t key)

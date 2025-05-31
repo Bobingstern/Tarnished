@@ -123,7 +123,7 @@ namespace Search {
 			}
 		}
 	}
-	int scoreMove(Move &move, Move &ttMove, Stack *ss, ThreadInfo &thread){
+	int scoreMove(Move move, Move ttMove, Stack *ss, ThreadInfo &thread){
 		// MVV-LVA
 		// TT Move
 		// Killer Move Heuristic
@@ -173,7 +173,7 @@ namespace Search {
 		}
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
-		bool ttHit = ttEntry->zobrist == thread.board.hash();
+		bool ttHit = ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
 		if (!isPV && ttHit
 			&& (ttEntry->flag == TTFlag::EXACT 
 				|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= beta)
@@ -213,7 +213,7 @@ namespace Search {
 		for (auto &move : moves){
 			// Qsearch doesnt have killers
 			// Still pass to make compiler happy
-			move.setScore(scoreMove(move, ttEntry->move, ss, thread));
+			move.setScore(scoreMove(move, Move(ttEntry->move), ss, thread));
 		}
 		for (int m_ = 0;m_<moves.size();m_++){
 			if (thread.stopped || thread.exiting)
@@ -274,15 +274,14 @@ namespace Search {
 
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
-		uint64_t testh = thread.board.hash();
-		bool ttHit = moveIsNull(ss->excluded) && ttEntry->zobrist == thread.board.hash();
+		bool ttHit = moveIsNull(ss->excluded) && ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
 		if (!isPV && ttHit && ttEntry->depth >= depth
 			&& (ttEntry->flag == TTFlag::EXACT 
 				|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= beta)
 				|| (ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= alpha))){
 			return ttEntry->score;
 		}
-		bool hashMove = !ttHit || moveIsNull(ttEntry->move);
+		bool hashMove = !ttHit || moveIsNull(Move(ttEntry->move));
 
 		// http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
     	// https://github.com/jhonnold/berserk/blob/dd1678c278412898561d40a31a7bd08d49565636/src/search.c#L379
@@ -361,7 +360,7 @@ namespace Search {
 
 		// Move Scoring
 		for (auto &move : moves){
-			move.setScore(scoreMove(move, ttEntry->move, ss, thread));
+			move.setScore(scoreMove(move, Move(ttEntry->move), ss, thread));
 		}
 		if (root) {
 			bestMove = moves[0]; // Guaruntee some random move
@@ -410,7 +409,7 @@ namespace Search {
 			// Sirius conditions
 			// https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
 			bool doSE = !root && moveIsNull(ss->excluded) &&
-						depth >= SE_MIN_DEPTH && ttEntry->move == move && ttEntry->depth >= depth - 3
+						depth >= SE_MIN_DEPTH && Move(ttEntry->move) == move && ttEntry->depth >= depth - 3
 						&& ttEntry->flag != TTFlag::FAIL_LOW && !isMateScore(ttEntry->score);	
 			
 			int extension = 0;
@@ -419,7 +418,7 @@ namespace Search {
 				int sBeta = std::max(-MATE, ttEntry->score - SE_BETA_SCALE * depth / 16);
 				int sDepth = (depth - 1) / 2;
 				// How good are we without this move
-				ss->excluded = ttEntry->move;
+				ss->excluded = Move(ttEntry->move);
 				int seScore = search<false>(sDepth, ply+1, sBeta-1, sBeta, ss, thread, limit);
 				ss->excluded = Move::NO_MOVE;
 
