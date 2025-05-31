@@ -19,31 +19,32 @@ enum TTFlag {
 };
 
 struct TTEntry {
-	uint64_t zobrist;
-	chess::Move move;
+	uint32_t zobrist;
 	int score;
+	uint16_t move;
 	uint8_t flag;
 	uint8_t depth;
 	TTEntry(){
 		this->zobrist = 0;
-		this->move = chess::Move();
+		this->move = 0;
 		this->score = 0;
 		this->flag = 0;
 		this->depth = 0;
 	}
 	TTEntry(uint64_t key, chess::Move best, int score, uint8_t flag, uint8_t depth){
-		this->move = best;
-		this->zobrist = key;
+		this->move = best.move();
+		this->zobrist = static_cast<uint32_t>(key);
 		this->score = score;
 		this->flag = flag;
 		this->depth = depth;
 		
 	}
 	void updateEntry(uint64_t key, chess::Move best, int score, uint8_t flag, uint8_t depth) {
-		if (!moveIsNull(best) || key != this->zobrist)
-			this->move = best;
-		if (flag == TTFlag::EXACT || key != this->zobrist || depth > this->depth){
-			this->zobrist = key;
+		uint32_t key32 = static_cast<uint32_t>(key);
+		if (!moveIsNull(best) || key32 != this->zobrist)
+			this->move = best.move();
+		if (flag == TTFlag::EXACT || key32 != this->zobrist || depth > this->depth){
+			this->zobrist = key32;
 			this->score = score;
 			this->flag = flag;
 			this->depth = depth;
@@ -91,8 +92,8 @@ public:
 		table = static_cast<TTEntry*>(std::malloc(size * sizeof(TTEntry)));
 	}
 	uint64_t index(uint64_t key) { 
-		return key % size;
-		//return static_cast<std::uint64_t>((static_cast<u128>(key) * static_cast<u128>(size)) >> 64);
+		//return key % size;
+		return static_cast<std::uint64_t>((static_cast<u128>(key) * static_cast<u128>(size)) >> 64);
 	}
 
 	TTEntry *getEntry(uint64_t key){
