@@ -501,13 +501,13 @@ namespace Search {
 			}
 			if (score >= beta){
 				ttFlag = TTFlag::BETA_CUT;
-				ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
 				// Butterfly History
 				// Continuation History
 				// Capture History
 				int bonus = std::min(8 * depth * depth + 212 * depth - 150, 2048);
 				int malus = std::min(-(5 * depth * depth + 250 * depth + 66), 1024);
 				if (isQuiet){
+					ss->killer = bestMove;
 					thread.updateHistory(thread.board.sideToMove(), move, bonus);
 					thread.updateConthist(ss, thread.board, move, bonus);
 					for (const Move quietMove : seenQuiets){
