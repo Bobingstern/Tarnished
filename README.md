@@ -96,3 +96,4 @@ Alternatively, with `CMake`
 - [Stormphrax](https://github.com/Ciekce/Stormphrax) (Ciekce for helping out with programming details and NNUE things)
 - [Prelude](https://git.nocturn9x.space/Quinniboi10/Prelude)
 - [Bullet](https://github.com/jw1912/bullet)
+- [weather-factory](https://github.com/jnlt3/weather-factory) Local SPSA tuner for UCI chess engines

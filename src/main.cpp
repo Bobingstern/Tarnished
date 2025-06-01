@@ -143,7 +143,7 @@ void UCISetOption(Searcher &searcher, char *str) {
     }
 }
 void UCIInfo(){
-    std::cout << "id name Tarnished v2.1 (Ambition)\n";
+    std::cout << "id name Tarnished v3.0 (Warrior)\n";
     std::cout << "id author Anik Patel\n";
     std::cout << "option name Hash type spin default 16 min 2 max 65536\n";
     std::cout << "option name Threads type spin default 1 min 1 max 256\n";
