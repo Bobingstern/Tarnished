@@ -232,6 +232,9 @@ namespace Search {
 			pickMove(moves, m_);
 			Move move = moves[m_];
 
+			// QS late move pruning
+			if (!inCheck && moveCount >= 3)
+				break;
 			// SEE Pruning
 			if (bestScore > GETTING_MATED && !SEE(thread.board, move, 0))
 				continue;
