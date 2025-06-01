@@ -1,4 +1,11 @@
 #pragma once
+#include <bit>
+#include <vector>
+#include <sstream>
+#include <cassert>
+#include <cstring>
+#include <cmath>
+#include <list>
 
 #define MAX_PLY 125
 #define BENCH_DEPTH 12
@@ -10,11 +17,33 @@ using u128 = std::_Unsigned128;
 #else
 using u128 = unsigned __int128;
 #endif
-// History
+
+//#define TUNE
+
+// Struct for tunable parameters
+struct TunableParam
+{
+    std::string name;
+    int value;
+    int defaultValue;
+    int min;
+    int max;
+    int step;
+};
+
+std::list<TunableParam>& tunables();
+TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
+void printWeatherFactoryConfig();
+
+#define TUNABLE_PARAM(name, val, min, max, step) \
+    inline TunableParam& name##Param = addTunableParam(#name, val, min, max, step); \
+    inline int name() { return name##Param.value; }
+
+
+// History Constants
 constexpr int16_t MAX_HISTORY = 16383;
 const int16_t DEFAULT_HISTORY = 0;
 constexpr int PAWN_CORR_HIST_ENTRIES = 16384;
-constexpr int PAWN_CORR_WEIGHT = 128;
 constexpr int MAX_CORR_HIST = 1024;
 // NNUE Parameters
 constexpr int16_t HL_N = 512;
@@ -23,35 +52,42 @@ constexpr int16_t QB = 64;
 constexpr int16_t NNUE_SCALE = 400;
 constexpr int OUTPUT_BUCKETS = 8; 
 
+// History Parameters
+TUNABLE_PARAM(PAWN_CORR_WEIGHT, 186, 64, 2048, 32)
+TUNABLE_PARAM(CORRHIST_BONUS_WEIGHT, 100, 10, 300, 10);
+
+TUNABLE_PARAM(HIST_BONUS_QUADRATIC, 7, 1, 10, 1)
+TUNABLE_PARAM(HIST_BONUS_LINEAR, 274, 64, 384, 32);
+TUNABLE_PARAM(HIST_BONUS_OFFSET, 182, 64, 768, 64);
+
+TUNABLE_PARAM(HIST_MALUS_QUADRATIC, 5, 1, 10, 1)
+TUNABLE_PARAM(HIST_MALUS_LINEAR, 283, 64, 384, 32);
+TUNABLE_PARAM(HIST_MALUS_OFFSET, 169, 64, 768, 64);
+
 // Search Parameters
-constexpr int RFP_MARGIN = 70;
-constexpr int RFP_MAX_DEPTH = 6;
+TUNABLE_PARAM(RFP_MARGIN, 76, 30, 100, 8);
+TUNABLE_PARAM(RFP_MAX_DEPTH, 6, 4, 10, 1);
 
-constexpr int NMP_BASE_REDUCTION = 3;
-constexpr int NMP_REDUCTION_SCALE = 4;
-constexpr int NMP_EVAL_SCALE = 200;
+TUNABLE_PARAM(NMP_BASE_REDUCTION, 4, 2, 5, 1);
+TUNABLE_PARAM(NMP_REDUCTION_SCALE, 4, 3, 6, 1);
+TUNABLE_PARAM(NMP_EVAL_SCALE, 210, 50, 300, 10);
 
-constexpr int SEE_ORDERING_MARGIN = -100;
+TUNABLE_PARAM(SE_MIN_DEPTH, 7, 4, 10, 1);
+TUNABLE_PARAM(SE_BETA_SCALE, 31, 8, 64, 1);
+TUNABLE_PARAM(SE_DOUBLE_MARGIN, 22, 0, 40, 2);
 
-constexpr int SE_MIN_DEPTH = 8;
-constexpr int SE_BETA_SCALE = 32;
-constexpr int SE_DOUBLE_MARGIN = 20;
+TUNABLE_PARAM(LMR_BASE_QUIET, 139, -50, 200, 5);
+TUNABLE_PARAM(LMR_DIVISOR_QUIET, 278, 150, 350, 5);
+TUNABLE_PARAM(LMR_BASE_NOISY, 20, -50, 200, 5);
+TUNABLE_PARAM(LMR_DIVISOR_NOISY, 331, 150, 350, 5);
+TUNABLE_PARAM(LMR_MIN_DEPTH, 1, 1, 8, 1);
+TUNABLE_PARAM(LMR_MIN_MOVECOUNT, 4, 1, 10, 1);
 
-// constexpr int HIST_PRUNING_DEPTH = 7;
-// constexpr int HIST_PRUNING_MARGIN = -2048;
-// constexpr int HIST_BASE_THRESHOLD = -380;
-// constexpr int HIST_MULT_THRESHOLD = -2000;
-// constexpr int HIST_CAPTURE_BASE_THRESHOLD = -500;
-// constexpr int HIST_CAPTURE_MULT_THRESHOLD = -1700;
+TUNABLE_PARAM(IIR_MIN_DEPTH, 5, 2, 9, 1);
 
-constexpr int LMR_MIN_DEPTH = 2;
+TUNABLE_PARAM(LMP_MIN_MOVES_BASE, 2, 2, 8, 1);
+TUNABLE_PARAM(LMP_DEPTH_SCALE, 1, 1, 10, 1);
 
-constexpr int HISTORY_QUADRATIC_BONUS = 20;
-
-constexpr int IIR_MIN_DEPTH = 6;
-
-constexpr int LMP_MIN_MOVES_BASE = 2;
-
-constexpr int MIN_ASP_WINDOW_DEPTH = 6;
-constexpr int INITIAL_ASP_WINDOW = 40; 
-constexpr int ASP_WIDENING_FACTOR = 3;
+TUNABLE_PARAM(MIN_ASP_WINDOW_DEPTH, 4, 3, 8, 1);
+TUNABLE_PARAM(INITIAL_ASP_WINDOW, 37, 8, 64, 4);
+TUNABLE_PARAM(ASP_WIDENING_FACTOR, 3, 1, 32, 2);
