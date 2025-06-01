@@ -94,12 +94,14 @@ namespace Search {
 	bool isWin(int score){
 		return score >= FOUND_MATE;
 	}
-
 	bool isLoss(int score){
 		return score <= GETTING_MATED;
 	}
 	bool isMateScore(int score){
 		return std::abs(score) >= FOUND_MATE;
+	}
+	int drawEval(ThreadInfo &thread) {
+		return 4 - (thread.nodes & 3);
 	}
 	void fillLmr(){
 		// Weiss formula for reductions is
@@ -169,7 +171,7 @@ namespace Search {
 			thread.searcher->stopSearching();
 		}
 		if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1){
-			return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, thread.accumulator) : 0;
+			return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, thread.accumulator) : drawEval(thread);
 		}
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
@@ -283,11 +285,9 @@ namespace Search {
 				thread.searcher->stopSearching();
 			}
 			if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1){
-				return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, thread.accumulator) : 0;
+				return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, thread.accumulator) : drawEval(thread);
 			}
 		}
-
-
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
 		bool ttHit = moveIsNull(ss->excluded) && ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
@@ -531,7 +531,7 @@ namespace Search {
 			
 		}
 		if (!moveCount){
-			return inCheck ? -MATE + ply : 0;
+			return inCheck ? -MATE + ply : drawEval(thread);
 		}
 		if (moveIsNull(ss->excluded)){
 			// Update correction history

@@ -284,6 +284,10 @@ int main(int agrc, char *argv[]){
         searcher.exit();
         return 0;
     }
+
+    // Print Art
+    tarnishedAscii();
+
     char str[INPUT_SIZE];
     while (GetInput(str)) {
         switch (HashInput(str)) {
