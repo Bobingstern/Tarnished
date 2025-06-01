@@ -279,7 +279,7 @@ namespace Search {
 		// Terminal Conditions (and checkmate)
 		if (!root){
 			if (thread.board.isRepetition(1) || thread.board.isHalfMoveDraw())
-				return 0;
+				return drawEval(thread);
 
 			if (thread.type == ThreadType::MAIN && (limit.outOfTime() || limit.outOfNodes(thread.nodes)) && thread.rootDepth != 1 ){
 				thread.searcher->stopSearching();
