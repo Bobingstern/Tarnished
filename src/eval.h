@@ -45,8 +45,8 @@ static WinRateParams winRateParams(Board& board) {
 
 	// Return a = p_a(material) and b = p_b(material), see github.com/official-stockfish/WDL_model
 	// Stockfish values for now, I will compute WDL when I generate enough data
-	constexpr double as[] = {-13.50030198, 40.92780883, -36.82753545, 386.83004070};
-    constexpr double bs[] = {96.53354896, -165.79058388, 90.89679019, 49.29561889};
+	constexpr double as[] = {-20.63598875, 6.25340832, -96.78922561, 352.88451344};
+    constexpr double bs[] = {-45.21618763, 105.19725901, -36.49509268, 73.62537026};
 
 	double a = (((as[0] * m + as[1]) * m + as[2]) * m) + as[3];
 	double b = (((bs[0] * m + bs[1]) * m + bs[2]) * m) + bs[3];

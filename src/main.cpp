@@ -147,7 +147,7 @@ void UCIInfo(){
     std::cout << "id author Anik Patel\n";
     std::cout << "option name Hash type spin default 16 min 2 max 65536\n";
     std::cout << "option name Threads type spin default 1 min 1 max 256\n";
-    std::cout << "option name UCI_ShowWDL type check default false\n";
+    std::cout << "option name UCI_ShowWDL type check default true\n";
 #ifdef TUNE
     for (auto &param : tunables()) {
         std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min << " max " << param.max << std::endl;
@@ -288,7 +288,7 @@ int main(int agrc, char *argv[]){
 
     Search::fillLmr();
     Searcher searcher = Searcher();
-    searcher.toggleWDL(false); // Default display wdl
+    searcher.toggleWDL(true); // Default display wdl
     searcher.initialize(1); // Default one thread
     searcher.reset();
 

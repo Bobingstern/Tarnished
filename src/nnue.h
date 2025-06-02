@@ -18,12 +18,6 @@ constexpr int ACTIVATION = SCReLU;
 
 const bool IS_LITTLE_ENDIAN = true;
 
-#ifdef __AVX512F__
-constexpr size_t ALIGNMENT = 64;
-#else
-constexpr size_t ALIGNMENT = 32;
-#endif
-
 // stole from sf 
 template<typename IntType>
 inline IntType readLittleEndian(std::istream& stream) {
@@ -46,8 +40,8 @@ inline IntType readLittleEndian(std::istream& stream) {
 }
 
 struct Accumulator {
-	alignas(ALIGNMENT) std::array<int16_t, HL_N> white;
-	alignas(ALIGNMENT) std::array<int16_t, HL_N> black;
+	alignas(64) std::array<int16_t, HL_N> white;
+	alignas(64) std::array<int16_t, HL_N> black;
 
 	void refresh(Board &board);
 	void print();
@@ -59,10 +53,10 @@ struct Accumulator {
 };
 
 struct NNUE {
-	alignas(ALIGNMENT) std::array<int16_t, HL_N * 768> H1;
-	alignas(ALIGNMENT) std::array<int16_t, HL_N> H1Bias;
-	alignas(ALIGNMENT) std::array<std::array<int16_t, HL_N * 2>, OUTPUT_BUCKETS> OW;
-	alignas(ALIGNMENT) std::array<int16_t, OUTPUT_BUCKETS> outputBias;
+	alignas(64) std::array<int16_t, HL_N * 768> H1;
+	alignas(64) std::array<int16_t, HL_N> H1Bias;
+	alignas(64) std::array<std::array<int16_t, HL_N * 2>, OUTPUT_BUCKETS> OW;
+	alignas(64) std::array<int16_t, OUTPUT_BUCKETS> outputBias;
 
 	int16_t ReLU_(int16_t x);
 	int16_t CReLU_(int16_t x);

@@ -471,8 +471,11 @@ namespace Search {
 
 				// Reduce more if not a PV node
 				reduction += !isPV;
+				// Reduce less if good history
+				reduction -= ss->historyScore / LMR_HIST_DIVISOR();
 
-				score = -search<false>(newDepth-reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+
+				score = -search<false>(newDepth - reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
 				if (score > alpha)
 					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
@@ -638,7 +641,7 @@ namespace Search {
 					std::cout << "mate " << ((score < 0) ? "-" : "") << (MATE - std::abs(score)) / 2 + 1;
 				}
 				else {
-					std::cout << "cp " << score;
+					std::cout << "cp " << scaleEval(score, pvBoard);
 					if (searcher->showWDL){
 						WDL wdl = computeWDL(score, pvBoard);
 						std::cout << " wdl " << wdl.w << " " << wdl.d << " " << wdl.l;
