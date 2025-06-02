@@ -471,6 +471,8 @@ namespace Search {
 
 				// Reduce more if not a PV node
 				reduction += !isPV;
+				// Reduce less when improving
+				reduction -= improving;
 				// Reduce less if good history
 				reduction -= ss->historyScore / LMR_HIST_DIVISOR();
 
