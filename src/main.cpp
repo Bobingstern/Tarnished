@@ -12,6 +12,7 @@
 #include "timeman.h"
 #include "datagen.h"
 #include "util.h"
+#include "parameters.h"
 
 using namespace chess;
 using namespace std::chrono;
@@ -131,13 +132,27 @@ void UCISetOption(Searcher &searcher, char *str) {
         std::string opt = OptionValue(str);
         searcher.toggleWDL(opt == "true");
     }
+    else {
+        Search::fillLmr();
+        for (auto &param : tunables()) {
+            const char *p = param.name.c_str();
+            if (OptionName(str, p)) {
+                param.value = atoi(OptionValue(str));
+            }
+        }
+    }
 }
 void UCIInfo(){
-    std::cout << "id name Tarnished v2.1 (Ambition)\n";
+    std::cout << "id name Tarnished v3.0 (Warrior)\n";
     std::cout << "id author Anik Patel\n";
     std::cout << "option name Hash type spin default 16 min 2 max 65536\n";
     std::cout << "option name Threads type spin default 1 min 1 max 256\n";
     std::cout << "option name UCI_ShowWDL type check default false\n";
+#ifdef TUNE
+    for (auto &param : tunables()) {
+        std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min << " max " << param.max << std::endl;
+    }
+#endif
     std::cout << "uciok" << std::endl; 
 }
 
@@ -284,6 +299,10 @@ int main(int agrc, char *argv[]){
         searcher.exit();
         return 0;
     }
+
+    // Print Ascii
+    tarnishedAscii();
+
     char str[INPUT_SIZE];
     while (GetInput(str)) {
         switch (HashInput(str)) {
