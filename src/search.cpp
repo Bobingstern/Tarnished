@@ -479,7 +479,7 @@ namespace Search {
 				reduction += cutnode;
 
 				// Clamp reduction
-				reduction = std::clamp(reduction, 0, newDepth - 1);
+				// reduction = std::clamp(reduction, 0, newDepth - 1);
 
 				score = -search<false>(newDepth - reduction, ply+1, -alpha - 1, -alpha, true, ss+1, thread, limit);
 				// Re-search at normal depth
