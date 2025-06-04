@@ -475,7 +475,8 @@ namespace Search {
 				reduction -= improving;
 				// Reduce less if good history
 				reduction -= ss->historyScore / LMR_HIST_DIVISOR();
-
+				// Reduce more if not in check
+				reduction += !inCheck;
 
 				score = -search<false>(newDepth - reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
