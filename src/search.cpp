@@ -334,6 +334,7 @@ namespace Search {
 		int score = bestScore;
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
+		bool ttMoveCapture = ttHit && !moveIsNull(Move(ttEntry->move)) && thread.board.isCapture(Move(ttEntry->move));
 
 		// Get the corrected static evaluation if we're not in singular search or check
 		if (moveIsNull(ss->excluded)){
@@ -503,6 +504,8 @@ namespace Search {
 
 					reduction += !inCheck;
 
+					reduction += ttMoveCapture;
+
 					thread.lmrInfo.emplace_back(depth, moveCount, ss->historyScore, reduction, depth, isQuiet, isPV, improving);
 				}
 				doLMR = false;
@@ -515,6 +518,8 @@ namespace Search {
 				reduction -= improving;
 				// Reduce less if good history
 				reduction -= ss->historyScore / LMR_HIST_DIVISOR();
+
+			
 
 				score = -search<false>(newDepth - reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth

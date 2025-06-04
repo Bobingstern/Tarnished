@@ -263,7 +263,8 @@ void lmrDatagen() {
 		thread->nodes = 0;
 		thread->bestMove = Move::NO_MOVE;
 		int eval = Search::iterativeDeepening(std::ref(board), *thread, limit, nullptr);
-		
+		//std::shuffle(thread->lmrInfo.begin(), thread->lmrInfo.end(), g);
+		//thread->lmrInfo.resize(1000);
 		for (auto &entry : thread->lmrInfo) {
 			avg += std::pow(entry.reduction - entry.optimalReduction, 2);
 			// Save data
@@ -271,6 +272,7 @@ void lmrDatagen() {
 	        //      << entry.depth / 256.0 << ','
 	        //      << entry.moveCount / 256.0 << ','
 	        //      << entry.historyScore / 16384.0 << ','
+	        //      << entry.reduction / 256.0 << ","
 	        //      << (entry.isQuiet ? 1 : 0) << ','
 	        //      << (entry.isPV ? 1 : 0) << ','
 	        //      << (entry.improving ? 1 : 0) << ','
@@ -291,5 +293,6 @@ void lmrDatagen() {
 	// check: 6.4397
 	// normals: 6.415
 	// !incheck: 3.65
+	// ttCapture: 3.57
 }
 #endif
