@@ -419,13 +419,12 @@ namespace Search {
 					break;
 
 				// History Pruning
-				// Failed, will test again later
 				// https://github.com/aronpetko/integral/blob/733036df88408d0d6338d05f7991f46f0527ed4f/src/engine/search/search.cc#L945
 				// https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L614
-				// if (isQuiet && depth <= HIST_PRUNING_DEPTH && ss->historyScore <= HIST_PRUNING_MARGIN * depth){
-				// 	skipQuiets = true;
-				// 	continue;
-				// }
+				if (isQuiet && depth <= HIST_PRUNING_DEPTH() && ss->historyScore < -HIST_PRUNING_OFFSET() - HIST_PRUNING_MARGIN() * depth){
+					skipQuiets = true;
+					continue;
+				}
 			}
 
 
