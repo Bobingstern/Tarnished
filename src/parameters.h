@@ -19,6 +19,7 @@ using u128 = unsigned __int128;
 #endif
 
 //#define TUNE
+#define STORE_LMR_DATA
 
 // Struct for tunable parameters
 struct TunableParam
@@ -45,6 +46,7 @@ constexpr int16_t MAX_HISTORY = 16383;
 const int16_t DEFAULT_HISTORY = 0;
 constexpr int CORR_HIST_ENTRIES = 16384;
 constexpr int MAX_CORR_HIST = 1024;
+
 // NNUE Parameters
 constexpr int16_t HL_N = 512;
 constexpr int16_t QA = 255;

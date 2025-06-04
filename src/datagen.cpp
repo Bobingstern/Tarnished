@@ -216,3 +216,80 @@ void startDatagen(size_t tcount){
 	}
 	runThread(tcount-1);
 }
+
+
+// LMR
+#ifdef STORE_LMR_DATA
+void lmrDatagen() {
+	
+	
+	TTable TT;
+	std::unique_ptr<Search::ThreadInfo> thread = std::make_unique<Search::ThreadInfo>(ThreadType::SECONDARY, TT, nullptr);
+	thread->stopped = false;
+	std::vector<std::string> fens;
+	std::ifstream file("./data/fens.fens");
+	std::ofstream fileOut("./data/lmrdata.csv", std::ios::app); // Open in append mode
+	std::string line;
+    std::mt19937 g;
+    g.seed(0);
+
+	if (file.is_open()) {
+		while (std::getline(file, line)) {
+			if (line.length() > 2)
+				fens.push_back(line);
+		}
+	}
+	file.close();
+
+	std::shuffle(fens.begin(), fens.end(), g);
+	fens.resize(1000);
+
+    double avg = 0;
+    int total = 0;
+    int c = 0;
+    for (auto fen : fens) {
+    	Board board;
+		board.setFen(fen);
+		thread->reset();
+		TT.clear();
+
+		if (board.isGameOver().second != GameResult::NONE)
+			continue;
+		
+		Search::Limit limit = Search::Limit();
+		limit.softnodes = 50000;
+		limit.maxnodes = HARD_NODE_COUNT;
+		limit.start();
+		thread->nodes = 0;
+		thread->bestMove = Move::NO_MOVE;
+		int eval = Search::iterativeDeepening(std::ref(board), *thread, limit, nullptr);
+		
+		for (auto &entry : thread->lmrInfo) {
+			avg += std::pow(entry.reduction - entry.optimalReduction, 2);
+			// Save data
+			// fileOut << std::fixed << std::setprecision(6)
+	        //      << entry.depth / 256.0 << ','
+	        //      << entry.moveCount / 256.0 << ','
+	        //      << entry.historyScore / 16384.0 << ','
+	        //      << (entry.isQuiet ? 1 : 0) << ','
+	        //      << (entry.isPV ? 1 : 0) << ','
+	        //      << (entry.improving ? 1 : 0) << ','
+	        //      << (entry.optimalReduction == 0 ? 1 : 0) << "\n";
+			//std::cout << "Reduction " << entry.reduction << " Optimal " << entry.optimalReduction << std::endl;
+		}
+		total += thread->lmrInfo.size();
+		c++;
+
+		std::cout << "Fens " << c  << " Total " << total << " Running average " << avg / total << std::endl;
+
+		
+
+	}
+	avg /= total;
+	std::cout << "Average reduction error " << avg << std::endl;
+
+	// check: 6.4397
+	// normals: 6.415
+	// !incheck: 3.65
+}
+#endif

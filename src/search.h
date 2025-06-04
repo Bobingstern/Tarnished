@@ -28,6 +28,9 @@ struct Searcher;
 
 namespace Search {
 
+void fillLmr();
+bool isMateScore(int score);
+
 struct PVList {
 	std::array<chess::Move, MAX_PLY> moves;
 	uint32_t length;
@@ -59,8 +62,7 @@ struct Stack {
     MultiArray<int16_t, 2, 6, 64> *conthist;
 };
 
-void fillLmr();
-bool isMateScore(int score);
+
 struct Limit {
 	TimeLimit timer;
 	int64_t depth;
@@ -119,6 +121,20 @@ struct Limit {
 	}
 };
 
+#ifdef STORE_LMR_DATA
+struct LMRInfo {
+	int depth;
+	int moveCount;
+	int historyScore;
+	int reduction;
+	int optimalReduction;
+	bool isQuiet;
+	bool isPV;
+	bool improving;
+
+};
+#endif
+
 struct ThreadInfo {
 	std::thread thread;
 	ThreadType type;
@@ -144,7 +160,9 @@ struct ThreadInfo {
 	Searcher *searcher;
 	int threadId;
 
-
+#ifdef STORE_LMR_DATA
+	std::vector<LMRInfo> lmrInfo;
+#endif
 	// indexed by [stm][from][to]
 	MultiArray<int, 2, 64, 64> history;
 	// indexed by [prev stm][prev pt][prev to][stm][pt][to]
@@ -153,7 +171,8 @@ struct ThreadInfo {
 	MultiArray<int, 2, 6, 6, 64> capthist;
 	// Correction histories indexed by [stm][hash % entries]
 	MultiArray<int, 2, CORR_HIST_ENTRIES> pawnCorrhist;
-	MultiArray<int, 2, 2, CORR_HIST_ENTRIES> nonPawnCorrhist;
+	MultiArray<int, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
+	MultiArray<int, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
 	
 	ThreadInfo(ThreadType t, TTable &tt, Searcher *s);
 	ThreadInfo(int id, TTable &tt, Searcher *s);
@@ -163,7 +182,8 @@ struct ThreadInfo {
 		conthist = other.conthist;
 		capthist = other.capthist;
 		pawnCorrhist = other.pawnCorrhist;
-		nonPawnCorrhist = other.nonPawnCorrhist;
+		whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
+		blackNonPawnCorrhist = other.blackNonPawnCorrhist;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}
 	void exit();
@@ -208,8 +228,8 @@ struct ThreadInfo {
 			entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
 		};
 		updateEntry(pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES]);
-		updateEntry(nonPawnCorrhist[board.sideToMove()][0][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
-		updateEntry(nonPawnCorrhist[board.sideToMove()][1][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
+		updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
+		updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
 	}
 	// ----------------- History getters
 	int getHistory(Color c, Move m){
@@ -239,8 +259,8 @@ struct ThreadInfo {
 
 		int correction = 0;
 		correction += PAWN_CORR_WEIGHT() * pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES];
-		correction += NON_PAWN_STM_CORR_WEIGHT() * nonPawnCorrhist[board.sideToMove()][board.sideToMove()][ss->nonPawnKey[board.sideToMove()] % CORR_HIST_ENTRIES];
-		correction += NON_PAWN_NSTM_CORR_WEIGHT() * nonPawnCorrhist[board.sideToMove()][~board.sideToMove()][ss->nonPawnKey[~board.sideToMove()] % CORR_HIST_ENTRIES];
+		correction += NON_PAWN_STM_CORR_WEIGHT() * whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES];
+		correction += NON_PAWN_NSTM_CORR_WEIGHT() * blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
 
 		int corrected = eval + correction / 2048;
 		return std::clamp(corrected, -INFINITE + 1, INFINITE - 1);
@@ -252,9 +272,14 @@ struct ThreadInfo {
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
 		pawnCorrhist.fill((int)DEFAULT_HISTORY);
-		nonPawnCorrhist.fill((int)DEFAULT_HISTORY);
+		whiteNonPawnCorrhist.fill((int)DEFAULT_HISTORY);
+		blackNonPawnCorrhist.fill((int)DEFAULT_HISTORY);
 		threadBestScore = -INFINITE;
 		completed = 0;
+
+	#ifdef STORE_LMR_DATA
+		lmrInfo.clear();
+	#endif
 	}
 };
 

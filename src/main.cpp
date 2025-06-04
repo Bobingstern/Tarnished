@@ -296,6 +296,8 @@ int main(int agrc, char *argv[]){
         std::string arg = argv[1];
         if (arg == "bench")
             bench(searcher);
+        if (arg == "lmr")
+            lmrDatagen();
         searcher.exit();
         return 0;
     }

@@ -490,9 +490,25 @@ namespace Search {
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT() && !thread.board.inCheck()){
-				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+			bool doLMR = depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT() && !thread.board.inCheck();
+			#ifdef STORE_LMR_DATA
+				if (doLMR) {
+					int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+					// Reduce more if not a PV node
+					reduction += !isPV;
+					// Reduce less when improving
+					reduction -= improving;
+					// Reduce less if good history
+					reduction -= ss->historyScore / LMR_HIST_DIVISOR();
 
+					reduction += !inCheck;
+
+					thread.lmrInfo.emplace_back(depth, moveCount, ss->historyScore, reduction, depth, isQuiet, isPV, improving);
+				}
+				doLMR = false;
+			#endif
+			if (doLMR){
+				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
 				// Reduce more if not a PV node
 				reduction += !isPV;
 				// Reduce less when improving
@@ -525,6 +541,14 @@ namespace Search {
 					if (isPV){
 						ss->pv.update(move, (ss+1)->pv);
 					}
+
+				#ifdef STORE_LMR_DATA
+					if (thread.lmrInfo.size() > 0){
+						for (auto &entry : thread.lmrInfo)
+							entry.optimalReduction = entry.depth;
+						thread.lmrInfo[thread.lmrInfo.size()-1].optimalReduction = 0;
+					}
+				#endif
 				}
 			}
 			if (score >= beta){
