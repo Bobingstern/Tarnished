@@ -418,6 +418,11 @@ namespace Search {
 				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
 					break;
 
+				int seeMargin = isQuiet ? SEE_PRUNING_QUIET() * depth 
+										: SEE_PRUNING_NOISY() * depth * depth;
+				if (moveCount > 0 && !SEE(thread.board, move, seeMargin))
+					continue;
+
 				// History Pruning
 				// Failed, will test again later
 				// https://github.com/aronpetko/integral/blob/733036df88408d0d6338d05f7991f46f0527ed4f/src/engine/search/search.cc#L945
