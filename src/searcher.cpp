@@ -10,29 +10,15 @@
 
 Search::ThreadInfo::ThreadInfo(ThreadType t, TTable &tt, Searcher *s) : type(t), TT(tt), searcher(s) {
 	board = Board();
-	history.fill((int)DEFAULT_HISTORY);
-	conthist.fill(DEFAULT_HISTORY);
-	capthist.fill((int)DEFAULT_HISTORY);
-	pawnCorrhist.fill((int)DEFAULT_HISTORY);
-	nodes = 0;
-	bestMove = Move::NO_MOVE;
-	minNmpPly = 0;
-	rootDepth = 0;
 	thread = std::thread(&Search::ThreadInfo::idle, this);
+	reset();
 };
 
 Search::ThreadInfo::ThreadInfo(int id, TTable &tt, Searcher *s) : threadId(id), TT(tt), searcher(s) {
 	type = id == 0 ? ThreadType::MAIN : ThreadType::SECONDARY;
 	board = Board();
-	history.fill((int)DEFAULT_HISTORY);
-	conthist.fill(DEFAULT_HISTORY);
-	capthist.fill((int)DEFAULT_HISTORY);
-	pawnCorrhist.fill((int)DEFAULT_HISTORY);
-	nodes = 0;
-	bestMove = Move::NO_MOVE;
-	minNmpPly = 0;
-	rootDepth = 0;
 	thread = std::thread(&Search::ThreadInfo::idle, this);
+	reset();
 };
 
 void Search::ThreadInfo::exit() {

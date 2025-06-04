@@ -12,7 +12,7 @@ using namespace chess;
 
 // Accumulator wrappers
 // Update the accumulators incrementally and track the
-// pawn zobrist key for correction history (stored in the search stack)
+// zobrist keys for correction history (stored in the search stack)
 void MakeMove(Board &board, Accumulator &acc, Move &move, Search::Stack *ss){
 	PieceType to = board.at<PieceType>(move.to());
 	PieceType from = board.at<PieceType>(move.from());
@@ -20,6 +20,7 @@ void MakeMove(Board &board, Accumulator &acc, Move &move, Search::Stack *ss){
 
 	// Pawn key incremental updates
 	ss->pawnKey = (ss-1)->pawnKey;
+	ss->nonPawnKey = (ss-1)->nonPawnKey;
 	if (from == PieceType::PAWN){
 		// Update pawn zobrist key
 		// Remove from sq pawn
@@ -32,18 +33,41 @@ void MakeMove(Board &board, Accumulator &acc, Move &move, Search::Stack *ss){
 			// Remove to sq pawn
 			ss->pawnKey ^= Zobrist::piece(board.at(move.to()), move.to());
 		}
+		else if (to != PieceType::NONE) 
+			ss->nonPawnKey[~stm] ^= Zobrist::piece(board.at(move.to()), move.to());
 		// Add to sq pawn
 		if (move.typeOf() != Move::PROMOTION)
 			ss->pawnKey ^= Zobrist::piece(board.at(move.from()), move.to());
+		else
+			ss->nonPawnKey[stm] ^= Zobrist::piece(Piece(move.promotionType(), stm), move.to());
+	}
+	else {
+		
+		if (move.typeOf() != Move::CASTLING){
+			// Remove from sq piece
+			ss->nonPawnKey[stm] ^= Zobrist::piece(board.at(move.from()), move.from());
+			// If capture remove to
+			if (to != PieceType::NONE) {
+				ss->nonPawnKey[~stm] ^= Zobrist::piece(board.at(move.to()), move.to());
+			}
+			// Add the moving piece at the to sq
+			ss->nonPawnKey[stm] ^= Zobrist::piece(board.at(move.from()), move.to());
+		}
+		
+
 	}
 
 	board.makeMove(move);
+
 
 	if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION){
 		// For now just recalculate on special moves like these
 		acc.refresh(board);
 	}
 	else if (move.typeOf() == Move::CASTLING){
+		// Lazy. I will make it incremental eventually
+		ss->nonPawnKey[stm] = resetNonPawnHash(board, stm);
+
 		Square king = move.from();
 		Square kingTo = (king > move.to()) ? king - 2 : king + 2;
 		Square rookTo = (king > move.to()) ? kingTo + 1 : kingTo - 1;
@@ -476,7 +500,6 @@ namespace Search {
 				// Reduce less if good history
 				reduction -= ss->historyScore / LMR_HIST_DIVISOR();
 
-
 				score = -search<false>(newDepth - reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
 				if (score > alpha)
@@ -587,6 +610,8 @@ namespace Search {
 			};
 			threadInfo.rootDepth = depth;
 			(ss-1)->pawnKey = resetPawnHash(threadInfo.board);
+			(ss-1)->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
+			(ss-1)->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
 			// Aspiration Windows (WIP untuned)
 			if (depth >= MIN_ASP_WINDOW_DEPTH()){
 				int delta = INITIAL_ASP_WINDOW();

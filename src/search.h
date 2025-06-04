@@ -54,6 +54,7 @@ struct Stack {
     int    eval;
     int    historyScore;
     uint64_t pawnKey;
+    std::array<uint64_t, 2> nonPawnKey;
     Move excluded{};
     MultiArray<int16_t, 2, 6, 64> *conthist;
 };
@@ -150,8 +151,9 @@ struct ThreadInfo {
 	MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
 	// indexed by [stm][moving pt][cap pt][to]
 	MultiArray<int, 2, 6, 6, 64> capthist;
-	// indexed by [stm][pawnhash % entries]
-	MultiArray<int, 2, PAWN_CORR_HIST_ENTRIES> pawnCorrhist;
+	// Correction histories indexed by [stm][hash % entries]
+	MultiArray<int, 2, CORR_HIST_ENTRIES> pawnCorrhist;
+	MultiArray<int, 2, 2, CORR_HIST_ENTRIES> nonPawnCorrhist;
 	
 	ThreadInfo(ThreadType t, TTable &tt, Searcher *s);
 	ThreadInfo(int id, TTable &tt, Searcher *s);
@@ -161,6 +163,7 @@ struct ThreadInfo {
 		conthist = other.conthist;
 		capthist = other.capthist;
 		pawnCorrhist = other.pawnCorrhist;
+		nonPawnCorrhist = other.nonPawnCorrhist;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}
 	void exit();
@@ -200,9 +203,13 @@ struct ThreadInfo {
 
 	// Static eval correction history
 	void updateCorrhist(Stack *ss, Board &board, int bonus){
-		int &entry = pawnCorrhist[board.sideToMove()][ss->pawnKey % PAWN_CORR_HIST_ENTRIES];
-		int clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
-		entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
+		auto updateEntry = [&](int &entry) {
+			int clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
+			entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
+		};
+		updateEntry(pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES]);
+		updateEntry(nonPawnCorrhist[board.sideToMove()][0][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
+		updateEntry(nonPawnCorrhist[board.sideToMove()][1][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
 	}
 	// ----------------- History getters
 	int getHistory(Color c, Move m){
@@ -229,10 +236,11 @@ struct ThreadInfo {
 	}
 
 	int correctStaticEval(Stack *ss, Board &board, int eval){
-		int pawnEntry = pawnCorrhist[board.sideToMove()][ss->pawnKey % PAWN_CORR_HIST_ENTRIES];
 
 		int correction = 0;
-		correction += PAWN_CORR_WEIGHT() * pawnEntry;
+		correction += PAWN_CORR_WEIGHT() * pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES];
+		correction += NON_PAWN_STM_CORR_WEIGHT() * nonPawnCorrhist[board.sideToMove()][board.sideToMove()][ss->nonPawnKey[board.sideToMove()] % CORR_HIST_ENTRIES];
+		correction += NON_PAWN_NSTM_CORR_WEIGHT() * nonPawnCorrhist[board.sideToMove()][~board.sideToMove()][ss->nonPawnKey[~board.sideToMove()] % CORR_HIST_ENTRIES];
 
 		int corrected = eval + correction / 2048;
 		return std::clamp(corrected, -INFINITE + 1, INFINITE - 1);
@@ -244,6 +252,7 @@ struct ThreadInfo {
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
 		pawnCorrhist.fill((int)DEFAULT_HISTORY);
+		nonPawnCorrhist.fill((int)DEFAULT_HISTORY);
 		threadBestScore = -INFINITE;
 		completed = 0;
 	}

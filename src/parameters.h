@@ -43,7 +43,7 @@ void printWeatherFactoryConfig();
 // History Constants
 constexpr int16_t MAX_HISTORY = 16383;
 const int16_t DEFAULT_HISTORY = 0;
-constexpr int PAWN_CORR_HIST_ENTRIES = 16384;
+constexpr int CORR_HIST_ENTRIES = 16384;
 constexpr int MAX_CORR_HIST = 1024;
 // NNUE Parameters
 constexpr int16_t HL_N = 512;
@@ -54,6 +54,8 @@ constexpr int OUTPUT_BUCKETS = 8;
 
 // History Parameters
 TUNABLE_PARAM(PAWN_CORR_WEIGHT, 186, 64, 2048, 32)
+TUNABLE_PARAM(NON_PAWN_STM_CORR_WEIGHT, 128, 64, 2048, 32)
+TUNABLE_PARAM(NON_PAWN_NSTM_CORR_WEIGHT, 128, 64, 2048, 32)
 TUNABLE_PARAM(CORRHIST_BONUS_WEIGHT, 100, 10, 300, 10);
 
 TUNABLE_PARAM(HIST_BONUS_QUADRATIC, 7, 1, 10, 1)
