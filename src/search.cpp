@@ -457,6 +457,8 @@ namespace Search {
 					else
 						extension = 1; // Singular Extension
 				}
+				else if (sBeta >= beta)
+					return sBeta; // Multicut
 				else if (ttEntry->score >= beta)
 					extension = -2 + isPV; // Negative Extension
 
