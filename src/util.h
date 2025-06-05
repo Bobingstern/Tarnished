@@ -31,13 +31,13 @@ struct StateInfo {
 	}
 };
 // Values taken from SF
-constexpr int PawnValue   = 208;
-constexpr int KnightValue = 781;
-constexpr int BishopValue = 825;
-constexpr int RookValue   = 1276;
-constexpr int QueenValue  = 2538;
+constexpr int PawnValue   = 100;
+constexpr int KnightValue = 316;
+constexpr int BishopValue = 328;
+constexpr int RookValue   = 493;
+constexpr int QueenValue  = 982;
 
-inline std::array<int, 7> PieceValue = {PawnValue, KnightValue, BishopValue, RookValue, QueenValue, 0};
+inline std::array<int, 8> PieceValue = {PawnValue, KnightValue, BishopValue, RookValue, QueenValue, 0, 0};
 
 template<typename T, typename U>
 inline void deepFill(T& dest, const U& val) {

@@ -418,7 +418,7 @@ namespace Search {
 				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
 					break;
 
-				if (!isQuiet && !SEE(thread.board, move, SEE_PRUNING_NOISY() * depth))
+				if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
 					continue;
 
 				// History Pruning
