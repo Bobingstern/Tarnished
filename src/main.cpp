@@ -96,9 +96,6 @@ void UCIPosition(Board &board, char *str) {
     if ((str = strstr(str, "moves")) == NULL)
         return;
 
-    Accumulator acc;
-    // Loop over the moves and make them in succession
-
     char *move = strtok(str, " ");
     while ((move = strtok(NULL, " "))) {
 
@@ -107,7 +104,6 @@ void UCIPosition(Board &board, char *str) {
         Move move_ = uci::uciToMove(board, m);
         board.makeMove(move_);
     }
-
 
 }
 

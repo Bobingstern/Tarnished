@@ -33,6 +33,8 @@ uint64_t resetNonPawnHash(Board &board, Color c){
 	return key;
 } 
 
+
+
 // Utility attackers
 Bitboard attackersTo(Board &board, Square s, Bitboard occ){
 	return (attacks::pawn(Color::WHITE, s) & board.pieces(PieceType::PAWN, Color::BLACK))
