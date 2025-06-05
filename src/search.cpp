@@ -20,6 +20,8 @@ void MakeMove(Board &board, Accumulator &acc, Move &move, Search::Stack *ss){
 
 	// Pawn key incremental updates
 	ss->pawnKey = (ss-1)->pawnKey;
+	ss->nonPawnKey[0] = (ss-1)->nonPawnKey[0];
+	ss->nonPawnKey[1] = (ss-1)->nonPawnKey[1];
 	if (from == PieceType::PAWN){
 		// Update pawn zobrist key
 		// Remove from sq pawn
@@ -32,18 +34,39 @@ void MakeMove(Board &board, Accumulator &acc, Move &move, Search::Stack *ss){
 			// Remove to sq pawn
 			ss->pawnKey ^= Zobrist::piece(board.at(move.to()), move.to());
 		}
+		else if (to != PieceType::NONE) 
+			ss->nonPawnKey[~stm] ^= Zobrist::piece(board.at(move.to()), move.to());
 		// Add to sq pawn
 		if (move.typeOf() != Move::PROMOTION)
 			ss->pawnKey ^= Zobrist::piece(board.at(move.from()), move.to());
+		else
+			ss->nonPawnKey[stm] ^= Zobrist::piece(Piece(move.promotionType(), stm), move.to());
+	}
+	else {
+		
+		if (move.typeOf() != Move::CASTLING){
+			// Remove from sq piece
+			ss->nonPawnKey[stm] ^= Zobrist::piece(board.at(move.from()), move.from());
+			// If capture remove to
+			if (to != PieceType::NONE && to != PieceType::PAWN) {
+				ss->nonPawnKey[~stm] ^= Zobrist::piece(board.at(move.to()), move.to());
+			}
+			// Add the moving piece at the to sq
+			ss->nonPawnKey[stm] ^= Zobrist::piece(board.at(move.from()), move.to());
+		}
 	}
 
 	board.makeMove(move);
-
+	//ss->nonPawnKey[stm] = resetNonPawnHash(board, stm);
+	//ss->nonPawnKey[~stm] = resetNonPawnHash(board, ~stm);
 	if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION){
 		// For now just recalculate on special moves like these
 		acc.refresh(board);
 	}
 	else if (move.typeOf() == Move::CASTLING){
+		// Lazy. I will make it incremental eventually
+		ss->nonPawnKey[stm] = resetNonPawnHash(board, stm);
+
 		Square king = move.from();
 		Square kingTo = (king > move.to()) ? king - 2 : king + 2;
 		Square rookTo = (king > move.to()) ? kingTo + 1 : kingTo - 1;
@@ -60,6 +83,7 @@ void MakeMove(Board &board, Accumulator &acc, Move &move, Search::Stack *ss){
 		acc.quiet(stm, move.to(), from, move.from(), from);
 
 }
+
 
 void UnmakeMove(Board &board, Accumulator &acc, Move &move){
 	board.unmakeMove(move);
@@ -590,6 +614,8 @@ namespace Search {
 			};
 			threadInfo.rootDepth = depth;
 			(ss-1)->pawnKey = resetPawnHash(threadInfo.board);
+			(ss-1)->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
+			(ss-1)->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
 			// Aspiration Windows (WIP untuned)
 			if (depth >= MIN_ASP_WINDOW_DEPTH()){
 				int delta = INITIAL_ASP_WINDOW();

@@ -13,17 +13,25 @@ Bitboard BetweenBB[64][64] = {};
 Bitboard Rays[64][8] = {};
 
 // Pawn Hash reset
-
 uint64_t resetPawnHash(Board &board){
-	uint64_t pawnKey = 0ULL;
+	uint64_t key = 0ULL;
 	Bitboard occ = board.pieces(PieceType::PAWN);
 	while (occ) {
 		Square sq = occ.pop();
-		pawnKey ^= Zobrist::piece(board.at(sq), sq);
+		key ^= Zobrist::piece(board.at(sq), sq);
 	}
-	return pawnKey;
+	return key;
 } 
-
+// Nonpawn Hash
+uint64_t resetNonPawnHash(Board &board, Color c){
+	uint64_t key = 0ULL;
+	Bitboard occ = board.us(c) ^ board.pieces(PieceType::PAWN, c);
+	while (occ) {
+		Square sq = occ.pop();
+		key ^= Zobrist::piece(board.at(sq), sq);
+	}
+	return key;
+} 
 
 // Utility attackers
 Bitboard attackersTo(Board &board, Square s, Bitboard occ){

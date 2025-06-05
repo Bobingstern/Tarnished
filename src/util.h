@@ -55,6 +55,8 @@ namespace Search {
 };
 // Accumulator wrapper
 uint64_t resetPawnHash(Board &board);
+uint64_t resetNonPawnHash(Board &board, Color c);
+
 void MakeMove(Board &board, Accumulator &acc, Move &move, Search::Stack *ss);
 void UnmakeMove(Board &board, Accumulator &acc, Move &move);
 // SEE stuff
