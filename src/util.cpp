@@ -169,6 +169,10 @@ void pinnersBlockers(Board &board, Color stm, StateInfo *sti){
 }
 // Stockfish and Sirius
 bool SEE(Board &board, Move &move, int margin){
+
+	if (move.typeOf() != Move::NORMAL)
+		return 0 >= margin;
+
 	Square from = move.from();
 	Square to = move.to();
 	StateInfo state = StateInfo();
@@ -234,3 +238,64 @@ bool SEE(Board &board, Move &move, int margin){
 	}
 	return bool(res);
 }
+
+
+
+/*
+inline void trim(std::string& str)
+{
+    const size_t first = str.find_first_not_of(" \t\n\r");
+    const size_t last  = str.find_last_not_of(" \t\n\r");
+
+    str = first == std::string::npos
+        ? ""
+        : str.substr(first, last - first + 1);
+}
+
+inline std::vector<std::string> splitString(const std::string& str, const char delimiter)
+{
+    std::vector<std::string> strSplit = { };
+    std::stringstream ss(str);
+    std::string token;
+
+    while (getline(ss, token, delimiter))
+    {
+        trim(token);
+
+        if (token != "")
+            strSplit.push_back(token);
+    }
+
+    return strSplit;
+}
+
+void testSEE() {
+
+    std::ifstream inputFile("data/SEE.txt");
+    assert(inputFile.is_open());
+
+    std::string line = "";
+    while (std::getline(inputFile, line))
+    {
+        std::stringstream iss(line);
+        const std::vector<std::string> tokens = splitString(line, '|');
+
+        const std::string fen = tokens[0];
+        const std::string uciMove = tokens[1];
+        const int32_t gain = stoi(tokens[2]);
+
+        Board pos = Board();
+        pos.setFen(fen);
+        Move move = uci::uciToMove(pos, uciMove);
+
+        std::cout << line << std::endl;
+        std::cout << gain << std::endl;
+        std::cout << SEE(pos, move, gain - 1) << ", " << SEE(pos, move, gain) << ", " << !SEE(pos, move, gain + 1) << "\n" << std::endl;
+        assert(SEE(pos, move, gain - 1));
+        assert(SEE(pos, move, gain));
+        assert(!SEE(pos, move, gain + 1));
+    }
+
+    inputFile.close();
+}
+*/
