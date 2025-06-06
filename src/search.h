@@ -53,8 +53,10 @@ struct Stack {
     int    staticEval;
     int    eval;
     int    historyScore;
+
     uint64_t pawnKey;
     std::array<uint64_t, 2> nonPawnKey;
+
     Move excluded{};
     MultiArray<int16_t, 2, 6, 64> *conthist;
 };
@@ -151,10 +153,11 @@ struct ThreadInfo {
 	MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
 	// indexed by [stm][moving pt][cap pt][to]
 	MultiArray<int, 2, 6, 6, 64> capthist;
-	// indexed by [stm][pawnhash % entries]
-	MultiArray<int, 2, CORR_HIST_ENTRIES> pawnCorrhist;
-	MultiArray<int, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
-	MultiArray<int, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
+	// indexed by [stm][hash % entries]
+	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> pawnCorrhist;
+	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
+	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
+
 	
 	ThreadInfo(ThreadType t, TTable &tt, Searcher *s);
 	ThreadInfo(int id, TTable &tt, Searcher *s);
@@ -164,6 +167,8 @@ struct ThreadInfo {
 		conthist = other.conthist;
 		capthist = other.capthist;
 		pawnCorrhist = other.pawnCorrhist;
+		whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
+		blackNonPawnCorrhist = other.blackNonPawnCorrhist;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}
 	void exit();
@@ -203,8 +208,8 @@ struct ThreadInfo {
 
 	// Static eval correction history
 	void updateCorrhist(Stack *ss, Board &board, int bonus){
-		auto updateEntry = [&](int &entry) {
-			int clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
+		auto updateEntry = [&](int16_t &entry) {
+			int16_t clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
 			entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
 		};
 		updateEntry(pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES]);
@@ -250,8 +255,11 @@ struct ThreadInfo {
 		history.fill((int)DEFAULT_HISTORY);
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
-		pawnCorrhist.fill((int)DEFAULT_HISTORY);
+		pawnCorrhist.fill(DEFAULT_HISTORY);
+		whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
+		blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
 		threadBestScore = -INFINITE;
+		rootDepth = 0;
 		completed = 0;
 	}
 };

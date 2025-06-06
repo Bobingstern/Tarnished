@@ -28,7 +28,7 @@ void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
 		board.makeNullMove();
 		return;
 	}
-
+	
 	if (from == PieceType::PAWN){
 		// Update pawn zobrist key
 		// Remove from sq pawn
@@ -346,7 +346,7 @@ namespace Search {
 		int score = bestScore;
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
-
+		ss->conthist = nullptr;
 		// Get the corrected static evaluation if we're not in singular search or check
 		if (moveIsNull(ss->excluded)){
 			if (inCheck){
@@ -367,7 +367,7 @@ namespace Search {
 			}
 		}
 
-		ss->conthist = nullptr;
+		
 
 		// Improving heurstic
 		// We are better than 2 plies ago
@@ -385,10 +385,13 @@ namespace Search {
 			if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()){
 				// Sirius formula
 				const int reduction = NMP_BASE_REDUCTION() + depth / NMP_REDUCTION_SCALE() + std::min(2, (ss->eval-beta)/NMP_EVAL_SCALE());
-				//thread.board.makeNullMove();
+
+				ss->conthist = nullptr;
+
 				MakeMove(thread.board, thread.accumulator, Move(Move::NULL_MOVE), ss);
 				int nmpScore = -search<false>(depth-reduction, ply+1, -beta, -beta + 1, ss+1, thread, limit);
 				UnmakeMove(thread.board, thread.accumulator, Move(Move::NULL_MOVE));
+
 				if (nmpScore >= beta){
 					// Zugzwang verifiction
 					// All "real" moves are bad, so doing a null causes a cutoff
@@ -468,9 +471,6 @@ namespace Search {
 				// }
 			}
 
-
-			ss->conthist = thread.getConthistSegment(thread.board, move);
-
 			// Singular Extensions
 			// Sirius conditions
 			// https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
@@ -498,6 +498,9 @@ namespace Search {
 					extension = -2 + isPV; // Negative Extension
 
 			}					
+
+			// Update Continuation History
+			ss->conthist = thread.getConthistSegment(thread.board, move);
 
 			MakeMove(thread.board, thread.accumulator, move, ss);
 			moveCount++;
@@ -529,6 +532,7 @@ namespace Search {
 				score = -search<isPV>(newDepth, ply+1, -beta, -alpha, ss+1, thread, limit);
 			}
 			UnmakeMove(thread.board, thread.accumulator, move);
+
 			if (score > bestScore){
 				bestScore = score;
 				if (score > alpha){
