@@ -208,6 +208,8 @@ namespace Search {
 			return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, thread.accumulator) : 0;
 		}
 
+		ss->ply = ply;
+
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
 		bool ttHit = ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
 		if (!isPV && ttHit
@@ -304,6 +306,8 @@ namespace Search {
 	int search(int depth, int ply, int alpha, int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
 		//bool isPV = alpha != beta - 1;
 		bool root = ply == 0;
+		ss->ply = ply;
+
 		if (isPV) 
 			ss->pv.length = 0;
 		if (depth <= 0){
