@@ -32,8 +32,19 @@ uint64_t resetNonPawnHash(Board &board, Color c){
 	}
 	return key;
 } 
+uint64_t resetMajorHash(Board &board){
+	uint64_t key = 0ULL;
+	Bitboard occ = board.pieces(PieceType::ROOK) | board.pieces(PieceType::QUEEN) | board.pieces(PieceType::KING);
+	while (occ) {
+		Square sq = occ.pop();
+		key ^= Zobrist::piece(board.at(sq), sq);
+	}
+	return key;
+} 
 
-
+bool isMajor(PieceType pt) {
+	return pt == PieceType::ROOK || pt == PieceType::QUEEN || pt == PieceType::KING;
+}
 
 // Utility attackers
 Bitboard attackersTo(Board &board, Square s, Bitboard occ){

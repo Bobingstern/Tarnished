@@ -56,6 +56,7 @@ struct Stack {
     int    ply;
 
     uint64_t pawnKey;
+    uint64_t majorKey;
     std::array<uint64_t, 2> nonPawnKey;
 
     Move excluded{};
@@ -156,6 +157,7 @@ struct ThreadInfo {
 	MultiArray<int, 2, 6, 6, 64> capthist;
 	// indexed by [stm][hash % entries]
 	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> pawnCorrhist;
+	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> majorCorrhist;
 	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
 	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
 
@@ -216,6 +218,7 @@ struct ThreadInfo {
 			entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
 		};
 		updateEntry(pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES]);
+		updateEntry(pawnCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES]);
 		updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
 		updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
 	}
@@ -248,6 +251,7 @@ struct ThreadInfo {
 	int correctStaticEval(Stack *ss, Board &board, int eval){
 		int correction = 0;
 		correction += PAWN_CORR_WEIGHT() * pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES];
+		correction += MAJOR_CORR_WEIGHT() * majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES];
 		correction += NON_PAWN_STM_CORR_WEIGHT() * whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES];
 		correction += NON_PAWN_NSTM_CORR_WEIGHT() * blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
 
@@ -261,6 +265,7 @@ struct ThreadInfo {
 		conthist.fill(DEFAULT_HISTORY);
 		capthist.fill((int)DEFAULT_HISTORY);
 		pawnCorrhist.fill(DEFAULT_HISTORY);
+		majorCorrhist.fill(DEFAULT_HISTORY);
 		whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
 		blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
 		threadBestScore = -INFINITE;
