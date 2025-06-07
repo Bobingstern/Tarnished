@@ -170,6 +170,7 @@ struct ThreadInfo {
 		conthist = other.conthist;
 		capthist = other.capthist;
 		pawnCorrhist = other.pawnCorrhist;
+		majorCorrhist = other.majorCorrhist;
 		whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
 		blackNonPawnCorrhist = other.blackNonPawnCorrhist;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
