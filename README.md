@@ -1,20 +1,21 @@
+<div align="center">
 
+<img
+  width="250"
+  alt="Tarnished Logo"
+  src="assets/tarnished-logo-rounded.png">
+  
+<h1>Tarnished</h1>
 
-
-
-<p align="center">
-</p>
-<h1 align="center">Tarnished</h1>
-
-UCI Chess Engine written in C++ featuring NNUE evaluation trained from scratch. The name is a reference to a certain video game protagonist
-
-## Estimated Strength
+<p>UCI Chess Engine written in C++ featuring NNUE evaluation trained from scratch. </p>
 
 | Version | Release Date | [CCRL 40/15](https://www.computerchess.org.uk/ccrl/4040/cgi/compare_engines.cgi?family=Tarnished&print=Rating+list&print=Results+table&print=LOS+table&print=Ponder+hit+table&print=Eval+difference+table&print=Comopp+gamenum+table&print=Overlap+table&print=Score+with+common+opponents) |
 | --- | --- | --- |
 | 1.0 | 2025-05-10 | 2432 |
 | 2.0 | 2025-05-17 | 3152 |
 | 2.1 | 2025-05-24 | ~3300* |
+
+</div>
 
 ## Building
 It seems like the `Makefile` is slightly faster than using `CMake` but you may use whichever one you wish. Make sure to have an NNUE file under `network/latest.bin` if you plan on building the project. Tarnished makes use of [incbin](https://github.com/graphitemaster/incbin) to embed the file into the executable itself, removing the need to carry an external network along with it. To build with `make` you may 
@@ -52,24 +53,28 @@ Alternatively, with `CMake`
         - Killer Move Heuristic 
         - Butterfly History Heuristic
         - 1 ply Continuation History
+        - 2 ply Continuation History
         - Capture History
         - SEE Move Ordering
     - Selectivity
+        - TT Cut-offs
         - Reverse Futility Pruning
         - Null Move Pruning
         - Improving Heuristic
         - Late Move Reductions
         - Late Move Pruning
-        - SEE Pruning (qsearch)
+        - SEE Pruning (PVS and QS)
         - Singular Extensions
             - Double Extensions
             - Negative Extensions
         - Terminal Conditions (Mate, Stalemate, 3fold...)
         - Internal Iterative Reductions
  - Misc
-     - Static Evaluation Correction History (Pawn hash indexed)
+     - Static Evaluation Correction History (Pawn, Non-Pawn, Major, Minor Hashes)
+     - TT Static Evaluation Cut-offs
      - Soft time management
-     - Lazy SMP (functional but not tested thoroughly)
+     - Lazy SMP
+     - SPSA Parameter Tuning
 
 ## Non-standard UCI Commands
 
@@ -88,8 +93,10 @@ Alternatively, with `CMake`
      - Send me your data!
 
 ## Credits
-- Stockfish Discord Server
+- The name Tarnished is a reference to a certain video game protagonist
+- Thanks to everyone in the Stockfish Discord Server
 - [MattBench](https://chess.n9x.co/index/) (Thanks Matt for letting me join)
+- [Swedishchef](https://github.com/JonathanHallstrom) (Helping out with many engine development related things)
 - [Weiss](https://github.com/TerjeKir/Weiss)
 - [Stash](https://github.com/mhouppin/stash-bot)
 - [Sirius](https://github.com/mcthouacbb/Sirius) (Rand for pointing out many silly mistakes)
