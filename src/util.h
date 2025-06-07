@@ -58,7 +58,9 @@ namespace Search {
 uint64_t resetPawnHash(Board &board);
 uint64_t resetNonPawnHash(Board &board, Color c);
 uint64_t resetMajorHash(Board &board);
+uint64_t resetMinorHash(Board &board);
 bool isMajor(PieceType pt);
+bool isMinor(PieceType pt);
 
 // Accumulator wrapper
 void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss);

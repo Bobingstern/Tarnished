@@ -42,8 +42,22 @@ uint64_t resetMajorHash(Board &board){
 	return key;
 } 
 
+uint64_t resetMinorHash(Board &board){
+	uint64_t key = 0ULL;
+	Bitboard occ = board.pieces(PieceType::KNIGHT) | board.pieces(PieceType::BISHOP) | board.pieces(PieceType::KING);
+	while (occ) {
+		Square sq = occ.pop();
+		key ^= Zobrist::piece(board.at(sq), sq);
+	}
+	return key;
+} 
+
 bool isMajor(PieceType pt) {
 	return pt == PieceType::ROOK || pt == PieceType::QUEEN || pt == PieceType::KING;
+}
+
+bool isMinor(PieceType pt) {
+	return pt == PieceType::KNIGHT || pt == PieceType::BISHOP || pt == PieceType::KING;
 }
 
 // Utility attackers

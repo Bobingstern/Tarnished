@@ -57,6 +57,7 @@ struct Stack {
 
     uint64_t pawnKey;
     uint64_t majorKey;
+    uint64_t minorKey;
     std::array<uint64_t, 2> nonPawnKey;
 
     Move excluded{};
@@ -158,6 +159,7 @@ struct ThreadInfo {
 	// indexed by [stm][hash % entries]
 	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> pawnCorrhist;
 	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> majorCorrhist;
+	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> minorCorrhist;
 	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
 	MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
 
@@ -171,6 +173,7 @@ struct ThreadInfo {
 		capthist = other.capthist;
 		pawnCorrhist = other.pawnCorrhist;
 		majorCorrhist = other.majorCorrhist;
+		minorCorrhist = other.minorCorrhist;
 		whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
 		blackNonPawnCorrhist = other.blackNonPawnCorrhist;
 		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -220,6 +223,7 @@ struct ThreadInfo {
 		};
 		updateEntry(pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES]);
 		updateEntry(majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES]);
+		updateEntry(minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES]);
 		updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
 		updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
 	}
@@ -253,6 +257,7 @@ struct ThreadInfo {
 		int correction = 0;
 		correction += PAWN_CORR_WEIGHT() * pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES];
 		correction += MAJOR_CORR_WEIGHT() * majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES];
+		correction += MINOR_CORR_WEIGHT() * minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES];
 		correction += NON_PAWN_STM_CORR_WEIGHT() * whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES];
 		correction += NON_PAWN_NSTM_CORR_WEIGHT() * blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
 
@@ -267,6 +272,7 @@ struct ThreadInfo {
 		capthist.fill((int)DEFAULT_HISTORY);
 		pawnCorrhist.fill(DEFAULT_HISTORY);
 		majorCorrhist.fill(DEFAULT_HISTORY);
+		minorCorrhist.fill(DEFAULT_HISTORY);
 		whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
 		blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
 		threadBestScore = -INFINITE;
