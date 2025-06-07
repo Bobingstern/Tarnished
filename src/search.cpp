@@ -13,7 +13,7 @@ using namespace chess;
 // Accumulator wrappers
 // Update the accumulators incrementally and track the
 // pawn zobrist key for correction history (stored in the search stack)
-
+// The incremental hash logic is terrible and code is ugly. I will refactor into an add piece and remove piece eventually
 
 void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
 	PieceType to = board.at<PieceType>(move.to());
@@ -23,6 +23,7 @@ void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
 	// Hash key incremental updates
 	(ss+1)->pawnKey = ss->pawnKey;
 	(ss+1)->majorKey = ss->majorKey;
+	(ss+1)->minorKey = ss->minorKey;
 	(ss+1)->nonPawnKey[0] = ss->nonPawnKey[0];
 	(ss+1)->nonPawnKey[1] = ss->nonPawnKey[1];
 	if (move == Move::NULL_MOVE){
@@ -46,6 +47,8 @@ void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
 			(ss+1)->nonPawnKey[~stm] ^= Zobrist::piece(board.at(move.to()), move.to());
 			if (isMajor(to))
 				(ss+1)->majorKey ^= Zobrist::piece(board.at(move.to()), move.to());
+			if (isMinor(to))
+				(ss+1)->minorKey ^= Zobrist::piece(board.at(move.to()), move.to());
 		}
 		// Add to sq pawn
 		if (move.typeOf() != Move::PROMOTION)
@@ -54,6 +57,8 @@ void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
 			(ss+1)->nonPawnKey[stm] ^= Zobrist::piece(Piece(move.promotionType(), stm), move.to());
 			if (isMajor(move.promotionType()))
 				(ss+1)->majorKey ^= Zobrist::piece(Piece(move.promotionType(), stm), move.to());
+			if (isMinor(move.promotionType()))
+				(ss+1)->minorKey ^= Zobrist::piece(Piece(move.promotionType(), stm), move.to());
 		}
 	}
 	else {
@@ -69,6 +74,11 @@ void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
 				(ss+1)->majorKey ^= Zobrist::piece(board.at(move.from()), move.from());
 				(ss+1)->majorKey ^= Zobrist::piece(board.at(move.from()), move.to());
 			}
+			if (isMinor(from)) {
+				// Remove from, add to
+				(ss+1)->minorKey ^= Zobrist::piece(board.at(move.from()), move.from());
+				(ss+1)->minorKey ^= Zobrist::piece(board.at(move.from()), move.to());
+			}
 			// If capture remove to
 			if (to == PieceType::PAWN) {
 				(ss+1)->pawnKey ^= Zobrist::piece(board.at(move.to()), move.to());
@@ -77,26 +87,43 @@ void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
 				(ss+1)->nonPawnKey[~stm] ^= Zobrist::piece(board.at(move.to()), move.to());
 				if (isMajor(to)) 
 					(ss+1)->majorKey ^= Zobrist::piece(board.at(move.to()), move.to());
+				if (isMinor(to)) 
+					(ss+1)->minorKey ^= Zobrist::piece(board.at(move.to()), move.to());
 			}
 			
 		}
 	}
 
 	board.makeMove(move);
+	
 
 	if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION){
 		// For now just recalculate on special moves like these
 		acc.refresh(board);
 	}
 	else if (move.typeOf() == Move::CASTLING){
-		// Lazy. I will make it incremental eventually
-		(ss+1)->nonPawnKey[stm] = resetNonPawnHash(board, stm);
-		(ss+1)->majorKey = resetMajorHash(board);
 
 		Square king = move.from();
 		Square kingTo = (king > move.to()) ? king - 2 : king + 2;
 		Square rookTo = (king > move.to()) ? kingTo + 1 : kingTo - 1;
-		// There are basically just 2 quiet moves now
+
+		// Remove the king from sq
+		(ss+1)->minorKey ^= Zobrist::piece(Piece(PieceType::KING, stm), king);
+		(ss+1)->majorKey ^= Zobrist::piece(Piece(PieceType::KING, stm), king);
+		(ss+1)->nonPawnKey[stm] ^= Zobrist::piece(Piece(PieceType::KING, stm), king);
+		// Add him to the to sq
+		(ss+1)->minorKey ^= Zobrist::piece(Piece(PieceType::KING, stm), kingTo);
+		(ss+1)->majorKey ^= Zobrist::piece(Piece(PieceType::KING, stm), kingTo);
+		(ss+1)->nonPawnKey[stm] ^= Zobrist::piece(Piece(PieceType::KING, stm), kingTo);
+
+		// Remove the rook
+		(ss+1)->majorKey ^= Zobrist::piece(Piece(PieceType::ROOK, stm), move.to());
+		(ss+1)->nonPawnKey[stm] ^= Zobrist::piece(Piece(PieceType::ROOK, stm), move.to());
+		// Add the rook
+		(ss+1)->majorKey ^= Zobrist::piece(Piece(PieceType::ROOK, stm), rookTo);
+		(ss+1)->nonPawnKey[stm] ^= Zobrist::piece(Piece(PieceType::ROOK, stm), rookTo);
+
+		// There are basically just 2 quiet moves now for the accumulator
 		// Move king and move rook
 		// Since moves are encoded as king takes rook, its very easy
 		acc.quiet(stm, kingTo, PieceType::KING, move.from(), PieceType::KING);
@@ -107,6 +134,7 @@ void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
 	}
 	else
 		acc.quiet(stm, move.to(), from, move.from(), from);
+
 }
 
 
@@ -652,6 +680,7 @@ namespace Search {
 			threadInfo.rootDepth = depth;
 			ss->pawnKey = resetPawnHash(threadInfo.board);
 			ss->majorKey = resetMajorHash(threadInfo.board);
+			ss->minorKey = resetMinorHash(threadInfo.board);
 			ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
 			ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
 
