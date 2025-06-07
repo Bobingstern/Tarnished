@@ -53,6 +53,7 @@ struct Stack {
     int    staticEval;
     int    eval;
     int    historyScore;
+    int    ply;
 
     uint64_t pawnKey;
     std::array<uint64_t, 2> nonPawnKey;
@@ -202,8 +203,10 @@ struct ThreadInfo {
 			entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
 			entry = std::clamp((int)entry, int(-MAX_HISTORY), int(MAX_HISTORY));
 		};
-		if ((ss-1)->conthist != nullptr)
+		if (ss->ply > 0 && (ss-1)->conthist != nullptr)
 			updateEntry(( *(ss-1)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
+		if (ss->ply > 1 && (ss-2)->conthist != nullptr)
+			updateEntry(( *(ss-2)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
 	}
 
 	// Static eval correction history
@@ -235,8 +238,10 @@ struct ThreadInfo {
 
 	int getQuietHistory(Board &board, Move m, Stack *ss){
 		int hist = getHistory(board.sideToMove(), m);
-		if (ss != nullptr && (ss-1)->conthist != nullptr)
+		if (ss != nullptr && ss->ply > 0 && (ss-1)->conthist != nullptr)
 			hist += getConthist((ss-1)->conthist, board, m);
+		if (ss != nullptr && ss->ply > 1 && (ss-2)->conthist != nullptr)
+			hist += getConthist((ss-2)->conthist, board, m);
 		return hist;
 	}
 
