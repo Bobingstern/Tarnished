@@ -53,10 +53,14 @@ inline void deepFill(std::array<T, N>& arr, const U& value) {
 namespace Search {
     struct Stack;
 };
-// Accumulator wrapper
+
+// Hash Keys
 uint64_t resetPawnHash(Board &board);
 uint64_t resetNonPawnHash(Board &board, Color c);
+uint64_t resetMajorHash(Board &board);
+bool isMajor(PieceType pt);
 
+// Accumulator wrapper
 void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss);
 void UnmakeMove(Board &board, Accumulator &acc, Move move);
 // SEE stuff
