@@ -218,7 +218,7 @@ struct ThreadInfo {
 			entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
 		};
 		updateEntry(pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES]);
-		updateEntry(pawnCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES]);
+		updateEntry(majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES]);
 		updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
 		updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
 	}
