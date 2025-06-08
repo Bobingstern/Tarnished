@@ -255,8 +255,8 @@ void lmrDatagen() {
 			continue;
 		
 		Search::Limit limit = Search::Limit();
-		limit.softnodes = 100000;
-		limit.maxnodes = HARD_NODE_COUNT;
+		limit.softnodes = 1000000;
+		limit.maxnodes = 10000000;
 		limit.start();
 		thread->nodes = 0;
 		thread->bestMove = Move::NO_MOVE;

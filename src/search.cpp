@@ -187,7 +187,7 @@ namespace Search {
 		// Captures/Promo: 0.2 + log(depth) * log(movecount) / 3.35
 		// Quiets: 		   1.35 + log(depth) * log(movecount) / 2.75
 		// https://www.chessprogramming.org/Late_Move_Reductions
-		
+
 		for (int isQuiet = 0;isQuiet<=1;isQuiet++){
 			for (size_t depth=0;depth <= MAX_PLY;depth++){
 				for (int movecount=0;movecount<=218;movecount++){
@@ -505,8 +505,8 @@ namespace Search {
 			if (!root && bestScore > GETTING_MATED){
 				// Late Move Pruning
 			#ifndef STORE_LMR_DATA
-				// if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
-				// 	break;
+				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
+					break;
 			#endif
 
 				if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
@@ -565,7 +565,7 @@ namespace Search {
 		#ifdef STORE_LMR_DATA
 			bool didLMR = false;
 			if (doLMR) {
-				thread.lmrInfo.emplace_back(depth, moveCount, isQuiet, depth);
+				thread.lmrInfo.emplace_back(depth, moveCount, isQuiet, std::min(3, depth));
 				didLMR = true;
 			}
 			doLMR = false;

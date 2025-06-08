@@ -304,6 +304,8 @@ int main(int agrc, char *argv[]){
 
     // Print Ascii
     tarnishedAscii();
+    // std::cout << lmrForward(4, 1, 0) << std::endl;
+    // std::cout << lmrForward(4, 1, 1) << std::endl;
 
     char str[INPUT_SIZE];
     while (GetInput(str)) {
