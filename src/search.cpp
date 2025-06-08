@@ -187,6 +187,7 @@ namespace Search {
 		// Captures/Promo: 0.2 + log(depth) * log(movecount) / 3.35
 		// Quiets: 		   1.35 + log(depth) * log(movecount) / 2.75
 		// https://www.chessprogramming.org/Late_Move_Reductions
+		
 		for (int isQuiet = 0;isQuiet<=1;isQuiet++){
 			for (size_t depth=0;depth <= MAX_PLY;depth++){
 				for (int movecount=0;movecount<=218;movecount++){
@@ -572,7 +573,7 @@ namespace Search {
 
 			if (doLMR){
 				//int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
-				int reduction = lmrForward(depth, moveCount, isQuiet) * 256.0 + 0.5;
+				int reduction = lmrForward(depth, moveCount, isQuiet) + 0.5;
 				// Reduce more if not a PV node
 				reduction += !isPV;
 				// Reduce less when improving

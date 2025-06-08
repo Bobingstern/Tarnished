@@ -282,10 +282,10 @@ void lmrDatagen() {
 		for (auto &entry : data) {
 			// Save data
 			fileOut << std::fixed << std::setprecision(6)
-	             << entry.depth / 256.0 << ','
-	             << entry.moveCount / 256.0 << ','
+	             << entry.depth << ','
+	             << entry.moveCount << ','
 	             << entry.isQuiet << ','
-	             << entry.optimalReduction / 256.0 << "\n";
+	             << entry.optimalReduction << "\n";
 			//std::cout << "Reduction " << entry.reduction << " Optimal " << entry.optimalReduction << std::endl;
 		}
 		total += data.size();
