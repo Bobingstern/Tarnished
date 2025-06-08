@@ -201,6 +201,7 @@ namespace Search {
 					else {
 						lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_NOISY() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_NOISY() / 100.0));
 					}
+					//std::cout << "Log " << lmrTable[isQuiet][depth][movecount] << " NN " << lmrForward(depth, movecount, isQuiet) << std::endl;
 				}
 			}
 		}
@@ -565,7 +566,7 @@ namespace Search {
 		#ifdef STORE_LMR_DATA
 			bool didLMR = false;
 			if (doLMR) {
-				thread.lmrInfo.emplace_back(depth, moveCount, isQuiet, std::min(3, depth));
+				thread.lmrInfo.emplace_back(depth, moveCount, isQuiet, std::min(2, depth));
 				didLMR = true;
 			}
 			doLMR = false;
