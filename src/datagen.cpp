@@ -240,7 +240,7 @@ void lmrDatagen() {
 	file.close();
 
 	std::shuffle(fens.begin(), fens.end(), g);
-	fens.resize(1000);
+	fens.resize(10000);
 
     double avg = 0;
     int total = 0;
@@ -255,7 +255,7 @@ void lmrDatagen() {
 			continue;
 		
 		Search::Limit limit = Search::Limit();
-		limit.softnodes = 50000;
+		limit.softnodes = 100000;
 		limit.maxnodes = HARD_NODE_COUNT;
 		limit.start();
 		thread->nodes = 0;
@@ -284,6 +284,7 @@ void lmrDatagen() {
 			fileOut << std::fixed << std::setprecision(6)
 	             << entry.depth / 256.0 << ','
 	             << entry.moveCount / 256.0 << ','
+	             << entry.isQuiet << ','
 	             << entry.optimalReduction / 256.0 << "\n";
 			//std::cout << "Reduction " << entry.reduction << " Optimal " << entry.optimalReduction << std::endl;
 		}

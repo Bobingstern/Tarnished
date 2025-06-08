@@ -128,6 +128,7 @@ struct Limit {
 struct LMRInfo {
 	int depth;
 	int moveCount;
+	bool isQuiet;
 	int optimalReduction;
 
 };

@@ -564,7 +564,7 @@ namespace Search {
 		#ifdef STORE_LMR_DATA
 			bool didLMR = false;
 			if (doLMR) {
-				thread.lmrInfo.emplace_back(depth, moveCount, depth);
+				thread.lmrInfo.emplace_back(depth, moveCount, isQuiet, depth);
 				didLMR = true;
 			}
 			doLMR = false;
@@ -572,7 +572,7 @@ namespace Search {
 
 			if (doLMR){
 				//int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
-				int reduction = lmrForward(depth, moveCount) * 256.0 + 0.5;
+				int reduction = lmrForward(depth, moveCount, isQuiet) * 256.0 + 0.5;
 				// Reduce more if not a PV node
 				reduction += !isPV;
 				// Reduce less when improving

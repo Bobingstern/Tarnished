@@ -304,10 +304,6 @@ int main(int agrc, char *argv[]){
 
     // Print Ascii
     tarnishedAscii();
-    for (int i=0;i<128;i++) {
-        std::cout << lmrForward(i, i) * 256 << std::endl;
-    }
-    std::cout << lmrForward(1, 1) << std::endl;
 
     char str[INPUT_SIZE];
     while (GetInput(str)) {
