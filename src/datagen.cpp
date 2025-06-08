@@ -285,7 +285,7 @@ void lmrDatagen() {
 	             << entry.depth << ','
 	             << entry.moveCount << ','
 	             << entry.isQuiet << ','
-	             << entry.optimalReduction << "\n";
+	             << std::clamp(entry.optimalReduction, 0, 4) << "\n";
 			//std::cout << "Reduction " << entry.reduction << " Optimal " << entry.optimalReduction << std::endl;
 		}
 		total += data.size();

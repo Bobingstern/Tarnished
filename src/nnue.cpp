@@ -2,7 +2,6 @@
 #include "search.h"
 
 #include <fstream>
-#include <format>
 #include <algorithm>
 #include <immintrin.h>
 #include <random>
