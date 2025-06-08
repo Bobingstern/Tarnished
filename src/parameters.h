@@ -8,7 +8,7 @@
 #include <list>
 
 #define MAX_PLY 125
-#define BENCH_DEPTH 13
+#define BENCH_DEPTH 12
 
 // Random big num
 #ifdef _MSC_VER

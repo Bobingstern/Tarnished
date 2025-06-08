@@ -505,8 +505,8 @@ namespace Search {
 			if (!root && bestScore > GETTING_MATED){
 				// Late Move Pruning
 			#ifndef STORE_LMR_DATA
-				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
-					break;
+				// if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
+				// 	break;
 			#endif
 
 				if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
