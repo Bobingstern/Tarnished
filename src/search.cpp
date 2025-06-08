@@ -503,8 +503,10 @@ namespace Search {
 
 			if (!root && bestScore > GETTING_MATED){
 				// Late Move Pruning
+			#ifndef STORE_LMR_DATA
 				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
 					break;
+			#endif
 
 				if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
 					continue;
@@ -557,16 +559,26 @@ namespace Search {
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT() && !thread.board.inCheck()){
-				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+			bool doLMR = depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT() && !thread.board.inCheck();
 
+		#ifdef STORE_LMR_DATA
+			bool didLMR = false;
+			if (doLMR) {
+				thread.lmrInfo.emplace_back(depth, moveCount, depth);
+				didLMR = true;
+			}
+			doLMR = false;
+		#endif
+
+			if (doLMR){
+				//int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+				int reduction = lmrForward(depth, moveCount) * 256.0 + 0.5;
 				// Reduce more if not a PV node
 				reduction += !isPV;
 				// Reduce less when improving
 				reduction -= improving;
 				// Reduce less if good history
 				reduction -= ss->historyScore / LMR_HIST_DIVISOR();
-
 
 				score = -search<false>(newDepth - reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
@@ -579,8 +591,9 @@ namespace Search {
 			if (isPV && (moveCount == 1 || score > alpha)){
 				score = -search<isPV>(newDepth, ply+1, -beta, -alpha, ss+1, thread, limit);
 			}
-			UnmakeMove(thread.board, thread.accumulator, move);
 
+			UnmakeMove(thread.board, thread.accumulator, move);
+			
 			if (score > bestScore){
 				bestScore = score;
 				if (score > alpha){
@@ -594,6 +607,11 @@ namespace Search {
 					if (isPV){
 						ss->pv.update(move, (ss+1)->pv);
 					}
+
+				#ifdef STORE_LMR_DATA
+					if (didLMR)
+						thread.lmrInfo[thread.lmrInfo.size()-1].optimalReduction = 0;
+				#endif
 				}
 			}
 			if (score >= beta){

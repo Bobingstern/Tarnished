@@ -294,12 +294,20 @@ int main(int agrc, char *argv[]){
         std::string arg = argv[1];
         if (arg == "bench")
             bench(searcher);
+    #ifdef STORE_LMR_DATA
+        if (arg == "lmr")
+            lmrDatagen();
+    #endif
         searcher.exit();
         return 0;
     }
 
     // Print Ascii
     tarnishedAscii();
+    for (int i=0;i<128;i++) {
+        std::cout << lmrForward(i, i) * 256 << std::endl;
+    }
+    std::cout << lmrForward(1, 1) << std::endl;
 
     char str[INPUT_SIZE];
     while (GetInput(str)) {
