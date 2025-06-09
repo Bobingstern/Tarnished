@@ -545,9 +545,7 @@ namespace Search {
 
 		#ifdef STORE_LMR_DATA
 			bool didLMR = false;
-			LMRInfo lmrEntry;
 			if (doLMR) {
-				lmrEntry = LMRInfo(depth, moveCount, isQuiet, depth); // Reducing by some factor of depth is probably decent enoguh
 				didLMR = true;
 			}
 			doLMR = false;
@@ -576,9 +574,16 @@ namespace Search {
 			}
 
 			UnmakeMove(thread.board, thread.accumulator, move);
+
 			
 			#ifdef STORE_LMR_DATA
 				if (didLMR){
+					int reductionApprox = std::round(1 + 0.085 * (bestScore - score));
+					LMRInfo lmrEntry = LMRInfo( depth, 
+												moveCount, 
+												isQuiet,
+												std::clamp(reductionApprox, 0, 5)
+												);
 					if (score > alpha)
 						lmrEntry.optimalReduction = 0;
 					thread.lmrInfo.push_back(lmrEntry);
