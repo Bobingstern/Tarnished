@@ -229,7 +229,7 @@ void lmrDatagen() {
 	std::ofstream fileOut("./data/lmrdata.csv", std::ios::app); // Open in append mode
 	std::string line;
     std::mt19937 g;
-    g.seed(0);
+    g.seed(1);
 
 	if (file.is_open()) {
 		while (std::getline(file, line)) {

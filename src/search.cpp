@@ -567,7 +567,7 @@ namespace Search {
 		#ifdef STORE_LMR_DATA
 			bool didLMR = false;
 			if (doLMR) {
-				thread.lmrInfo.emplace_back(depth, moveCount, isQuiet, std::min(2, depth));
+				thread.lmrInfo.emplace_back(depth, moveCount, isQuiet, std::min(3, depth));
 				didLMR = true;
 			}
 			doLMR = false;
