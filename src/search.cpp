@@ -195,12 +195,13 @@ namespace Search {
 						lmrTable[isQuiet][depth][movecount] = 0;
 						continue;
 					}
-					if (isQuiet){
-						lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_QUIET() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_QUIET() / 100.0));
-					}
-					else {
-						lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_NOISY() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_NOISY() / 100.0));
-					}
+					// if (isQuiet){
+					// 	lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_QUIET() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_QUIET() / 100.0));
+					// }
+					// else {
+					// 	lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_NOISY() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_NOISY() / 100.0));
+					// }
+					lmrTable[isQuiet][depth][movecount] = static_cast<int>(lmrForward(depth, movecount, isQuiet) + 0.5);
 					//std::cout << "Log " << lmrTable[isQuiet][depth][movecount] << " NN " << lmrForward(depth, movecount, isQuiet) << std::endl;
 				}
 			}
@@ -566,15 +567,15 @@ namespace Search {
 		#ifdef STORE_LMR_DATA
 			bool didLMR = false;
 			if (doLMR) {
-				thread.lmrInfo.emplace_back(depth, moveCount, isQuiet, std::max(lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount], 1) );
+				thread.lmrInfo.emplace_back(depth, moveCount, isQuiet, std::min(2, depth));
 				didLMR = true;
 			}
 			doLMR = false;
 		#endif
 
 			if (doLMR){
-				//int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
-				int reduction = lmrForward(depth, moveCount, isQuiet) + 0.5;
+				int reduction = lmrTable[isQuiet][depth][moveCount];
+				//int reduction = lmrForward(depth, moveCount, isQuiet) + 0.5;
 				// Reduce more if not a PV node
 				reduction += !isPV;
 				// Reduce less when improving
