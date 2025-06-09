@@ -566,8 +566,9 @@ namespace Search {
 
 		#ifdef STORE_LMR_DATA
 			bool didLMR = false;
+			LMRInfo lmrEntry;
 			if (doLMR) {
-				thread.lmrInfo.emplace_back(depth, moveCount, isQuiet, std::min(3, depth));
+				lmrEntry = LMRInfo(depth, moveCount, isQuiet, lmrTable[isQuiet][depth][moveCount]);
 				didLMR = true;
 			}
 			doLMR = false;
@@ -597,6 +598,14 @@ namespace Search {
 
 			UnmakeMove(thread.board, thread.accumulator, move);
 			
+			#ifdef STORE_LMR_DATA
+				if (didLMR){
+					if (score > alpha)
+						lmrEntry.optimalReduction = 0;
+					thread.lmrInfo.push_back(lmrEntry);
+					//thread.lmrInfo[thread.lmrInfo.size()-1].optimalReduction = 0;
+				}
+			#endif
 			if (score > bestScore){
 				bestScore = score;
 				if (score > alpha){
@@ -610,13 +619,10 @@ namespace Search {
 					if (isPV){
 						ss->pv.update(move, (ss+1)->pv);
 					}
-
-				#ifdef STORE_LMR_DATA
-					if (didLMR)
-						thread.lmrInfo[thread.lmrInfo.size()-1].optimalReduction = 0;
-				#endif
 				}
 			}
+
+
 			if (score >= beta){
 				ttFlag = TTFlag::BETA_CUT;
 				ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
