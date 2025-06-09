@@ -183,29 +183,8 @@ namespace Search {
 		return std::abs(score) >= FOUND_MATE;
 	}
 	void fillLmr(){
-		// Weiss formula for reductions is
-		// Captures/Promo: 0.2 + log(depth) * log(movecount) / 3.35
-		// Quiets: 		   1.35 + log(depth) * log(movecount) / 2.75
 		// https://www.chessprogramming.org/Late_Move_Reductions
-
-		for (int isQuiet = 0;isQuiet<=1;isQuiet++){
-			for (size_t depth=0;depth <= MAX_PLY;depth++){
-				for (int movecount=0;movecount<=218;movecount++){
-					if (depth == 0 || movecount == 0){
-						lmrTable[isQuiet][depth][movecount] = 0;
-						continue;
-					}
-					// if (isQuiet){
-					// 	lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_QUIET() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_QUIET() / 100.0));
-					// }
-					// else {
-					// 	lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_NOISY() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_NOISY() / 100.0));
-					// }
-					lmrTable[isQuiet][depth][movecount] = static_cast<int>(lmrForward(depth, movecount, isQuiet) + 0.5);
-					//std::cout << "Log " << lmrTable[isQuiet][depth][movecount] << " NN " << lmrForward(depth, movecount, isQuiet) << std::endl;
-				}
-			}
-		}
+		// Neural Network based log formula
 	}
 	int scoreMove(Move move, Move ttMove, Stack *ss, ThreadInfo &thread){
 		// MVV-LVA
@@ -568,14 +547,14 @@ namespace Search {
 			bool didLMR = false;
 			LMRInfo lmrEntry;
 			if (doLMR) {
-				lmrEntry = LMRInfo(depth, moveCount, isQuiet, lmrTable[isQuiet][depth][moveCount]);
+				lmrEntry = LMRInfo(depth, moveCount, isQuiet, lmrIndex(std::min(depth, 31), std::min(moveCount, 31), isQuiet) + !isPV - improving - ss->historyScore / LMR_HIST_DIVISOR());
 				didLMR = true;
 			}
 			doLMR = false;
 		#endif
 
 			if (doLMR){
-				int reduction = lmrTable[isQuiet][depth][moveCount];
+				int reduction = lmrIndex(std::min(depth, 31), std::min(moveCount, 31), isQuiet);
 				//int reduction = lmrForward(depth, moveCount, isQuiet) + 0.5;
 				// Reduce more if not a PV node
 				reduction += !isPV;
