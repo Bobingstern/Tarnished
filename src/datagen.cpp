@@ -255,7 +255,7 @@ void lmrDatagen() {
 			continue;
 		
 		Search::Limit limit = Search::Limit();
-		limit.softnodes = 100000000;
+		limit.softnodes = 1000000;
 		limit.maxnodes = 1000000000;
 		limit.start();
 		thread->nodes = 0;
@@ -265,21 +265,21 @@ void lmrDatagen() {
 		//thread->lmrInfo.resize(1000);
 
 		// Attempt to equalize distribution of nonzeros with zeros
-		const int zeros = std::count_if(thread->lmrInfo.begin(), thread->lmrInfo.end(), [](Search::LMRInfo a) {return a.optimalReduction == 0;});
-		std::vector<int> nonzeroIndex;
-		std::vector<Search::LMRInfo> data;
-		for (int i=0;i<thread->lmrInfo.size();i++) {
-			if (thread->lmrInfo[i].optimalReduction == 0)
-				data.push_back(thread->lmrInfo[i]);
-			else
-				nonzeroIndex.push_back(i);
-		}
-		std::shuffle(nonzeroIndex.begin(), nonzeroIndex.end(), g);
-		for (int i=0;i<zeros;i++) {
-			data.push_back(thread->lmrInfo[nonzeroIndex[i]]);
-		}
+		//const int zeros = std::count_if(thread->lmrInfo.begin(), thread->lmrInfo.end(), [](Search::LMRInfo a) {return a.optimalReduction == 0;});
+		//std::vector<int> nonzeroIndex;
+		// std::vector<Search::LMRInfo> data;
+		// for (int i=0;i<thread->lmrInfo.size();i++) {
+		// 	if (thread->lmrInfo[i].optimalReduction == 0)
+		// 		data.push_back(thread->lmrInfo[i]);
+		// 	else
+		// 		nonzeroIndex.push_back(i);
+		// }
+		// std::shuffle(nonzeroIndex.begin(), nonzeroIndex.end(), g);
+		// for (int i=0;i<zeros;i++) {
+		// 	data.push_back(thread->lmrInfo[nonzeroIndex[i]]);
+		// }
 
-		for (auto &entry : data) {
+		for (auto &entry : thread->lmrInfo) {
 			// Save data
 			fileOut << std::fixed << std::setprecision(6)
 	             << entry.depth << ','
@@ -288,7 +288,7 @@ void lmrDatagen() {
 	             << std::clamp(entry.optimalReduction, 0, entry.depth) << "\n";
 			//std::cout << "Reduction " << entry.reduction << " Optimal " << entry.optimalReduction << std::endl;
 		}
-		total += data.size();
+		total += thread->lmrInfo.size();
 		c++;
 
 		std::cout << "Fens " << c  << " Total " << total << std::endl;
