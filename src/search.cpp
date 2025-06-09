@@ -547,7 +547,7 @@ namespace Search {
 			bool didLMR = false;
 			LMRInfo lmrEntry;
 			if (doLMR) {
-				lmrEntry = LMRInfo(depth, moveCount, isQuiet, depth / 2 + !isPV - improving - ss->historyScore / LMR_HIST_DIVISOR());
+				lmrEntry = LMRInfo(depth, moveCount, isQuiet, depth); // Reducing by some factor of depth is probably decent enoguh
 				didLMR = true;
 			}
 			doLMR = false;
