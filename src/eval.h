@@ -74,18 +74,3 @@ static WDL computeWDL(int v, Board &board){
 	wdl.d = 1000 - wdl.w - wdl.l;
 	return wdl;
 }
-
-static double lmrForward(int depth, int moveCount, bool isQuiet) {
-	std::array<double, 16> L2 = lmrL1Bias;
-	double output = lmrOutputBias;
-	double d = depth;
-	double m = moveCount;
-	for (int i=0;i<16;i++) {
-		L2[i] += d * lmrL1[i][0] + m * lmrL1[i][1] + isQuiet * lmrL1[i][2];
-		L2[i] = std::max(0.0, L2[i]);
-	}
-	for (int i=0;i<16;i++){
-		output += L2[i] * lmrL2[i];
-	}
-	return std::max(0.0, output);
-}

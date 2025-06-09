@@ -84,7 +84,3 @@ struct ViriEntry {
 void startDatagen(size_t tc);
 uint16_t packMove(Move m);
 void writeViriformat(std::ofstream &outFile, ViriEntry &game);
-
-#ifdef STORE_LMR_DATA
-void lmrDatagen();
-#endif

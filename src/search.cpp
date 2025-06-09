@@ -187,7 +187,6 @@ namespace Search {
 		// Captures/Promo: 0.2 + log(depth) * log(movecount) / 3.35
 		// Quiets: 		   1.35 + log(depth) * log(movecount) / 2.75
 		// https://www.chessprogramming.org/Late_Move_Reductions
-
 		for (int isQuiet = 0;isQuiet<=1;isQuiet++){
 			for (size_t depth=0;depth <= MAX_PLY;depth++){
 				for (int movecount=0;movecount<=218;movecount++){
@@ -195,14 +194,12 @@ namespace Search {
 						lmrTable[isQuiet][depth][movecount] = 0;
 						continue;
 					}
-					// if (isQuiet){
-					// 	lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_QUIET() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_QUIET() / 100.0));
-					// }
-					// else {
-					// 	lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_NOISY() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_NOISY() / 100.0));
-					// }
-					lmrTable[isQuiet][depth][movecount] = static_cast<int>(lmrForward(depth, movecount, isQuiet) + 0.5);
-					//std::cout << "Log " << lmrTable[isQuiet][depth][movecount] << " NN " << lmrForward(depth, movecount, isQuiet) << std::endl;
+					if (isQuiet){
+						lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_QUIET() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_QUIET() / 100.0));
+					}
+					else {
+						lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_NOISY() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_NOISY() / 100.0));
+					}
 				}
 			}
 		}
@@ -506,10 +503,8 @@ namespace Search {
 
 			if (!root && bestScore > GETTING_MATED){
 				// Late Move Pruning
-			#ifndef STORE_LMR_DATA
 				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
 					break;
-			#endif
 
 				if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
 					continue;
@@ -562,26 +557,16 @@ namespace Search {
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			bool doLMR = depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT() && !thread.board.inCheck();
+			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT() && !thread.board.inCheck()){
+				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
 
-		#ifdef STORE_LMR_DATA
-			bool didLMR = false;
-			if (doLMR) {
-				thread.lmrInfo.emplace_back(depth, moveCount, isQuiet, std::min(3, depth));
-				didLMR = true;
-			}
-			doLMR = false;
-		#endif
-
-			if (doLMR){
-				int reduction = lmrTable[isQuiet][depth][moveCount];
-				//int reduction = lmrForward(depth, moveCount, isQuiet) + 0.5;
 				// Reduce more if not a PV node
 				reduction += !isPV;
 				// Reduce less when improving
 				reduction -= improving;
 				// Reduce less if good history
 				reduction -= ss->historyScore / LMR_HIST_DIVISOR();
+
 
 				score = -search<false>(newDepth - reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
@@ -594,9 +579,8 @@ namespace Search {
 			if (isPV && (moveCount == 1 || score > alpha)){
 				score = -search<isPV>(newDepth, ply+1, -beta, -alpha, ss+1, thread, limit);
 			}
-
 			UnmakeMove(thread.board, thread.accumulator, move);
-			
+
 			if (score > bestScore){
 				bestScore = score;
 				if (score > alpha){
@@ -610,11 +594,6 @@ namespace Search {
 					if (isPV){
 						ss->pv.update(move, (ss+1)->pv);
 					}
-
-				#ifdef STORE_LMR_DATA
-					if (didLMR)
-						thread.lmrInfo[thread.lmrInfo.size()-1].optimalReduction = 0;
-				#endif
 				}
 			}
 			if (score >= beta){

@@ -124,16 +124,6 @@ struct Limit {
 	}
 };
 
-#ifdef STORE_LMR_DATA
-struct LMRInfo {
-	int depth;
-	int moveCount;
-	bool isQuiet;
-	int optimalReduction;
-
-};
-#endif
-
 struct ThreadInfo {
 	std::thread thread;
 	ThreadType type;
@@ -159,9 +149,6 @@ struct ThreadInfo {
 	Searcher *searcher;
 	int threadId;
 
-#ifdef STORE_LMR_DATA
-	std::vector<LMRInfo> lmrInfo;
-#endif
 
 	// indexed by [stm][from][to]
 	MultiArray<int, 2, 64, 64> history;
@@ -291,10 +278,6 @@ struct ThreadInfo {
 		threadBestScore = -INFINITE;
 		rootDepth = 0;
 		completed = 0;
-
-	#ifdef STORE_LMR_DATA
-		lmrInfo.clear();
-	#endif
 	}
 };
 
