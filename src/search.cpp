@@ -578,7 +578,7 @@ namespace Search {
 				// reduction -= improving;
 				// // Reduce less if good history
 				// reduction -= ss->historyScore / LMR_HIST_DIVISOR();
-				int tweaks = lmrBias;
+				double tweaks = lmrBias;
 				tweaks += lmrTweaks[0] * depth;
 				tweaks += lmrTweaks[1] * moveCount;
 				tweaks += lmrTweaks[2] * ss->eval;
@@ -587,8 +587,8 @@ namespace Search {
 				tweaks += lmrTweaks[5] * isPV;
 				tweaks += lmrTweaks[6] * improving;
 				tweaks += lmrTweaks[7] * inCheck;
-				tweaks = std::max(0, tweaks);
-				reduction += tweaks;
+				tweaks = std::max(0.0, tweaks);
+				reduction += std::round(tweaks);
 
 				score = -search<false>(newDepth - reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
