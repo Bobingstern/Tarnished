@@ -183,8 +183,27 @@ namespace Search {
 		return std::abs(score) >= FOUND_MATE;
 	}
 	void fillLmr(){
+		// Weiss formula for reductions is
+		// Captures/Promo: 0.2 + log(depth) * log(movecount) / 3.35
+		// Quiets: 		   1.35 + log(depth) * log(movecount) / 2.75
+		// For Tarnished, values were tuned via SPSA
 		// https://www.chessprogramming.org/Late_Move_Reductions
-		// Neural Network based log formula
+		for (int isQuiet = 0;isQuiet<=1;isQuiet++){
+			for (size_t depth=0;depth <= MAX_PLY;depth++){
+				for (int movecount=0;movecount<=218;movecount++){
+					if (depth == 0 || movecount == 0){
+						lmrTable[isQuiet][depth][movecount] = 0;
+						continue;
+					}
+					if (isQuiet){
+						lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_QUIET() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_QUIET() / 100.0));
+					}
+					else {
+						lmrTable[isQuiet][depth][movecount] = static_cast<int>(LMR_BASE_NOISY() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_NOISY() / 100.0));
+					}
+				}
+			}
+		}
 	}
 	int scoreMove(Move move, Move ttMove, Stack *ss, ThreadInfo &thread){
 		// MVV-LVA
@@ -538,7 +557,6 @@ namespace Search {
 			moveCount++;
 			thread.nodes++;
 			
-
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
 			bool doLMR = depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT() && !thread.board.inCheck();
@@ -552,14 +570,25 @@ namespace Search {
 		#endif
 
 			if (doLMR){
-				int reduction = lmrIndex(std::min(depth, 31), std::min(moveCount, 31), isQuiet);
+				int reduction = lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
 				//int reduction = lmrForward(depth, moveCount, isQuiet) + 0.5;
 				// Reduce more if not a PV node
-				reduction += !isPV;
-				// Reduce less when improving
-				reduction -= improving;
-				// Reduce less if good history
-				reduction -= ss->historyScore / LMR_HIST_DIVISOR();
+				// reduction += !isPV;
+				// // Reduce less when improving
+				// reduction -= improving;
+				// // Reduce less if good history
+				// reduction -= ss->historyScore / LMR_HIST_DIVISOR();
+				int tweaks = lmrBias;
+				tweaks += lmrTweaks[0] * depth;
+				tweaks += lmrTweaks[1] * moveCount;
+				tweaks += lmrTweaks[2] * ss->eval;
+				tweaks += lmrTweaks[3] * ss->historyScore;
+				tweaks += lmrTweaks[4] * isQuiet;
+				tweaks += lmrTweaks[5] * isPV;
+				tweaks += lmrTweaks[6] * improving;
+				tweaks += lmrTweaks[7] * inCheck;
+				tweaks = std::max(0, tweaks);
+				reduction += tweaks;
 
 				score = -search<false>(newDepth - reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
@@ -578,10 +607,15 @@ namespace Search {
 			
 			#ifdef STORE_LMR_DATA
 				if (didLMR){
-					int reductionApprox = std::round(1 + 0.085 * (bestScore - score));
+					int reductionApprox = newDepth - lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount] + 1;
 					LMRInfo lmrEntry = LMRInfo( depth, 
-												moveCount, 
+												moveCount,
+												ss->eval,
+												ss->historyScore, 
 												isQuiet,
+												isPV,
+												improving,
+												inCheck,
 												std::clamp(reductionApprox, 0, 5)
 												);
 					if (score > alpha)

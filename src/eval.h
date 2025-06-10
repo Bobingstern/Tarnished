@@ -74,7 +74,3 @@ static WDL computeWDL(int v, Board &board){
 	wdl.d = 1000 - wdl.w - wdl.l;
 	return wdl;
 }
-
-static int lmrIndex(int depth, int movecount, bool isQuiet) {
-	return lmrTableRaw[isQuiet * 32 * 32 + depth * 32 + movecount];
-}

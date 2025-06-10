@@ -284,7 +284,12 @@ void lmrDatagen() {
 			fileOut << std::fixed << std::setprecision(6)
 	             << entry.depth << ','
 	             << entry.moveCount << ','
+	             << entry.eval << ','
+	             << entry.historyScore << ','
 	             << entry.isQuiet << ','
+	             << entry.isPV << ','
+	             << entry.improving << ','
+	             << entry.inCheck << ','
 	             << std::clamp(entry.optimalReduction, 0, entry.depth) << "\n";
 			//std::cout << "Reduction " << entry.reduction << " Optimal " << entry.optimalReduction << std::endl;
 		}
