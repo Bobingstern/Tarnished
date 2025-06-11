@@ -569,10 +569,17 @@ namespace Search {
 
 				reduction /= 1024;
 
-				score = -search<false>(newDepth - reduction, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+				int lmrDepth = newDepth - reduction;
+
+				score = -search<false>(lmrDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
-				if (score > alpha)
+				if (score > alpha && lmrDepth < newDepth) {
+					// if the search beats best score by some margin, re-search it at a higher depth
+					bool deeper = score > bestScore + LMR_DEEPER_BASE() + LMR_DEEPER_SCALE() * newDepth / 16;
+					newDepth += deeper;
+
 					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+				}
 			}
 			else if (!isPV || moveCount > 1){
 				score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
