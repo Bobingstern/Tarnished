@@ -182,6 +182,13 @@ namespace Search {
 	bool isMateScore(int score){
 		return std::abs(score) >= FOUND_MATE;
 	}
+	int historyBonus(int depth) {
+		return std::min(HIST_BONUS_QUADRATIC() * depth * depth + HIST_BONUS_LINEAR() * depth - HIST_BONUS_OFFSET(), 2048);
+	}
+	int historyMalus(int depth) {
+		// Clamp and nonregr later
+		return -(HIST_MALUS_QUADRATIC() * depth * depth + HIST_MALUS_LINEAR() * depth + HIST_MALUS_OFFSET());
+	}
 	void fillLmr(){
 		// Weiss formula for reductions is
 		// Captures/Promo: 0.2 + log(depth) * log(movecount) / 3.35
@@ -573,8 +580,14 @@ namespace Search {
 
 				score = -search<false>(lmrDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
-				if (score > alpha)
+				if (score > alpha) {
+
 					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+
+					if (isQuiet && (score <= alpha || score >= beta)) {
+						thread.updateConthist(ss, thread.board, move, score >= beta ? historyBonus(depth) : historyMalus(depth));
+					}
+				}
 			}
 			else if (!isPV || moveCount > 1){
 				score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
@@ -605,8 +618,8 @@ namespace Search {
 				// Butterfly History
 				// Continuation History
 				// Capture History
-				int bonus = std::min(HIST_BONUS_QUADRATIC() * depth * depth + HIST_BONUS_LINEAR() * depth - HIST_BONUS_OFFSET(), 2048);
-				int malus = std::min(-(HIST_MALUS_QUADRATIC() * depth * depth + HIST_MALUS_LINEAR() * depth + HIST_MALUS_OFFSET()), 1024);
+				int bonus = historyBonus(depth);
+				int malus = historyMalus(depth);
 				if (isQuiet){
 					thread.updateHistory(thread.board.sideToMove(), move, bonus);
 					thread.updateConthist(ss, thread.board, move, bonus);
