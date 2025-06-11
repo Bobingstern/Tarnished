@@ -563,6 +563,8 @@ namespace Search {
 			
 
 			int newDepth = depth - 1 + extension;
+			bool lmrConthist = false;
+			int lmrConthistBonus = 0;
 			// Late Move Reduction
 			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT() && !thread.board.inCheck()){
 				int reduction = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
@@ -585,7 +587,8 @@ namespace Search {
 					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 
 					if (isQuiet && (score <= alpha || score >= beta)) {
-						thread.updateConthist(ss, thread.board, move, score >= beta ? historyBonus(depth) : historyMalus(depth));
+						lmrConthist = true;
+						lmrConthistBonus = score >= beta ? historyBonus(depth) : historyMalus(depth);
 					}
 				}
 			}
@@ -597,6 +600,9 @@ namespace Search {
 			}
 			UnmakeMove(thread.board, thread.accumulator, move);
 
+			if (lmrConthist) {
+				thread.updateConthist(ss, thread.board, move, lmrConthistBonus);
+			}
 			if (score > bestScore){
 				bestScore = score;
 				if (score > alpha){
