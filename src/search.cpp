@@ -569,7 +569,7 @@ namespace Search {
 
 				reduction /= 1024;
 
-				int lmrDepth = std::clamp(newDepth - reduction, 1, newDepth);
+				int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
 
 				score = -search<false>(lmrDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
 				// Re-search at normal depth
