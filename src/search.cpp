@@ -194,12 +194,10 @@ namespace Search {
 						lmrTable[isQuiet][depth][movecount] = 0;
 						continue;
 					}
-					if (isQuiet){
-						lmrTable[isQuiet][depth][movecount] = static_cast<int>((LMR_BASE_QUIET() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_QUIET() / 100.0)));
-					}
-					else {
-						lmrTable[isQuiet][depth][movecount] = static_cast<int>((LMR_BASE_NOISY() / 100.0 + std::log( static_cast<double>(depth) ) * std::log(static_cast<double>(movecount)) / (LMR_DIVISOR_NOISY() / 100.0)));
-					}
+					const auto base = static_cast<double>(isQuiet ? LMR_BASE_QUIET() : LMR_BASE_NOISY()) / 100.0;
+					const auto divisor = static_cast<double>(isQuiet ? LMR_DIVISOR_QUIET() : LMR_DIVISOR_NOISY()) / 100.0;
+					lmrTable[isQuiet][depth][movecount] = 1024 * (base + std::log(static_cast<double>(depth)) * std::log(static_cast<double>(movecount)) / divisor);
+					
 				}
 			}
 		}
@@ -558,14 +556,14 @@ namespace Search {
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
 			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT()){
-				int reduction = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+				int reduction = lmrTable[isQuiet][depth][moveCount];
 
 				// Reduce more if not a PV node
 				reduction += LMR_ISPV_SCALE() * !isPV;
 				// Reduce less when improving
 				reduction -= LMR_IMPROVING_SCALE() * improving;
 				// Reduce less if good history
-				reduction -= LMR_HIST_SCALE() * ss->historyScore / LMR_HIST_DIVISOR();
+				reduction -= 1024 * ss->historyScore / (isQuiet ? LMR_QUIET_HIST_DIVISOR() : LMR_NOISY_HIST_DIVISOR());
 
 				reduction /= 1024;
 
