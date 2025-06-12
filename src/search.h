@@ -78,6 +78,8 @@ struct Limit {
 	bool enableClock;
 	Color color;
 
+	std::array<uint64_t, 4096> nodeCounts;
+
 	Limit(){
 		depth = 0;
 		ctime = 0;
@@ -99,14 +101,14 @@ struct Limit {
 		if (enableClock)
 			softtime = 0;
 		if (ctime != 0){
-			// Calculate movetime
-			// this was like ~34 lol
-			movetime = ctime / (inc <= 0 ? 30 : 20) + inc / 2;
-			softtime = movetime * 0.63;
-			if (movetime > 75)
-				movetime -= 15;
+			// Calculate movetime and softime
+			movetime = ctime * 0.5;
+			softtime = 0.6 * (ctime / 20 + inc * 3 / 4);
 		}
 		timer.start();
+	}
+	void updateNodes(Move move, uint64_t nodes) {
+		nodeCounts[move.move() & 4095] += nodes;
 	}
 	bool outOfNodes(int64_t cnt){
 		return maxnodes != -1 && cnt > maxnodes;
@@ -117,10 +119,13 @@ struct Limit {
 	bool outOfTime(){
 		return (enableClock && static_cast<int64_t>(timer.elapsed()) >= movetime);
 	}
-	bool outOfTimeSoft(){
+	bool outOfTimeSoft(Move bestMove, uint64_t totalNodes){
 		if (!enableClock || softtime == 0)
 			return false;
-		return (static_cast<int64_t>(timer.elapsed()) >= softtime);
+
+		double prop = static_cast<double>(nodeCounts[bestMove.move() & 4095]) / static_cast<double>(totalNodes);
+		double scale = (1.5 - prop) * 1.35;
+		return (static_cast<int64_t>(timer.elapsed()) >= softtime * scale);
 	}
 };
 
