@@ -550,6 +550,8 @@ namespace Search {
 			// Update Continuation History
 			ss->conthist = thread.getConthistSegment(thread.board, move);
 
+			uint64_t previousNodes = thread.nodes;
+
 			MakeMove(thread.board, thread.accumulator, move, ss);
 			moveCount++;
 			thread.nodes++;
@@ -583,6 +585,9 @@ namespace Search {
 				score = -search<isPV>(newDepth, ply+1, -beta, -alpha, ss+1, thread, limit);
 			}
 			UnmakeMove(thread.board, thread.accumulator, move);
+
+			if (root && thread.type == ThreadType::MAIN)
+				limit.updateNodes(move, thread.nodes - previousNodes);
 
 			if (score > bestScore){
 				bestScore = score;
@@ -753,7 +758,7 @@ namespace Search {
 				std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed()+1) * 1000 << " pv ";
 				std::cout << pvss.str() << std::endl;
 			}	
-			if (limit.outOfTimeSoft())
+			if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes))
 				break;
 
 		}
