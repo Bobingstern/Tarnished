@@ -19,6 +19,7 @@ using u128 = unsigned __int128;
 #endif
 
 //#define TUNE
+#define LMR_TUNE
 
 // Struct for tunable parameters
 struct TunableParam
@@ -33,12 +34,19 @@ struct TunableParam
 
 std::list<TunableParam>& tunables();
 TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
+void updateTunable(std::string name, int step);
 void printWeatherFactoryConfig();
 
 #define TUNABLE_PARAM(name, val, min, max, step) \
     inline TunableParam& name##Param = addTunableParam(#name, val, min, max, step); \
     inline int name() { return name##Param.value; }
 
+// LMR Tuning stuff
+constexpr double LMR_LR = 0.5;
+TUNABLE_PARAM(LMR_BASE_SCALE, 1, 256, 2048, 64)
+TUNABLE_PARAM(LMR_ISPV_SCALE, 1, 256, 2048, 64)
+TUNABLE_PARAM(LMR_IMPROVING_SCALE, -1, -256, -2048, 64)
+TUNABLE_PARAM(LMR_HIST_SCALE, -1, -256, -2048, 64)
 
 // History Constants
 constexpr int16_t MAX_HISTORY = 16383;
@@ -87,10 +95,7 @@ TUNABLE_PARAM(LMR_DIVISOR_NOISY, 331, 150, 350, 5);
 TUNABLE_PARAM(LMR_MIN_DEPTH, 1, 1, 8, 1);
 TUNABLE_PARAM(LMR_MIN_MOVECOUNT, 4, 1, 10, 1);
 TUNABLE_PARAM(LMR_HIST_DIVISOR, 8192, 4096, 16385, 650);
-TUNABLE_PARAM(LMR_BASE_SCALE, 1024, 256, 2048, 64)
-TUNABLE_PARAM(LMR_ISPV_SCALE, 1024, 256, 2048, 64)
-TUNABLE_PARAM(LMR_IMPROVING_SCALE, 1024, 256, 2048, 64)
-TUNABLE_PARAM(LMR_HIST_SCALE, 1024, 256, 2048, 64)
+
 
 TUNABLE_PARAM(IIR_MIN_DEPTH, 5, 2, 9, 1);
 

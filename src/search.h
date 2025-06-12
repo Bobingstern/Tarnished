@@ -135,6 +135,7 @@ struct ThreadInfo {
     bool searching = false;
     bool stopped = false;
     bool exiting = false;
+    bool updateLMR = true;
 
 	Board board;
 	Limit limit;
@@ -145,6 +146,8 @@ struct ThreadInfo {
 	int minNmpPly;
 	int rootDepth;
 	int completed;
+	int lmrErrors = 0;
+	int lmrPerformed = 0;
 
 	Searcher *searcher;
 	int threadId;
@@ -278,6 +281,8 @@ struct ThreadInfo {
 		threadBestScore = -INFINITE;
 		rootDepth = 0;
 		completed = 0;
+		lmrErrors = 0;
+		lmrPerformed = 0;
 	}
 };
 

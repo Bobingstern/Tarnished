@@ -22,6 +22,15 @@ TunableParam& addTunableParam(std::string name, int value, int min, int max, int
     return param;
 }
 
+void updateTunable(std::string name, int step) {
+    for (auto &param : tunables()) {
+        if (name == param.name){
+            param.value += step;
+            param.value = std::clamp(param.value, param.min, param.max);
+        }
+    }
+}
+
 void printWeatherFactoryConfig() {
     std::cout << "{\n";
     for (auto& param : tunables())

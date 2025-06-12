@@ -557,24 +557,59 @@ namespace Search {
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT() && !thread.board.inCheck()){
-				int reduction = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+			bool doLMR = depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT() && !thread.board.inCheck();
+			if (doLMR && thread.updateLMR){
+				int baseLMR = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
 
+				int reduction = baseLMR;
 				// Reduce more if not a PV node
 				reduction += LMR_ISPV_SCALE() * !isPV;
 				// Reduce less when improving
-				reduction -= LMR_IMPROVING_SCALE() * improving;
+				reduction += LMR_IMPROVING_SCALE() * !improving;
 				// Reduce less if good history
-				reduction -= LMR_HIST_SCALE() * ss->historyScore / LMR_HIST_DIVISOR();
+				reduction += LMR_HIST_SCALE() * ss->historyScore / LMR_HIST_DIVISOR();
+
+				int totalReduction = reduction;
 
 				reduction /= 1024;
 
 				int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
 
 				score = -search<false>(lmrDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+				int lmrScore = score;
 				// Re-search at normal depth
-				if (score > alpha)
+				if (lmrScore > alpha)
 					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+
+			#ifdef LMR_TUNE
+				// The idea here is to do a full window search at normal depth
+				// If it fails alpha, then we reward this path and decrease the reduction
+				// for all activated LMR features by some LR and vice versa
+				// Also be sure not to update anything inside this search
+				if (thread.updateLMR) {
+					thread.lmrPerformed++;
+
+					thread.updateLMR = false;
+					int fullSearch = score > alpha ? score : -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+					thread.updateLMR = true;
+
+					int direction = 0;
+					if (lmrScore > alpha && fullSearch < alpha)
+						direction = 1;
+					if (lmrScore < alpha && fullSearch > alpha)
+						direction = -1;
+					thread.lmrErrors += direction != 0;
+
+					if (totalReduction != 0) {
+						updateTunable("LMR_BASE_SCALE", direction * LMR_LR * baseLMR / totalReduction);
+						updateTunable("LMR_HIST_SCALE", direction * LMR_LR * (LMR_HIST_SCALE() * ss->historyScore / LMR_HIST_DIVISOR()) / totalReduction);
+						updateTunable("LMR_ISPV_SCALE", direction * LMR_LR * LMR_ISPV_SCALE() * !isPV / totalReduction);
+						updateTunable("LMR_IMPROVING_SCALE", direction * LMR_LR * LMR_IMPROVING_SCALE() * !improving / totalReduction);
+					}
+
+				}
+			#endif
+
 			}
 			else if (!isPV || moveCount > 1){
 				score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
@@ -757,6 +792,7 @@ namespace Search {
 				break;
 
 		}
+	
 		// if (isMain){
 		// 	searcher->stopSearching();
 		// 	searcher->waitForWorkersFinished();

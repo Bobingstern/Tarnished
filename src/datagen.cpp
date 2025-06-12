@@ -216,3 +216,75 @@ void startDatagen(size_t tcount){
 	}
 	runThread(tcount-1);
 }
+
+#ifdef LMR_TUNE
+void lmrDatagen() {
+	
+	
+	TTable TT;
+	std::unique_ptr<Search::ThreadInfo> thread = std::make_unique<Search::ThreadInfo>(ThreadType::SECONDARY, TT, nullptr);
+	thread->stopped = false;
+	std::vector<std::string> fens;
+	std::ifstream file("./data/fens.fens");
+	std::ofstream fileOut("./data/lmrtune.csv", std::ios::app);
+	std::string line;
+    std::mt19937 g;
+    //g.seed(1);
+
+	if (file.is_open()) {
+		while (std::getline(file, line)) {
+			if (line.length() > 2)
+				fens.push_back(line);
+		}
+	}
+	file.close();
+
+	std::shuffle(fens.begin(), fens.end(), g);
+	fens.resize(1000);
+
+    int c = 0;
+    for (auto fen : fens) {
+    	std::cout << "FENS NUMBER: " << c << " CURRENT: " << fen << std::endl;
+    	for (int i=0;i<1;i++) {
+	    	Board board;
+			board.setFen(fen);
+			thread->reset();
+			TT.clear();
+
+			if (board.isGameOver().second != GameResult::NONE && !board.inCheck())
+				continue;
+			
+			Search::Limit limit = Search::Limit();
+			limit.depth = 12;
+			limit.maxnodes = 100000000;
+			limit.start();
+			thread->nodes = 0;
+			thread->bestMove = Move::NO_MOVE;
+			Search::iterativeDeepening(std::ref(board), *thread, limit, nullptr);
+			c++;
+
+			
+			std::cout << "CURRENT VALUES ---------------------------------" << std::endl;
+			std::cout << "LMR BASE: " << LMR_BASE_SCALE() << std::endl;
+			std::cout << "LMR ISPV: " << LMR_ISPV_SCALE() << std::endl;
+			std::cout << "LMR IMPROVING: " << LMR_IMPROVING_SCALE() << std::endl;
+			std::cout << "LMR HISTORY: " << LMR_HIST_SCALE() << std::endl;
+			std::cout << "TOTAL ERRORS " << thread->lmrErrors << "/" << thread->lmrPerformed << ", " 
+						<< ((double)thread->lmrErrors / (thread->lmrPerformed + 1)) << "%" << std::endl;
+
+			fileOut << LMR_BASE_SCALE() << "," 
+					<< LMR_ISPV_SCALE() << "," 
+					<< LMR_IMPROVING_SCALE() << "," 
+					<< LMR_HIST_SCALE() << std::endl; 
+		}
+
+	}
+	/*
+	LMR BASE: 1389
+	LMR ISPV: 357
+	LMR IMPROVING: -2048
+	LMR HISTORY: -2048
+	*/
+
+}
+#endif

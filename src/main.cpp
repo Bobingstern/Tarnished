@@ -294,6 +294,10 @@ int main(int agrc, char *argv[]){
         std::string arg = argv[1];
         if (arg == "bench")
             bench(searcher);
+    #ifdef LMR_TUNE
+        if (arg == "lmr")
+            lmrDatagen();
+    #endif
         searcher.exit();
         return 0;
     }
