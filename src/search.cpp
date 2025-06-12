@@ -510,9 +510,8 @@ namespace Search {
 					continue;
 
 				// Quiet History Pruning
-				if (isQuiet && depth <= HIST_PRUNING_MAX_DEPTH() && ss->historyScore < HIST_PRUNING_QUIET_MARGIN() + HIST_PRUNING_QUIET_SCALE() * depth){
-					skipQuiets = true;
-					continue;
+				if (isQuiet && !inCheck && depth <= HIST_PRUNING_MAX_DEPTH() && ss->historyScore < HIST_PRUNING_QUIET_SCALE() * depth){
+					break;
 				}
 			}
 
