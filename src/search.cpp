@@ -506,17 +506,15 @@ namespace Search {
 				if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
 					break;
 
+				// Static Exchange Evaluation
 				if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
 					continue;
 
-				// History Pruning
-				// Failed, will test again later
-				// https://github.com/aronpetko/integral/blob/733036df88408d0d6338d05f7991f46f0527ed4f/src/engine/search/search.cc#L945
-				// https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L614
-				// if (isQuiet && depth <= HIST_PRUNING_DEPTH && ss->historyScore <= HIST_PRUNING_MARGIN * depth){
-				// 	skipQuiets = true;
-				// 	continue;
-				// }
+				// Futility Pruning
+				if (!inCheck && !isPV && isQuiet && depth <= FP_MAX_DEPTH() && ss->staticEval + FP_BASE_MARGIN() + FP_DEPTH_SCALE() * depth <= alpha) {
+					skipQuiets = true;
+					continue;
+				}
 			}
 
 			// Singular Extensions
