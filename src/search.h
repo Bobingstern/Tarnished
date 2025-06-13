@@ -28,6 +28,13 @@ struct Searcher;
 
 namespace Search {
 
+inline int historyBonus(int depth) {
+	return std::min(HIST_BONUS_QUADRATIC() * depth * depth + HIST_BONUS_LINEAR() * depth - HIST_BONUS_OFFSET(), 2048);
+}
+inline int historyMalus(int depth) {
+	return -std::min(HIST_MALUS_QUADRATIC() * depth * depth + HIST_MALUS_LINEAR() * depth + HIST_MALUS_OFFSET(), 1024);
+}
+
 struct PVList {
 	std::array<chess::Move, MAX_PLY> moves;
 	uint32_t length;
@@ -192,7 +199,6 @@ struct ThreadInfo {
 	// Make use of the history gravity formula:
 	// v += bonus - v * abs(bonus) / max_hist
 	// bonus is clamped with max_hist and max_hist/4 for correction history
-
 
 	// Butterfly history
 	void updateHistory(Color c, Move m, int bonus){

@@ -175,7 +175,6 @@ namespace Search {
 	bool isWin(int score){
 		return score >= FOUND_MATE;
 	}
-
 	bool isLoss(int score){
 		return score <= GETTING_MATED;
 	}
@@ -610,8 +609,8 @@ namespace Search {
 				// Butterfly History
 				// Continuation History
 				// Capture History
-				int bonus = std::min(HIST_BONUS_QUADRATIC() * depth * depth + HIST_BONUS_LINEAR() * depth - HIST_BONUS_OFFSET(), 2048);
-				int malus = std::min(-(HIST_MALUS_QUADRATIC() * depth * depth + HIST_MALUS_LINEAR() * depth + HIST_MALUS_OFFSET()), 1024);
+				int bonus = historyBonus(depth);
+				int malus = historyMalus(depth);
 				if (isQuiet){
 					thread.updateHistory(thread.board.sideToMove(), move, bonus);
 					thread.updateConthist(ss, thread.board, move, bonus);
