@@ -31,6 +31,9 @@
 *.out
 *.app
 
+# Networks
+*.bin
+
 # Build products
 build
 cmake-build-*
