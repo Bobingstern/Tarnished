@@ -8,13 +8,8 @@ SOURCES := $(wildcard src/*.cpp)
 CXX := clang++
 
 
-
-DEFAULT_NET = $(file > network.txt)
-ifeq ($(OS), Windows_NT)
-	EXE_SUFFIX = .exe
-	DEFAULT_NET = $(shell type network.txt)
-endif
-
+cat := $(if $(filter $(OS),Windows_NT),type,cat)
+DEFAULT_NET := $(shell $(cat) network.txt)
 
 ifndef EVALFILE
     EVALFILE = $(DEFAULT_NET).bin
