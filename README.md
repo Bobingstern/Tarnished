@@ -18,18 +18,10 @@
 </div>
 
 ## Building
-It seems like the `Makefile` is slightly faster than using `CMake` but you may use whichever one you wish. Make sure to have an NNUE file under `network/latest.bin` if you plan on building the project. Tarnished makes use of [incbin](https://github.com/graphitemaster/incbin) to embed the file into the executable itself, removing the need to carry an external network along with it. To build with `make` you may 
+You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-nets](https://github.com/Bobingstern/tarnished-nets). The Makefile will automatically download the default network for whatever version you are building. Tarnished makes use of [incbin](https://github.com/graphitemaster/incbin) to embed the file into the executable itself, removing the need to carry an external network along with it. To build with `make` you may 
 1. Clone the repository.
 2. `make`
 3. Binary is at `tarnished.exe`
-
-Alternatively, with `CMake`
-
-1. Clone the repository.
-2. `mkdir build && cd build`
-3. `cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release`
-4. `cmake --build .`
-5. Binary is at `build/Tarnished.exe`
 
 ## Features
 
