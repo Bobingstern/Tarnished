@@ -508,6 +508,11 @@ namespace Search {
 				if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
 					continue;
 
+				if (isQuiet && !inCheck && depth <= FP_MAX_DEPTH() && ss->staticEval + FP_MARGIN() + FP_SCALE() * depth < alpha) {
+					skipQuiets = true;
+					continue;
+				}
+
 				// History Pruning
 				// Failed, will test again later
 				// https://github.com/aronpetko/integral/blob/733036df88408d0d6338d05f7991f46f0527ed4f/src/engine/search/search.cc#L945
