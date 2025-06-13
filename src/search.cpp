@@ -511,7 +511,7 @@ namespace Search {
 
 				// Quiet History Pruning
 				if (isQuiet && !inCheck && depth <= HIST_PRUNING_MAX_DEPTH() && ss->historyScore < HIST_PRUNING_QUIET_SCALE() * depth){
-					break;
+					continue;
 				}
 			}
 
