@@ -9,7 +9,7 @@ using enum MPStage;
 
 void MovePicker::scoreMoves(Movelist &moves) {
 	for (auto &move : moves) {
-		if (stage == GEN_NOISY){
+		if (stage == GEN_NOISY || move.typeOf() == Move::CASTLING){
 			PieceType to = thread->board.at<PieceType>(move.to());
 			if (move.typeOf() == Move::ENPASSANT)
 				to = PieceType::PAWN;
@@ -32,7 +32,7 @@ Move MovePicker::selectHighest(Movelist &moves) {
 		}
 	}
 
-	std::swap(moves[bestIndex], moves[currMove]);
+	std::iter_swap(moves.begin() + bestIndex, moves.begin() + currMove);
 	return moves[currMove++];
 }
 
@@ -52,8 +52,9 @@ Move MovePicker::nextMove() {
 		case NOISY_GOOD:
 			while (currMove < movesList.size()) {
 				Move move = selectHighest(movesList);
-				if (move == ttMove)
+				if (move == ttMove){
 					continue;
+				}
 				return move;
 			}
 			++stage;
@@ -64,6 +65,8 @@ Move MovePicker::nextMove() {
 				return ss->killer;
 
 		case GEN_QUIET:
+			movesList.clear();
+			currMove = 0;
 			if (thread->board.inCheck() || !isQS) {
 				movegen::legalmoves<movegen::MoveGenType::QUIET>(movesList, thread->board);
 				scoreMoves(movesList);
@@ -73,6 +76,8 @@ Move MovePicker::nextMove() {
 		case QUIET:
 			while (currMove < movesList.size()) {
 				Move move = selectHighest(movesList);
+				if (move == ttMove)
+					continue;
 				return move;
 			}
 			++stage;

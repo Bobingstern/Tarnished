@@ -466,7 +466,7 @@ namespace Search {
 		while (!moveIsNull(move = picker.nextMove())){
 			if (thread.stopped || thread.exiting)
 				return bestScore;
-
+		
 			bool isQuiet = !thread.board.isCapture(move);
 			if (move == ss->excluded)
 				continue;

@@ -22,7 +22,7 @@ struct MovePicker {
 	Movelist movesList;
 	MPStage stage;
 	Move ttMove;
-	int currMove = 0;
+	int currMove;
 	bool isQS;
 
 	MovePicker(Search::ThreadInfo *T, Search::Stack *ss, uint16_t ttm, bool qs) {
@@ -31,6 +31,7 @@ struct MovePicker {
 		this->ttMove = Move(ttm);
 		isQS = qs;
 		stage = MPStage::TTMOVE;
+		currMove = 0;
 	}
 
 	Move nextMove();
