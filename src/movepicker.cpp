@@ -23,7 +23,7 @@ void MovePicker::scoreMoves(Movelist &moves) {
 }
 
 Move MovePicker::selectHighest(Movelist &moves) {
-	int bestScore = -INFINITE;
+	int bestScore = moves[currMove].score();
 	uint32_t bestIndex = currMove;
 	for (uint32_t i = currMove; i < moves.size(); i++) {
 		if (moves[i].score() > bestScore) {
@@ -40,7 +40,8 @@ Move MovePicker::nextMove() {
 	switch (stage) {
 		case TTMOVE:
 			++stage;
-			if (isLegal(thread->board, ttMove) && !(isQS && !thread->board.inCheck())){
+			// Only return ttMove if in QS if we're in check or if its a capture
+			if (isLegal(thread->board, ttMove) && (!isQS || thread->board.isCapture(ttMove) || thread->board.inCheck() )){
 				return ttMove;
 			}
 		case GEN_NOISY:
