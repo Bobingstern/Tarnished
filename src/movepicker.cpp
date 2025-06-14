@@ -10,7 +10,10 @@ using enum MPStage;
 void MovePicker::scoreMoves(Movelist &moves) {
 	for (auto &move : moves) {
 		if (stage == GEN_NOISY){
-			int score = thread->getCapthist(thread->board, move) + MVV_VALUES[thread->board.at<PieceType>(move.to())];
+			PieceType to = thread->board.at<PieceType>(move.to());
+			if (move.typeOf() == Move::ENPASSANT)
+				to = PieceType::PAWN;
+			int score = thread->getCapthist(thread->board, move) + MVV_VALUES[to];
 			move.setScore(score + 500000 * SEE(thread->board, move, -PawnValue));
 		}
 		else {
