@@ -14,7 +14,7 @@ void MovePicker::scoreMoves(Movelist &moves) {
 			if (move.typeOf() == Move::ENPASSANT)
 				to = PieceType::PAWN;
 			int score = thread->getCapthist(thread->board, move) + MVV_VALUES[to];
-			move.setScore(score - 800000 * !SEE(thread->board, move, -PawnValue));
+			move.setScore(score);
 		}
 		else {
 			move.setScore(thread->getQuietHistory(thread->board, move, ss));
@@ -55,7 +55,10 @@ Move MovePicker::nextMove() {
 				if (move == ttMove){
 					continue;
 				}
-				return move;
+				if (!SEE(thread->board, move, -move.score() / 4 + 15))
+					badNoises.add(move);
+				else
+					return move;
 			}
 			++stage;
 
@@ -76,6 +79,16 @@ Move MovePicker::nextMove() {
 		case QUIET:
 			while (currMove < movesList.size()) {
 				Move move = selectHighest(movesList);
+				if (move == ttMove)
+					continue;
+				return move;
+			}
+			currMove = 0;
+			++stage;
+
+		case BAD_NOISY:
+			while (currMove < badNoises.size()) {
+				Move move = selectHighest(badNoises);
 				if (move == ttMove)
 					continue;
 				return move;
