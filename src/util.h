@@ -39,6 +39,13 @@ constexpr int QueenValue  = 982;
 
 inline std::array<int, 8> PieceValue = {PawnValue, KnightValue, BishopValue, RookValue, QueenValue, 0, 0};
 
+// [stm][side]
+// kingside is 0, queenside 1
+inline std::array<std::array<Square, 2>, 2> castleRookSq = {{
+    {{Square::SQ_H1, Square::SQ_A1}},
+    {{Square::SQ_H8, Square::SQ_A8}}
+}};
+
 template<typename T, typename U>
 inline void deepFill(T& dest, const U& val) {
     dest = val;
@@ -61,6 +68,9 @@ uint64_t resetMajorHash(Board &board);
 uint64_t resetMinorHash(Board &board);
 bool isMajor(PieceType pt);
 bool isMinor(PieceType pt);
+
+// Legality
+bool isLegal(Board &board, Move move);
 
 // Accumulator wrapper
 void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss);
