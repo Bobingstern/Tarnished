@@ -60,6 +60,55 @@ bool isMinor(PieceType pt) {
 	return pt == PieceType::KNIGHT || pt == PieceType::BISHOP || pt == PieceType::KING;
 }
 
+// Pseudo Legal Check
+bool isLegal(Board &board, Move move) {
+	if (moveIsNull(move))
+		return false;
+
+	Color stm = board.sideToMove();
+	Piece srcPiece = board.at(move.from());
+
+	if (srcPiece == Piece::NONE || srcPiece.color() != stm)
+		return false;
+
+	Piece dstPiece = board.at(move.to());
+	PieceType srcPieceType = srcPiece.type();
+	PieceType dstPieceType = dstPiece.type();
+
+	// Lazy Solution
+	// Make this sane later
+	Movelist legals;
+	movegen::legalmoves<movegen::MoveGenType::ALL>(legals, board, 1 << (int)srcPieceType );
+	if (std::find(legals.begin(), legals.end(), move) == legals.end())
+		return false;
+	return true;
+
+	/*
+	if (move.typeOf() == Move::CASTLING) {
+		Lazy solution
+		Movelist kingMoves;
+		movegen::legalmoves<movegen::MoveGenType::QUIET>(kingMoves, board, PieceGenType::KING)
+		if (std::find(kingMoves.begin(), kingMoves.end(), move) == kingMoves.end())
+			return false;
+		if (srcPieceType != PieceType::KING || board.inCheck())
+			return false;
+
+		Bitboard firstRank = stm == Color::WHITE ? Bitboard(Rank::RANK_1) : Bitboard(Rank::RANK_8);
+		if ( (firstRank & Bitboard::fromSquare(move.from())).empty() || (firstRank & Bitboard::fromSquare(move.to())).empty())
+			return false;
+
+		if (move.from() > move.to()) {
+			// Queenside castle
+			// To square is not correct
+			if (move.to() != castleRookSq[stm][1])
+				return false;
+			// If we even have castling rights
+
+		}
+	}
+	*/
+}
+
 // Utility attackers
 Bitboard attackersTo(Board &board, Square s, Bitboard occ){
 	return (attacks::pawn(Color::WHITE, s) & board.pieces(PieceType::PAWN, Color::BLACK))

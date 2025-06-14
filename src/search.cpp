@@ -4,6 +4,7 @@
 #include "tt.h"
 #include "util.h"
 #include "parameters.h"
+#include "movepicker.h"
 
 #include <algorithm>
 #include <random>
@@ -292,26 +293,14 @@ namespace Search {
 		Move qBestMove = Move::NO_MOVE;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
 
-		Movelist moves;
 
-		// If we're in check, check all evasions
-		if (!inCheck)
-			movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, thread.board);
-		else
-			movegen::legalmoves(moves, thread.board);
+		// This will do evasions as well
+		Move move;
+		MovePicker picker = MovePicker(&thread, ss, ttEntry->move, true);
 
-		// Move Scoring
-		for (auto &move : moves){
-			// Qsearch doesnt have killers
-			// Still pass to make compiler happy
-			move.setScore(scoreMove(move, Move(ttEntry->move), ss, thread));
-		}
-		for (int m_ = 0;m_<moves.size();m_++){
+		while (!moveIsNull(move = picker.nextMove())){
 			if (thread.stopped || thread.exiting)
 				return bestScore;
-			// Move ordering
-			pickMove(moves, m_);
-			Move move = moves[m_];
 
 			// SEE Pruning
 			if (bestScore > GETTING_MATED && !SEE(thread.board, move, 0))
@@ -465,30 +454,20 @@ namespace Search {
 
 
 		Move bestMove = Move::NO_MOVE;
-		Movelist moves;
+		Move move;
+		MovePicker picker = MovePicker(&thread, ss, ttEntry->move, false);
+		
+
 		Movelist seenQuiets;
 		Movelist seenCaptures;
 
-		movegen::legalmoves(moves, thread.board);
-
-		// Move Scoring
-		for (auto &move : moves){
-			move.setScore(scoreMove(move, Move(ttEntry->move), ss, thread));
-		}
-		if (root) {
-			bestMove = moves[0]; // Guaruntee some random move
-		}
-
 		// Other vars
 		bool skipQuiets = false;
-		for (int m_ = 0;m_<moves.size();m_++){
+		while (!moveIsNull(move = picker.nextMove())){
 			if (thread.stopped || thread.exiting)
 				return bestScore;
 
-			pickMove(moves, m_); // We do this so that the swapped moves stays at the front 
-			Move move = moves[m_];
 			bool isQuiet = !thread.board.isCapture(move);
-
 			if (move == ss->excluded)
 				continue;
 			if (isQuiet && skipQuiets)
