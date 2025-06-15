@@ -537,7 +537,7 @@ namespace Search {
 
 			int newDepth = depth - 1 + extension;
 			// Late Move Reduction
-			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_MIN_MOVECOUNT()){
+			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_BASE_MOVECOUNT() + 2 * root){
 				int reduction = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
 
 				// Reduce more if not a PV node
