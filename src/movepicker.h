@@ -7,7 +7,7 @@
 #include "eval.h"
 
 enum class MPStage {
-    TTMOVE, GEN_NOISY, NOISY_GOOD, KILLER, GEN_QUIET, QUIET
+    TTMOVE, GEN_NOISY, NOISY_GOOD, KILLER, GEN_QUIET, QUIET, BAD_NOISY
 };
 
 inline MPStage operator++(MPStage& stage)
@@ -20,6 +20,7 @@ struct MovePicker {
 	Search::ThreadInfo *thread;
 	Search::Stack *ss;
 	Movelist movesList;
+	Movelist badNoises;
 	MPStage stage;
 	Move ttMove;
 	int currMove;
