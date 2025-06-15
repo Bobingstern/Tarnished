@@ -335,7 +335,7 @@ namespace Search {
 
 	}
 	template<bool isPV>
-	int search(int depth, int ply, int alpha, int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
+	int search(int depth, int ply, int alpha, int beta, bool cutnode, Stack *ss, ThreadInfo &thread, Limit &limit){
 		//bool isPV = alpha != beta - 1;
 		bool root = ply == 0;
 		ss->ply = ply;
@@ -425,7 +425,7 @@ namespace Search {
 				ss->conthist = nullptr;
 
 				MakeMove(thread.board, thread.accumulator, Move(Move::NULL_MOVE), ss);
-				int nmpScore = -search<false>(depth-reduction, ply+1, -beta, -beta + 1, ss+1, thread, limit);
+				int nmpScore = -search<false>(depth-reduction, ply+1, -beta, -beta + 1, !cutnode, ss+1, thread, limit);
 				UnmakeMove(thread.board, thread.accumulator, Move(Move::NULL_MOVE));
 
 				if (nmpScore >= beta){
@@ -436,7 +436,7 @@ namespace Search {
 					if (depth <= 15 || thread.minNmpPly > 0)
 						return isWin(nmpScore) ? beta : nmpScore;
 					thread.minNmpPly = ply + (depth - reduction) * 3 / 4;
-					int verification = search<false>(depth-NMP_BASE_REDUCTION(), ply+1, beta-1, beta, ss, thread, limit);
+					int verification = search<false>(depth-NMP_BASE_REDUCTION(), ply+1, beta-1, beta, true, ss, thread, limit);
 					thread.minNmpPly = 0;
 					if (verification >= beta)
 						return verification;
@@ -511,7 +511,7 @@ namespace Search {
 				int sDepth = (depth - 1) / 2;
 				// How good are we without this move
 				ss->excluded = Move(ttEntry->move);
-				int seScore = search<false>(sDepth, ply+1, sBeta-1, sBeta, ss, thread, limit);
+				int seScore = search<false>(sDepth, ply+1, sBeta-1, sBeta, cutnode, ss, thread, limit);
 				ss->excluded = Move::NO_MOVE;
 
 				if (seScore < sBeta) {
@@ -546,21 +546,23 @@ namespace Search {
 				reduction -= LMR_IMPROVING_SCALE() * improving;
 				// Reduce less if good history
 				reduction -= LMR_HIST_SCALE() * ss->historyScore / LMR_HIST_DIVISOR();
+				// Reduce more if cutnode
+				reduction += LMR_CUTNODE_SCALE() * cutnode;
 
 				reduction /= 1024;
 
 				int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
 
-				score = -search<false>(lmrDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+				score = -search<false>(lmrDepth, ply+1, -alpha - 1, -alpha, true, ss+1, thread, limit);
 				// Re-search at normal depth
 				if (score > alpha)
-					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, !cutnode, ss+1, thread, limit);
 			}
 			else if (!isPV || moveCount > 1){
-				score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, ss+1, thread, limit);
+				score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, !cutnode, ss+1, thread, limit);
 			}
 			if (isPV && (moveCount == 1 || score > alpha)){
-				score = -search<isPV>(newDepth, ply+1, -beta, -alpha, ss+1, thread, limit);
+				score = -search<isPV>(newDepth, ply+1, -beta, -alpha, false, ss+1, thread, limit);
 			}
 			UnmakeMove(thread.board, thread.accumulator, move);
 
@@ -677,7 +679,7 @@ namespace Search {
 				int beta = std::min(lastScore + delta, INFINITE);
 				int aspDepth = depth;
 				while (!aborted()){
-					score = search<true>(std::max(aspDepth, 1), 0, alpha, beta, ss, threadInfo, limit);
+					score = search<true>(std::max(aspDepth, 1), 0, alpha, beta, false, ss, threadInfo, limit);
 					if (score <= alpha){
 						beta = (alpha + beta) / 2;
 						alpha = std::max(alpha - delta, -INFINITE);
@@ -695,7 +697,7 @@ namespace Search {
 				}
 			}
 			else
-				score = search<true>(depth, 0, -INFINITE, INFINITE, ss, threadInfo, limit);
+				score = search<true>(depth, 0, -INFINITE, INFINITE, false, ss, threadInfo, limit);
 			// ---------------------
 			if (depth != 1 && aborted()){
 				break;
