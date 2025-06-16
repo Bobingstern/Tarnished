@@ -69,6 +69,8 @@ struct Stack {
 
     Move excluded{};
     MultiArray<int16_t, 2, 6, 64> *conthist;
+
+    Accumulator accumulator;
 };
 
 void fillLmr();
@@ -109,7 +111,7 @@ struct Limit {
 			softtime = 0;
 		if (ctime != 0){
 			// Calculate movetime and softime
-			movetime = ctime * 0.5;
+			movetime = ctime * 0.5 - 50;
 			softtime = 0.6 * (ctime / 20 + inc * 3 / 4);
 		}
 		timer.start();

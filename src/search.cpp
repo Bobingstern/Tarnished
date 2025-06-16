@@ -16,7 +16,7 @@ using namespace chess;
 // pawn zobrist key for correction history (stored in the search stack)
 // The incremental hash logic is terrible and code is ugly. I will refactor into an add piece and remove piece eventually
 
-void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
+void MakeMove(Board &board, Move move, Search::Stack *ss){
 	PieceType to = board.at<PieceType>(move.to());
 	PieceType from = board.at<PieceType>(move.from());
 	Color stm = board.sideToMove();
@@ -27,6 +27,8 @@ void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
 	(ss+1)->minorKey = ss->minorKey;
 	(ss+1)->nonPawnKey[0] = ss->nonPawnKey[0];
 	(ss+1)->nonPawnKey[1] = ss->nonPawnKey[1];
+	// Accumulator copy
+	(ss+1)->accumulator = ss->accumulator;
 	if (move == Move::NULL_MOVE){
 		board.makeNullMove();
 		return;
@@ -100,7 +102,7 @@ void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
 
 	if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION){
 		// For now just recalculate on special moves like these
-		acc.refresh(board);
+		(ss+1)->accumulator.refresh(board);
 	}
 	else if (move.typeOf() == Move::CASTLING){
 
@@ -127,47 +129,24 @@ void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss){
 		// There are basically just 2 quiet moves now for the accumulator
 		// Move king and move rook
 		// Since moves are encoded as king takes rook, its very easy
-		acc.quiet(stm, kingTo, PieceType::KING, move.from(), PieceType::KING);
-		acc.quiet(stm, rookTo, PieceType::ROOK, move.to(), PieceType::ROOK);
+		(ss+1)->accumulator.quiet(stm, kingTo, PieceType::KING, move.from(), PieceType::KING);
+		(ss+1)->accumulator.quiet(stm, rookTo, PieceType::ROOK, move.to(), PieceType::ROOK);
 	}
 	else if (to != PieceType::NONE){
-		acc.capture(stm, move.to(), from, move.from(), from, move.to(), to);
+		(ss+1)->accumulator.capture(stm, move.to(), from, move.from(), from, move.to(), to);
 	}
 	else
-		acc.quiet(stm, move.to(), from, move.from(), from);
+		(ss+1)->accumulator.quiet(stm, move.to(), from, move.from(), from);
 
 }
 
 
-void UnmakeMove(Board &board, Accumulator &acc, Move move){
+void UnmakeMove(Board &board, Move move){
 	if (move == Move::NULL_MOVE){
 		board.unmakeNullMove();
 		return;
 	}
 	board.unmakeMove(move);
-
-	PieceType to = board.at<PieceType>(move.to());
-	PieceType from = board.at<PieceType>(move.from());
-	Color stm = board.sideToMove();
-
-	if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION){
-		// For now just recalculate on special moves like these
-		acc.refresh(board);
-	}
-	else if (move.typeOf() == Move::CASTLING){
-		Square king = move.from();
-		Square kingTo = (king > move.to()) ? king - 2 : king + 2;
-		Square rookTo = (king > move.to()) ? kingTo + 1 : kingTo - 1;
-		// There are basically just 2 quiet moves now
-		acc.quiet(stm, move.from(), PieceType::KING, kingTo, PieceType::KING);
-		acc.quiet(stm, move.to(), PieceType::ROOK, rookTo, PieceType::ROOK);
-	}
-	else if (to != PieceType::NONE){
-		acc.uncapture(stm, move.from(), from, move.to(), to, move.to(), from);
-	}
-	else {
-		acc.quiet(stm, move.from(), from, move.to(), from);
-	}
 }
 
 namespace Search {
@@ -203,53 +182,14 @@ namespace Search {
 				}
 			}
 		}
-	}
-	int scoreMove(Move move, Move ttMove, Stack *ss, ThreadInfo &thread){
-		// MVV-LVA
-		// TT Move
-		// Killer Move Heuristic
-		// Butterfly History
-		// Continuation History
-		// Capture History
-		// SEE Ordering
-
-		PieceType to = thread.board.at<PieceType>(move.to());
-		if (move == ttMove){
-			return 1000000;
-		}
-		else if (to != PieceType::NONE) {
-			// MVV-Capthist-SEE
-			int hist = thread.getCapthist(thread.board, move);
-			int score = hist + MVV_VALUES[to];
-			return 500000 + score - 800000 * !SEE(thread.board, move, -PawnValue);
-		}
-		else if (move == ss->killer){
-			return 400000;
-		}
-		else {
-			// Quiet non killers
-			// main history + continuation history
-			return thread.getQuietHistory(thread.board, move, ss);
-		}
-		return -1000000;
-	}
-	bool scoreComparator(Move &a, Move &b){
-		return a.score() > b.score();
-	}
-	void pickMove(Movelist &mvlst, int start){
-		for (int i=start+1;i<mvlst.size();i++){
-			if (mvlst[i].score() > mvlst[start].score()){
-				std::iter_swap(mvlst.begin() + start, mvlst.begin() + i);
-			}
-		}
 	}	
 	template<bool isPV>
 	int qsearch(int ply, int alpha, const int beta, Stack *ss, ThreadInfo &thread, Limit &limit){
-		if (thread.type == ThreadType::MAIN && (limit.outOfTime() || limit.outOfNodes(thread.nodes))){
+		if (thread.type == ThreadType::MAIN && ((thread.nodes & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.nodes))){
 			thread.searcher->stopSearching();
 		}
 		if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1){
-			return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, thread.accumulator) : 0;
+			return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, ss->accumulator) : 0;
 		}
 
 		ss->ply = ply;
@@ -272,7 +212,7 @@ namespace Search {
 			eval = -INFINITE + ply;
 		}
 		else {
-			rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, thread.accumulator);
+			rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
 			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 			// TT Static Eval
 			if (ttHit && (
@@ -307,11 +247,11 @@ namespace Search {
 				continue;
 
 
-			MakeMove(thread.board, thread.accumulator, move, ss);
+			MakeMove(thread.board, move, ss);
 			thread.nodes++;
 			moveCount++;
 			int score = -qsearch<isPV>(ply+1, -beta, -alpha, ss+1, thread, limit);
-			UnmakeMove(thread.board, thread.accumulator, move);
+			UnmakeMove(thread.board, move);
 
 			if (score > bestScore){
 				bestScore = score;
@@ -351,11 +291,11 @@ namespace Search {
 			if (thread.board.isRepetition(1) || thread.board.isHalfMoveDraw())
 				return 0;
 
-			if (thread.type == ThreadType::MAIN && (limit.outOfTime() || limit.outOfNodes(thread.nodes)) && thread.rootDepth != 1 ){
+			if (thread.type == ThreadType::MAIN && ((thread.nodes & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.nodes)) && thread.rootDepth != 1 ){
 				thread.searcher->stopSearching();
 			}
 			if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1){
-				return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, thread.accumulator) : 0;
+				return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, ss->accumulator) : 0;
 			}
 		}
 
@@ -390,7 +330,7 @@ namespace Search {
 				ss->eval = -INFINITE;
 			}
 			else {
-				rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, thread.accumulator);
+				rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
 				ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 				ss->eval = ss->staticEval;
 				// TT Static Eval
@@ -424,9 +364,9 @@ namespace Search {
 
 				ss->conthist = nullptr;
 
-				MakeMove(thread.board, thread.accumulator, Move(Move::NULL_MOVE), ss);
+				MakeMove(thread.board, Move(Move::NULL_MOVE), ss);
 				int nmpScore = -search<false>(depth-reduction, ply+1, -beta, -beta + 1, !cutnode, ss+1, thread, limit);
-				UnmakeMove(thread.board, thread.accumulator, Move(Move::NULL_MOVE));
+				UnmakeMove(thread.board, Move(Move::NULL_MOVE));
 
 				if (nmpScore >= beta){
 					// Zugzwang verifiction
@@ -530,7 +470,7 @@ namespace Search {
 
 			uint64_t previousNodes = thread.nodes;
 
-			MakeMove(thread.board, thread.accumulator, move, ss);
+			MakeMove(thread.board, move, ss);
 			moveCount++;
 			thread.nodes++;
 			
@@ -564,7 +504,7 @@ namespace Search {
 			if (isPV && (moveCount == 1 || score > alpha)){
 				score = -search<isPV>(newDepth, ply+1, -beta, -alpha, false, ss+1, thread, limit);
 			}
-			UnmakeMove(thread.board, thread.accumulator, move);
+			UnmakeMove(thread.board, move);
 
 			if (root && thread.type == ThreadType::MAIN)
 				limit.updateNodes(move, thread.nodes - previousNodes);
@@ -641,7 +581,9 @@ namespace Search {
 
 	int iterativeDeepening(Board &board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher){
 		threadInfo.board = board;
-		threadInfo.accumulator.refresh(threadInfo.board);
+		Accumulator baseAcc;
+		baseAcc.refresh(threadInfo.board);
+		//threadInfo.accumulator.refresh(threadInfo.board);
 
 		bool isMain = threadInfo.type == ThreadType::MAIN;
 
@@ -671,6 +613,7 @@ namespace Search {
 			ss->minorKey = resetMinorHash(threadInfo.board);
 			ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
 			ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
+			ss->accumulator = baseAcc;
 
 			// Aspiration Windows
 			if (depth >= MIN_ASP_WINDOW_DEPTH()){

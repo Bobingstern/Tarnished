@@ -48,8 +48,7 @@ struct Accumulator {
 	// addsub, addsubsub, addaddsubsub
 	void quiet(Color stm, Square add, PieceType addPT, Square sub, PieceType subPT);
 	void capture(Color stm, Square add, PieceType addPT, Square sub1, PieceType subPT1, Square sub2, PieceType subPT2);
-	void uncapture(Color stm, Square add1, PieceType addPT1, Square add2, PieceType addPT2, Square sub, PieceType subPT);
-	void castle(Color stm, Square add1, PieceType addPT1, Square add2, PieceType addPT2, Square sub1, PieceType subPT1, Square sub2, PieceType subPT2);
+	
 };
 
 struct NNUE {
