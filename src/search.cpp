@@ -232,6 +232,7 @@ namespace Search {
 		int moveCount = 0;
 		Move qBestMove = Move::NO_MOVE;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
+		bool ttPV = isPV || (ttHit && ttEntry->isPV);
 
 
 		// This will do evasions as well
@@ -269,7 +270,7 @@ namespace Search {
 		if (!moveCount && inCheck)
 			return -MATE + ply;
 
-		ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, 0);
+		ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, 0, ttPV);
 
 		return bestScore;
 
@@ -310,7 +311,7 @@ namespace Search {
 			return ttEntry->score;
 		}
 		bool notHashMove = !ttHit || moveIsNull(Move(ttEntry->move));
-
+		bool ttPV = isPV || (ttHit && ttEntry->isPV);
 		// http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
     	// https://github.com/jhonnold/berserk/blob/dd1678c278412898561d40a31a7bd08d49565636/src/search.c#L379
     	// https://github.com/PGG106/Alexandria/blob/debbf941889b28400f9a2d4b34515691c64dfae6/src/search.cpp#L636
@@ -488,6 +489,8 @@ namespace Search {
 				reduction -= LMR_HIST_SCALE() * ss->historyScore / LMR_HIST_DIVISOR();
 				// Reduce more if cutnode
 				reduction += LMR_CUTNODE_SCALE() * cutnode;
+				// Reduce Less is ttpv
+				reduction -= LMR_TTPV_SCALE() * ttPV;
 
 				reduction /= 1024;
 
@@ -571,9 +574,7 @@ namespace Search {
 			}
 
 			// Update TT
-			//TTEntry *tableEntry = thread.TT.getEntry(thread.board.hash());
-			ttEntry->updateEntry(thread.board.hash(), bestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, depth);
-			//*ttEntry = TTEntry(thread.board.hash(), ttFlag == TTFlag::FAIL_LOW ? ttEntry->move : bestMove, bestScore, ttFlag, depth);
+			ttEntry->updateEntry(thread.board.hash(), bestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, depth, ttPV);
 		}
 		return bestScore;
 
