@@ -25,6 +25,7 @@ struct TTEntry {
 	uint16_t move;
 	uint8_t flag;
 	uint8_t depth;
+	bool isPV;
 	TTEntry(){
 		this->zobrist = 0;
 		this->move = 0;
@@ -32,17 +33,19 @@ struct TTEntry {
 		this->flag = 0;
 		this->depth = 0;
 		this->staticEval = -32767;
+		this->isPV = false;
 	}
-	TTEntry(uint64_t key, chess::Move best, int score, int16_t eval, uint8_t flag, uint8_t depth){
+	TTEntry(uint64_t key, chess::Move best, int score, int16_t eval, uint8_t flag, uint8_t depth, bool isPV){
 		this->move = best.move();
 		this->zobrist = static_cast<uint32_t>(key);
 		this->score = score;
 		this->flag = flag;
 		this->depth = depth;
 		this->staticEval = eval;
+		this->isPV = isPV;
 		
 	}
-	void updateEntry(uint64_t key, chess::Move best, int score, int16_t eval, uint8_t flag, uint8_t depth) {
+	void updateEntry(uint64_t key, chess::Move best, int score, int16_t eval, uint8_t flag, uint8_t depth, bool isPV) {
 		uint32_t key32 = static_cast<uint32_t>(key);
 		if (!moveIsNull(best) || key32 != this->zobrist)
 			this->move = best.move();
@@ -52,6 +55,7 @@ struct TTEntry {
 			this->flag = flag;
 			this->depth = depth;
 			this->staticEval = eval;
+			this->isPV = isPV;
 		}
 	}
 };
