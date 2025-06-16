@@ -73,8 +73,8 @@ bool isMinor(PieceType pt);
 bool isLegal(Board &board, Move move);
 
 // Accumulator wrapper
-void MakeMove(Board &board, Accumulator &acc, Move move, Search::Stack *ss);
-void UnmakeMove(Board &board, Accumulator &acc, Move move);
+void MakeMove(Board &board, Move move, Search::Stack *ss);
+void UnmakeMove(Board &board, Move move);
 // SEE stuff
 void initLookups();
 int oppDir(int dir);
