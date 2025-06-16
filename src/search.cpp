@@ -461,8 +461,14 @@ namespace Search {
 					else
 						extension = 1; // Singular Extension
 				}
-				else if (ttEntry->score >= beta)
+				else if (ttEntry->score >= beta) {
 					extension = -2 + isPV; // Negative Extension
+					
+					if (!isPV && ttEntry->score >= beta + SE_DOUBLE_NEGEXT_MARGIN()) {
+						extension -= 1; // Double Negative Extension
+					}
+
+				}
 
 			}					
 
