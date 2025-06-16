@@ -49,7 +49,7 @@ struct TTEntry {
 		uint32_t key32 = static_cast<uint32_t>(key);
 		if (!moveIsNull(best) || key32 != this->zobrist)
 			this->move = best.move();
-		if (flag == TTFlag::EXACT || key32 != this->zobrist || depth > this->depth){
+		if (flag == TTFlag::EXACT || key32 != this->zobrist || depth > this->depth - 2 * isPV){
 			this->zobrist = key32;
 			this->score = score;
 			this->flag = flag;
