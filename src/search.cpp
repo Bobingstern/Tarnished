@@ -498,8 +498,15 @@ namespace Search {
 
 				score = -search<false>(lmrDepth, ply+1, -alpha - 1, -alpha, true, ss+1, thread, limit);
 				// Re-search at normal depth
-				if (score > alpha)
+				if (score > alpha && lmrDepth < newDepth) {
+					bool doDeeper = score > bestScore + LMR_DEEPER_BASE() + LMR_DEEPER_SCALE() * newDepth;
+					bool doShallower = score < bestScore + newDepth;
+
+					newDepth += doDeeper;
+					newDepth -= doShallower;
+
 					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, !cutnode, ss+1, thread, limit);
+				}
 			}
 			else if (!isPV || moveCount > 1){
 				score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, !cutnode, ss+1, thread, limit);
