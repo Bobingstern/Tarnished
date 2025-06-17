@@ -500,7 +500,7 @@ namespace Search {
 				// Re-search at normal depth
 				if (score > alpha && lmrDepth < newDepth) {
 					bool doDeeper = score > bestScore + LMR_DEEPER_BASE() + LMR_DEEPER_SCALE() * newDepth;
-					bool doShallower = score > bestScore + newDepth;
+					bool doShallower = score < bestScore + newDepth;
 
 					newDepth += doDeeper;
 					newDepth -= doShallower;
