@@ -500,9 +500,11 @@ namespace Search {
 				// Re-search at normal depth
 				if (score > alpha && lmrDepth < newDepth) {
 					bool doDeeper = score > bestScore + LMR_DEEPER_BASE() + LMR_DEEPER_SCALE() * newDepth;
+					bool doShallower = score > bestScore + newDepth;
 
 					newDepth += doDeeper;
-					
+					newDepth -= doShallower;
+
 					score = -search<false>(newDepth, ply+1, -alpha - 1, -alpha, !cutnode, ss+1, thread, limit);
 				}
 			}
