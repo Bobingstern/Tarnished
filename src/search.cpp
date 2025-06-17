@@ -486,11 +486,13 @@ namespace Search {
 				// Reduce less when improving
 				reduction -= LMR_IMPROVING_SCALE() * improving;
 				// Reduce less if good history
-				reduction -= LMR_HIST_SCALE() * ss->historyScore / LMR_HIST_DIVISOR();
+				reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
 				// Reduce more if cutnode
 				reduction += LMR_CUTNODE_SCALE() * cutnode;
 				// Reduce Less is ttpv
 				reduction -= LMR_TTPV_SCALE() * ttPV;
+				// Reduce less if TT depth is equal or higher
+				reduction -= LMR_TT_DEPTH_SCALE() * (ttHit && ttEntry->depth >= depth);
 
 				reduction /= 1024;
 
