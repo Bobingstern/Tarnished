@@ -19,6 +19,7 @@ using u128 = unsigned __int128;
 #endif
 
 //#define TUNE
+#define LMR_TUNE
 
 // Struct for tunable parameters
 struct TunableParam
@@ -33,6 +34,7 @@ struct TunableParam
 
 std::list<TunableParam>& tunables();
 TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
+int lmrFactorized(std::array<bool, 6> features);
 void printWeatherFactoryConfig();
 
 #define TUNABLE_PARAM(name, val, min, max, step) \
@@ -51,6 +53,12 @@ constexpr int16_t QA = 255;
 constexpr int16_t QB = 64;
 constexpr int16_t NNUE_SCALE = 400;
 constexpr int OUTPUT_BUCKETS = 8; 
+
+// Factorized LMR arrays
+// {isQuiet, !isPV, improving, cutnode, ttpv, tthit}
+extern std::array<int, 6> LMR_ONE_PAIR;
+extern std::array<int, 15> LMR_TWO_PAIR;
+extern std::array<int, 20> LMR_THREE_PAIR;
 
 // History Parameters
 TUNABLE_PARAM(PAWN_CORR_WEIGHT, 186, 64, 2048, 32)
@@ -91,11 +99,6 @@ TUNABLE_PARAM(LMR_BASE_MOVECOUNT, 3, 1, 10, 1);
 // Reduction Constants
 TUNABLE_PARAM(LMR_HIST_DIVISOR, 8192, 4096, 16385, 650);
 TUNABLE_PARAM(LMR_BASE_SCALE, 1024, 256, 2048, 64)
-TUNABLE_PARAM(LMR_ISPV_SCALE, 1024, 256, 2048, 64)
-TUNABLE_PARAM(LMR_IMPROVING_SCALE, 1024, 256, 2048, 64)
-TUNABLE_PARAM(LMR_HIST_SCALE, 1024, 256, 2048, 64)
-TUNABLE_PARAM(LMR_CUTNODE_SCALE, 2000, 256, 2048, 64)
-TUNABLE_PARAM(LMR_TTPV_SCALE, 1024, 256, 2048, 64)
 // Deeper/Shallower
 TUNABLE_PARAM(LMR_DEEPER_BASE, 40, 16, 64, 4)
 TUNABLE_PARAM(LMR_DEEPER_SCALE, 4, 3, 12, 1)

@@ -126,13 +126,31 @@ void UCISetOption(Searcher &searcher, char *str) {
         searcher.toggleWDL(opt == "true");
     }
     else {
-        Search::fillLmr();
         for (auto &param : tunables()) {
             const char *p = param.name.c_str();
             if (OptionName(str, p)) {
                 param.value = atoi(OptionValue(str));
             }
         }
+        for (int i=0;i<LMR_THREE_PAIR.size();i++) {
+            std::string a = "LMR_ONE_PAIR_" + std::to_string(i);
+            std::string b = "LMR_TWO_PAIR_" + std::to_string(i);
+            std::string c = "LMR_THREE_PAIR_" + std::to_string(i);
+            const char *ac = a.c_str();
+            const char *bc = b.c_str();
+            const char *cc = c.c_str();
+            if (OptionName(str, ac)) {
+                LMR_ONE_PAIR[i] = atoi(OptionValue(str));
+            }
+            if (OptionName(str, bc)) {
+                LMR_TWO_PAIR[i] = atoi(OptionValue(str));
+            }
+            if (OptionName(str, cc)) {
+                LMR_THREE_PAIR[i] = atoi(OptionValue(str));
+            }
+        }
+
+        Search::fillLmr();
     }
 }
 void UCIInfo(){
@@ -144,6 +162,27 @@ void UCIInfo(){
 #ifdef TUNE
     for (auto &param : tunables()) {
         std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min << " max " << param.max << std::endl;
+    }
+#endif
+
+#ifdef LMR_TUNE
+    for (auto &param : tunables()) {
+        if (param.name.substr(0, 3) != "LMR")
+            continue;
+        std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min << " max " << param.max << std::endl;
+    }
+    // For pair
+    for (int i = 0; i < LMR_ONE_PAIR.size(); i++) {
+        std::string s = "LMR_ONE_PAIR_" + std::to_string(i);
+        std::cout << "option name " << s << " type spin default " << LMR_ONE_PAIR[i] << " min -2048 max 2048" << std::endl;
+    }
+    for (int i = 0; i < LMR_TWO_PAIR.size(); i++) {
+        std::string s = "LMR_TWO_PAIR_" + std::to_string(i);
+        std::cout << "option name " << s << " type spin default " << LMR_TWO_PAIR[i] << " min -2048 max 2048" << std::endl;
+    }
+    for (int i = 0; i < LMR_THREE_PAIR.size(); i++) {
+        std::string s = "LMR_THREE_PAIR_" + std::to_string(i);
+        std::cout << "option name " << s << " type spin default " << LMR_THREE_PAIR[i] << " min -2048 max 2048" << std::endl;
     }
 #endif
     std::cout << "uciok" << std::endl; 
@@ -285,6 +324,9 @@ int main(int agrc, char *argv[]){
     searcher.toggleWDL(true); // Default display wdl
     searcher.initialize(1); // Default one thread
     searcher.reset();
+
+    std::array<bool, 6> test = {1, 0, 1, 1, 0, 1};
+    lmrFactorized(test);
 
     if (agrc > 1){
         std::string arg = argv[1];

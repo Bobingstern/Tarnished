@@ -480,17 +480,12 @@ namespace Search {
 			// Late Move Reduction
 			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_BASE_MOVECOUNT() + root){
 				int reduction = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+				std::array<bool, 6> features = {isQuiet, !isPV, improving, cutnode, ttPV, ttHit};
 
-				// Reduce more if not a PV node
-				reduction += LMR_ISPV_SCALE() * !isPV;
-				// Reduce less when improving
-				reduction -= LMR_IMPROVING_SCALE() * improving;
+				// Factorized "inference"
+				reduction += lmrFactorized(features);
 				// Reduce less if good history
-				reduction -= LMR_HIST_SCALE() * ss->historyScore / LMR_HIST_DIVISOR();
-				// Reduce more if cutnode
-				reduction += LMR_CUTNODE_SCALE() * cutnode;
-				// Reduce Less is ttpv
-				reduction -= LMR_TTPV_SCALE() * ttPV;
+				reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
 
 				reduction /= 1024;
 
