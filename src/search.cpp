@@ -477,6 +477,7 @@ namespace Search {
 			
 
 			int newDepth = depth - 1 + extension;
+			bool givesCheck = thread.board.inCheck();
 			// Late Move Reduction
 			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_BASE_MOVECOUNT() + root){
 				int reduction = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
@@ -491,6 +492,8 @@ namespace Search {
 				reduction += LMR_CUTNODE_SCALE() * cutnode;
 				// Reduce Less is ttpv
 				reduction -= LMR_TTPV_SCALE() * ttPV;
+				// Reduce less if move gives check
+				reduction -= LMR_GIVE_CHECK_SCALE() * givesCheck;
 
 				reduction /= 1024;
 
