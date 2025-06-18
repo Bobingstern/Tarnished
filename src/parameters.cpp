@@ -31,7 +31,7 @@ TunableParam& addTunableParam(std::string name, int value, int min, int max, int
     return param;
 }
 
-int lmrFactorized(std::array<bool, 6> features) {
+int lmrConvolution(std::array<bool, 6> features) {
     int output = 0;
     int twoIndex = 0;
     int threeIndex = 0;

@@ -34,7 +34,7 @@ struct TunableParam
 
 std::list<TunableParam>& tunables();
 TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
-int lmrFactorized(std::array<bool, 6> features);
+int lmrConvolution(std::array<bool, 6> features);
 void printWeatherFactoryConfig();
 
 #define TUNABLE_PARAM(name, val, min, max, step) \

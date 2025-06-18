@@ -325,9 +325,6 @@ int main(int agrc, char *argv[]){
     searcher.initialize(1); // Default one thread
     searcher.reset();
 
-    std::array<bool, 6> test = {1, 0, 1, 1, 0, 1};
-    lmrFactorized(test);
-
     if (agrc > 1){
         std::string arg = argv[1];
         if (arg == "bench")
