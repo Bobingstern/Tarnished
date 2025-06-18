@@ -480,17 +480,21 @@ namespace Search {
 			// Late Move Reduction
 			if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_BASE_MOVECOUNT() + root){
 				int reduction = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+				std::array<bool, 6> features = {isQuiet, !isPV, improving, cutnode, ttPV, ttHit};
 
-				// Reduce more if not a PV node
-				reduction += LMR_ISPV_SCALE() * !isPV;
-				// Reduce less when improving
-				reduction -= LMR_IMPROVING_SCALE() * improving;
+				// Factorized "inference"
+				// ---------------------------------------------------------------
+				// | We take a set of input features and arrange 3 tables for up |
+				// | to 3 way interactions between them. For example, a two way  |
+				// | interaction would be two_way_table[i] * (x && y), three     |
+				// | way would be three_way_table[j] * (x && y && z) etc         |
+				// | For the 6 variables here, that gives us a one way           |
+				// | table of 6, two table of 6x5/2=15, and three way of         |
+				// | 6x5x3/3!=20. Thanks to AGE for this idea                    |
+				// ---------------------------------------------------------------
+				reduction += lmrConvolution(features);
 				// Reduce less if good history
-				reduction -= LMR_HIST_SCALE() * ss->historyScore / LMR_HIST_DIVISOR();
-				// Reduce more if cutnode
-				reduction += LMR_CUTNODE_SCALE() * cutnode;
-				// Reduce Less is ttpv
-				reduction -= LMR_TTPV_SCALE() * ttPV;
+				reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
 
 				reduction /= 1024;
 
