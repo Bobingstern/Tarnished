@@ -168,6 +168,8 @@ struct ThreadInfo {
 	MultiArray<int, 2, 64, 64> history;
 	// indexed by [prev stm][prev pt][prev to][stm][pt][to]
 	MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
+	// indexed by [stm][pt][to][has % entries]
+	MultiArray<int16_t, 2, 6, 64, PAWN_HIST_ENTRIES> pawnHistory;
 	// indexed by [stm][moving pt][cap pt][to]
 	MultiArray<int, 2, 6, 6, 64> capthist;
 	// indexed by [stm][hash % entries]
@@ -228,6 +230,19 @@ struct ThreadInfo {
 			updateEntry(( *(ss-2)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()] );
 	}
 
+	// Pawn History
+	void updatePawnHistory(Stack *ss, Board &board, Move m, int bonus) {
+		int16_t clamped = std::clamp(bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+		int16_t &entry = pawnHistory[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()][ss->pawnKey % PAWN_HIST_ENTRIES];
+		entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+	}
+
+	void updateQuietHistory(Move m, Stack *ss, int bonus) {
+		updateHistory(board.sideToMove(), m, bonus);
+		updateConthist(ss, board, m, bonus);
+		updatePawnHistory(ss, board, m, bonus);
+	}
+
 	// Static eval correction history
 	void updateCorrhist(Stack *ss, Board &board, int bonus){
 		auto updateEntry = [&](int16_t &entry) {
@@ -257,8 +272,13 @@ struct ThreadInfo {
 		return (*c)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
 	}
 
+	int16_t getPawnHistory(Board &board, Move m, Stack *ss){
+		return pawnHistory[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()][ss->pawnKey % PAWN_HIST_ENTRIES];
+	}
+
 	int getQuietHistory(Board &board, Move m, Stack *ss){
 		int hist = getHistory(board.sideToMove(), m);
+		hist += getPawnHistory(board, m, ss);
 		if (ss != nullptr && ss->ply > 0 && (ss-1)->conthist != nullptr)
 			hist += getConthist((ss-1)->conthist, board, m);
 		if (ss != nullptr && ss->ply > 1 && (ss-2)->conthist != nullptr)

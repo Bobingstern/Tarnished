@@ -46,6 +46,7 @@ void printWeatherFactoryConfig();
 constexpr int16_t MAX_HISTORY = 16383;
 const int16_t DEFAULT_HISTORY = 0;
 constexpr int CORR_HIST_ENTRIES = 16384;
+constexpr int PAWN_HIST_ENTRIES = 512;
 constexpr int MAX_CORR_HIST = 1024;
 // NNUE Parameters
 constexpr int16_t HL_N = 512;

@@ -547,13 +547,11 @@ namespace Search {
 				int bonus = historyBonus(depth);
 				int malus = historyMalus(depth);
 				if (isQuiet){
-					thread.updateHistory(thread.board.sideToMove(), move, bonus);
-					thread.updateConthist(ss, thread.board, move, bonus);
+					thread.updateQuietHistory(move, ss, bonus);
 					for (const Move quietMove : seenQuiets){
 						if (quietMove == move)
 							continue;
-						thread.updateHistory(thread.board.sideToMove(), quietMove, malus);
-						thread.updateConthist(ss, thread.board, quietMove, malus);
+						thread.updateQuietHistory(quietMove, ss, malus);
 					}
 				}
 				else {
