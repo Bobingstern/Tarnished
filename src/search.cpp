@@ -312,10 +312,6 @@ namespace Search {
 		}
 		bool notHashMove = !ttHit || moveIsNull(Move(ttEntry->move));
 		bool ttPV = isPV || (ttHit && ttEntry->isPV);
-		// http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
-    	// https://github.com/jhonnold/berserk/blob/dd1678c278412898561d40a31a7bd08d49565636/src/search.c#L379
-    	// https://github.com/PGG106/Alexandria/blob/debbf941889b28400f9a2d4b34515691c64dfae6/src/search.cpp#L636
-		bool canIIR = notHashMove && depth >= IIR_MIN_DEPTH();
 
 		int bestScore = -INFINITE;
 		int oldAlpha = alpha;
@@ -383,10 +379,12 @@ namespace Search {
 						return verification;
 				}
 			}
-			// Internal Iterative Reduction
-			if (canIIR)
-				depth -= 1;
 		}
+
+		// Internal Iterative Reduction
+		bool canIIR = notHashMove && depth >= IIR_MIN_DEPTH() && !inCheck && moveIsNull(ss->excluded);
+		if (canIIR)
+			depth--;
 		
 		// Thought
 		// What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
