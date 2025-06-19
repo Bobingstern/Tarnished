@@ -350,10 +350,10 @@ namespace Search {
 		
 		if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)){
 			// Reverse Futility Pruning
-			if (depth <= RFP_MAX_DEPTH() && ss->eval - RFP_SCALE() * (depth - improving) >= beta)
+			if (depth <= 6 && ss->eval - RFP_SCALE() * (depth - improving) >= beta)
 				return ss->eval;
 
-			if (depth <= RAZORING_MAX_DEPTH() && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
+			if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
 				int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
 				if (score <= alpha)
 					return score;
