@@ -229,6 +229,7 @@ namespace Search {
 		}
 
 		int bestScore = eval;
+		int futility = eval + QS_FUTILITY_MARGIN();
 		int moveCount = 0;
 		Move qBestMove = Move::NO_MOVE;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
@@ -243,9 +244,19 @@ namespace Search {
 			if (thread.stopped || thread.exiting)
 				return bestScore;
 
-			// SEE Pruning
-			if (bestScore > GETTING_MATED && !SEE(thread.board, move, 0))
-				continue;
+			if (bestScore > GETTING_MATED) {
+				// SEE Pruning
+				if (!SEE(thread.board, move, 0))
+					continue;
+
+				// Futility Pruning
+				if (!inCheck && futility <= alpha && !SEE(thread.board, move, 1)) {
+					if (bestScore < futility)
+						bestScore = futility;
+					continue;
+				}
+
+			}
 
 
 			MakeMove(thread.board, move, ss);
@@ -353,6 +364,7 @@ namespace Search {
 			if (depth <= 6 && ss->eval - RFP_SCALE() * (depth - improving) >= beta)
 				return ss->eval;
 
+			// Razoring
 			if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
 				int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
 				if (score <= alpha)
