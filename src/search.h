@@ -29,10 +29,10 @@ struct Searcher;
 namespace Search {
 
 inline int historyBonus(int depth) {
-	return std::min(HIST_BONUS_QUADRATIC() * depth * depth + HIST_BONUS_LINEAR() * depth - HIST_BONUS_OFFSET(), 2048);
+	return std::clamp(HIST_BONUS_SCALE() * depth - HIST_BONUS_OFFSET(), 0, 2048);
 }
 inline int historyMalus(int depth) {
-	return -std::min(HIST_MALUS_QUADRATIC() * depth * depth + HIST_MALUS_LINEAR() * depth + HIST_MALUS_OFFSET(), 1024);
+	return -std::clamp(HIST_MALUS_SCALE() * depth + HIST_MALUS_OFFSET(), 0, 1024);
 }
 
 struct PVList {
