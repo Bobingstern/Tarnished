@@ -17,6 +17,7 @@ struct Searcher {
 
 	bool showWDL;
 	bool printInfo = true;
+	bool isChess960 = false;
 	
 
 	void start(Board &board, Search::Limit limit);
@@ -88,5 +89,8 @@ struct Searcher {
 
 	void toggleWDL(bool x){
 		showWDL = x;
+	}
+	void toggleChess960(bool x){
+		isChess960 = x;
 	}
 };

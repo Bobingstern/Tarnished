@@ -62,7 +62,7 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     }
     if (strstr(str, "infinite")){
         ctime = 0;
-        mtime = 32000;
+        mtime = 320000;
         nodes = -1;
         softnodes = -1;
         depth = 0;
@@ -111,7 +111,7 @@ static int HashInput(char *str) {
     return hash;
 };
 
-void UCISetOption(Searcher &searcher, char *str) {
+void UCISetOption(Searcher &searcher, Board &board, char *str) {
 
     // Sets the size of the transposition table
     if (OptionName(str, "Hash")) {
@@ -124,6 +124,11 @@ void UCISetOption(Searcher &searcher, char *str) {
     else if (OptionName(str, "UCI_ShowWDL")) {
         std::string opt = OptionValue(str);
         searcher.toggleWDL(opt == "true");
+    }
+    else if (OptionName(str, "UCI_Chess960")) {
+        std::string opt = OptionValue(str);
+        searcher.toggleChess960(opt == "true");
+        board.set960(opt == "true");
     }
     else {
         for (auto &param : tunables()) {
@@ -159,6 +164,7 @@ void UCIInfo(){
     std::cout << "option name Hash type spin default 16 min 2 max 65536\n";
     std::cout << "option name Threads type spin default 1 min 1 max 256\n";
     std::cout << "option name UCI_ShowWDL type check default true\n";
+    std::cout << "option name UCI_Chess960 type check default false\n";
 #ifdef TUNE
     for (auto &param : tunables()) {
         std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min << " max " << param.max << std::endl;
@@ -343,7 +349,7 @@ int main(int agrc, char *argv[]){
             case UCI        : UCIInfo();                                  break;
             case ISREADY    : std::cout << "readyok" << std::endl;        break;
             case POSITION   : UCIPosition(board, str);                    break;
-            case SETOPTION  : UCISetOption(searcher, str);                break;
+            case SETOPTION  : UCISetOption(searcher, board, str);         break;
             case UCINEWGAME : searcher.reset();                           break;
             case STOP       : searcher.stopSearching();                   break;
             case QUIT       : searcher.stopSearching(); searcher.exit();  return 0;

@@ -55,7 +55,7 @@ void Search::ThreadInfo::startSearching() {
 			if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isMateScore(bestScore)))
 				bestSearcher = thread.get();
 		}
-		std::cout << "\nbestmove " << uci::moveToUci(bestSearcher->bestMove) << std::endl;
+		std::cout << "\nbestmove " << uci::moveToUci(bestSearcher->bestMove, searcher->board.chess960()) << std::endl;
 	}
 }
 
