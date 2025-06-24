@@ -353,6 +353,7 @@ int main(int agrc, char *argv[]){
             case EVAL       : UCIEvaluate(board);                         break;
             case BENCH      : bench(searcher);                            break;
             case DATAGEN    : BeginDatagen(str);                          break;
+            case WAIT       : searcher.waitForSearchFinished();           break;
 
         }
     }
