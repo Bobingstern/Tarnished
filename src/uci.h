@@ -21,7 +21,8 @@ enum InputCommands {
     BENCH       = 99,
     EVAL        = 26,
     PRINT       = 112,
-    DATAGEN     = 124
+    DATAGEN     = 124,
+    WAIT        = 15
 };
 bool GetInput(char *str) {
     memset(str, 0, INPUT_SIZE);
