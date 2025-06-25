@@ -12,8 +12,8 @@
 | Version | Release Date | [CCRL 40/15](https://www.computerchess.org.uk/ccrl/4040/cgi/compare_engines.cgi?family=Tarnished&print=Rating+list&print=Results+table&print=LOS+table&print=Ponder+hit+table&print=Eval+difference+table&print=Comopp+gamenum+table&print=Overlap+table&print=Score+with+common+opponents) |
 | --- | --- | --- |
 | 1.0 | 2025-05-10 | 2432 |
-| 2.0 | 2025-05-17 | 3152 |
-| 2.1 | 2025-05-24 | ~3300* |
+| 2.0 | 2025-05-17 | 3156 |
+| 2.1 | 2025-05-24 | 3375 |
 
 </div>
 
@@ -27,12 +27,13 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
 
 - Move Generation
     - Internally uses [chess-library](https://disservin.github.io/chess-library/)
-- NNUE `(768->512)x2->1x8`
+- NNUE `(768->1024)x2->1x8`
     - Trained with [bullet](https://github.com/jw1912/bullet)
     - Self generated training data
     - `(piece, square, color)` input features, 8 output buckets
     - 5000 soft nodes for self play
     - 8 random plies for opening
+    - ~1.7b positions
 - Search
     - Principle Variation Search
     - Quiescence Search
@@ -53,7 +54,8 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
         - Reverse Futility Pruning
         - Null Move Pruning
         - Improving Heuristic
-        - Late Move Reductions
+        - Razoring
+        - Late Move Reductions (Factorized formulation)
         - Late Move Pruning
         - SEE Pruning (PVS and QS)
         - Singular Extensions
@@ -87,7 +89,7 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
 ## Credits
 - The name Tarnished is a reference to a certain video game protagonist
 - Thanks to everyone in the Stockfish Discord Server
-- [MattBench](https://chess.n9x.co/index/) (Thanks Matt for letting me join)
+- [MattBench](https://chess.n9x.co/index/) (Thanks Matt and everyone else for sharing cores, special thanks to Micpilar for helping with datagen)
 - [Swedishchef](https://github.com/JonathanHallstrom) (Helping out with many engine development related things)
 - [Weiss](https://github.com/TerjeKir/Weiss)
 - [Stash](https://github.com/mhouppin/stash-bot)
