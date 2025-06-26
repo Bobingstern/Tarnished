@@ -196,7 +196,7 @@ namespace Search {
 		ss->ply = ply;
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
-		bool ttHit = ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
+		bool ttHit = ttEntry->zobrist == thread.board.hash();
 		if (!isPV && ttHit
 			&& (ttEntry->flag == TTFlag::EXACT 
 				|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= beta)
@@ -271,7 +271,7 @@ namespace Search {
 		if (!moveCount && inCheck)
 			return -MATE + ply;
 
-		ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, 0, ttPV);
+		//ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, 0, ttPV);
 
 		return bestScore;
 
@@ -304,7 +304,7 @@ namespace Search {
 
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
-		bool ttHit = moveIsNull(ss->excluded) && ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
+		bool ttHit = moveIsNull(ss->excluded) && ttEntry->zobrist == thread.board.hash();
 		if (!isPV && ttHit && ttEntry->depth >= depth
 			&& (ttEntry->flag == TTFlag::EXACT 
 				|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= beta)
