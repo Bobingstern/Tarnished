@@ -158,7 +158,7 @@ struct ThreadInfo {
 	std::atomic<uint64_t> nodes;
 	
 	Move bestMove;
-	int threadBestScore;
+	int bestRootScore;
 	int minNmpPly;
 	int rootDepth;
 	int completed;
@@ -184,7 +184,7 @@ struct ThreadInfo {
 	ThreadInfo(ThreadType t, TTable &tt, Searcher *s);
 	ThreadInfo(int id, TTable &tt, Searcher *s);
 	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), history(other.history), 
-											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), threadBestScore(other.threadBestScore) {
+											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), bestRootScore(other.bestRootScore) {
 		this->board = other.board;
 		conthist = other.conthist;
 		capthist = other.capthist;
@@ -291,7 +291,7 @@ struct ThreadInfo {
 		minorCorrhist.fill(DEFAULT_HISTORY);
 		whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
 		blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
-		threadBestScore = -INFINITE;
+		bestRootScore = -INFINITE;
 		rootDepth = 0;
 		completed = 0;
 	}
@@ -301,5 +301,5 @@ struct ThreadInfo {
 
 //int search(Board &board, int depth, int ply, int alpha, int beta, Stack *ss, ThreadInfo &thread);
 //int iterativeDeepening(Board board, ThreadInfo &threadInfo, Searcher *searcher);
-int iterativeDeepening(Board &board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher);
+int iterativeDeepening(Board board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher);
 } 

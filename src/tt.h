@@ -94,7 +94,6 @@ public:
 				t.join();
 	}
 	void resize(uint64_t MB){
-		std::cout << "ASASAS " << sizeof(TTEntry) << " " << alignof(TTEntry) << std::endl;
 		size = MB * 1024 * 1024 / sizeof(TTEntry);
 		if (table != nullptr)
 			std::free(table);

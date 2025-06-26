@@ -1,6 +1,7 @@
 #include "external/chess.hpp"
 #include "tt.h"
 #include "searcher.h"
+#include "util.h"
 #include <atomic>
 #include <vector>
 #include <thread>
@@ -35,6 +36,7 @@ void Search::ThreadInfo::exit() {
 void Search::ThreadInfo::startSearching() {
 	nodes = 0;
 	bestMove = Move::NO_MOVE;
+	bestRootScore = -INFINITE;
 
 	Search::iterativeDeepening(searcher->board, *this, searcher->limit, searcher);
 
@@ -43,18 +45,23 @@ void Search::ThreadInfo::startSearching() {
 		searcher->waitForWorkersFinished();
 		//std::cout << "\nbestmove " << uci::moveToUci(bestMove) << std::endl;
 		ThreadInfo *bestSearcher = this;
-		// for (auto &thread : searcher->threads) {
-		// 	if (thread.get()->type == ThreadType::MAIN)
-		// 		continue;
-		// 	int bestDepth = bestSearcher->completed;
-		// 	int bestScore = bestSearcher->threadBestScore;
-		// 	int currentDepth = thread->completed;
-		// 	int currentScore = thread->threadBestScore;
-		// 	if ( (bestDepth == currentDepth && currentScore > bestScore) || (Search::isWin(currentScore) && currentScore > bestScore))
-		// 		bestSearcher = thread.get();
-		// 	if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isWin(bestScore) ))
-		// 		bestSearcher = thread.get();
-		// }
+		for (auto &thread : searcher->threads) {
+			if (thread.get()->type == ThreadType::MAIN)
+				continue;
+			
+			// This should never happen but saftey
+			if (!isLegal(searcher->board, thread.get()->bestMove))
+				continue;
+
+			int bestDepth = bestSearcher->completed;
+			int bestScore = bestSearcher->bestRootScore;
+			int currentDepth = thread->completed;
+			int currentScore = thread->bestRootScore;
+			if ( (bestDepth == currentDepth && currentScore > bestScore) || (Search::isWin(currentScore) && currentScore > bestScore))
+				bestSearcher = thread.get();
+			if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isWin(bestScore) ))
+				bestSearcher = thread.get();
+		}
 		std::cout << "\nbestmove " << uci::moveToUci(bestSearcher->bestMove, searcher->board.chess960()) << std::endl;
 	}
 }

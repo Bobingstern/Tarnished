@@ -556,7 +556,7 @@ namespace Search {
 					bestMove = move;
 					if (root) {
 						thread.bestMove = bestMove;
-						thread.threadBestScore = bestScore;
+						thread.bestRootScore = bestScore;
 					}
 					ttFlag = TTFlag::EXACT;
 					alpha = score;
@@ -621,7 +621,7 @@ namespace Search {
 
 	}
 
-	int iterativeDeepening(Board &board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher){
+	int iterativeDeepening(Board board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher){
 		threadInfo.board = board;
 		Accumulator baseAcc;
 		baseAcc.refresh(threadInfo.board);
@@ -637,8 +637,6 @@ namespace Search {
 		int score = -INFINITE;
 		int lastScore = -INFINITE;
 
-		int moveEval = -INFINITE;
-		int smpDepth = isMain ? 0 : threadInfo.threadId;
 		int64_t avgnps = 0;
 		for (int depth = 1;depth<=limit.depth;depth++){
 			auto aborted = [&]() {
@@ -733,7 +731,6 @@ namespace Search {
 		// 	std::cout << "bestmove " << uci::moveToUci(lastPV.moves[0]) << std::endl;
 		// }
 
-		threadInfo.bestMove = lastPV.moves[0];
 		return lastScore;
 	}
 
