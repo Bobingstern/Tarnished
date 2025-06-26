@@ -213,8 +213,8 @@ namespace Search {
 			eval = -INFINITE + ply;
 		}
 		else {
-			//rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
-			rawStaticEval = network.inference(&thread.board, ss->accumulator);
+			rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
+			//rawStaticEval = network.inference(&thread.board, ss->accumulator);
 			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 			// TT Static Eval
 			// if (ttHit && (
@@ -329,8 +329,8 @@ namespace Search {
 				ss->eval = -INFINITE;
 			}
 			else {
-				//rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
-				rawStaticEval = network.inference(&thread.board, ss->accumulator);
+				rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
+				//rawStaticEval = network.inference(&thread.board, ss->accumulator);
 				ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 				ss->eval = ss->staticEval;
 				// // TT Static Eval
