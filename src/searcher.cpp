@@ -50,9 +50,9 @@ void Search::ThreadInfo::startSearching() {
 			int bestScore = bestSearcher->threadBestScore;
 			int currentDepth = thread->completed;
 			int currentScore = thread->threadBestScore;
-			if ( (bestDepth == currentDepth && currentScore > bestScore) || (Search::isMateScore(currentScore) && currentScore > bestScore))
+			if ( (bestDepth == currentDepth && currentScore > bestScore) || (Search::isWin(currentScore) && currentScore > bestScore))
 				bestSearcher = thread.get();
-			if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isMateScore(bestScore)))
+			if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isWin(bestScore) ))
 				bestSearcher = thread.get();
 		}
 		std::cout << "\nbestmove " << uci::moveToUci(bestSearcher->bestMove, searcher->board.chess960()) << std::endl;

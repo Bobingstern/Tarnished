@@ -33,7 +33,7 @@ struct Searcher {
         }
 	}
 
-	void startSearching(Board &board, Search::Limit limit) {
+	void startSearching(Board board, Search::Limit limit) {
 		stopSearching();
 		waitForSearchFinished();
 		this->board = board;

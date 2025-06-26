@@ -75,6 +75,8 @@ struct Stack {
 
 void fillLmr();
 bool isMateScore(int score);
+bool isWin(int score);
+bool isLoss(int score);
 struct Limit {
 	TimeLimit timer;
 	int64_t depth;
@@ -154,6 +156,7 @@ struct ThreadInfo {
 	Limit limit;
 	Accumulator accumulator;
 	std::atomic<uint64_t> nodes;
+	
 	Move bestMove;
 	int threadBestScore;
 	int minNmpPly;

@@ -9,8 +9,9 @@
 #include "parameters.h"
 
 using namespace chess;
-constexpr int INFINITE = 32767;
-constexpr int MATE = 32766;
+constexpr int EVAL_NONE = 32767;
+constexpr int INFINITE = 32766;
+constexpr int MATE = 32765;
 constexpr int32_t FOUND_MATE  = MATE - MAX_PLY;
 constexpr int32_t GETTING_MATED = -MATE + MAX_PLY;
 

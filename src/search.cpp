@@ -199,8 +199,8 @@ namespace Search {
 		bool ttHit = ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
 		uint8_t ttEntryFlag = 0;
 		uint16_t ttEntryMove = 0;
-		int ttEntryValue = -INFINITE;
-		int ttEntryEval = -INFINITE;
+		int ttEntryValue = EVAL_NONE;
+		int ttEntryEval = EVAL_NONE;
 		bool ttPV = isPV;
 
 		if (ttHit) {
@@ -212,7 +212,7 @@ namespace Search {
 		}
 
 
-		if (!isPV && ttEntryValue != -INFINITE
+		if (!isPV && ttEntryValue != EVAL_NONE
 			&& (ttEntryFlag == TTFlag::EXACT 
 				|| (ttEntryFlag == TTFlag::BETA_CUT && ttEntryValue >= beta)
 				|| (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue <= alpha))){
@@ -227,7 +227,7 @@ namespace Search {
 			rawStaticEval = -INFINITE;
 			eval = -INFINITE + ply;
 		}
-		else if (ttHit && ttEntryEval != -INFINITE) {
+		else if (ttHit && ttEntryEval != EVAL_NONE) {
 			rawStaticEval = ttEntryEval;
 			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 		}
@@ -317,8 +317,8 @@ namespace Search {
 		bool ttHit = ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
 		uint8_t ttEntryFlag = 0;
 		uint16_t ttEntryMove = 0;
-		int ttEntryValue = -INFINITE;
-		int ttEntryEval = -INFINITE;
+		int ttEntryValue = EVAL_NONE;
+		int ttEntryEval = EVAL_NONE;
 		int ttEntryDepth = 0;
 		bool ttPV = isPV;
 
@@ -331,7 +331,7 @@ namespace Search {
 			ttPV = ttPV || ttEntry->isPV;
 		}
 
-		if (!isPV && ttHit && ttEntryDepth >= depth && ttEntryValue != -INFINITE
+		if (!isPV && ttHit && ttEntryDepth >= depth && ttEntryValue != EVAL_NONE
 			&& (ttEntryFlag == TTFlag::EXACT 
 				|| (ttEntryFlag == TTFlag::BETA_CUT && ttEntryValue >= beta)
 				|| (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue <= alpha))){
@@ -342,21 +342,22 @@ namespace Search {
 
 		int bestScore = -INFINITE;
 		int oldAlpha = alpha;
-		int rawStaticEval = -INFINITE;
+		int rawStaticEval = EVAL_NONE;
 		int score = bestScore;
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
 		ss->conthist = nullptr;
+		ss->eval = EVAL_NONE;
 		// Get the corrected static evaluation if we're not in singular search or check
 
 		if (inCheck) {
-			ss->staticEval = -INFINITE;
+			ss->staticEval = EVAL_NONE;
 		}
 		else if (!moveIsNull(ss->excluded)) {
 			rawStaticEval = ss->eval = ss->staticEval;
 		}
 		else if (ttHit) {
-			rawStaticEval = ttEntryEval != -INFINITE ? ttEntryEval : network.inference(&thread.board, ss->accumulator);
+			rawStaticEval = ttEntryEval != EVAL_NONE ? ttEntryEval : network.inference(&thread.board, ss->accumulator);
 			ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 		}
 		else {
@@ -366,7 +367,7 @@ namespace Search {
 
 		// Improving heurstic
 		// We are better than 2 plies ago
-		bool improving = !inCheck && ply > 1 && (ss - 2)->staticEval != -INFINITE && (ss - 2)->staticEval < ss->staticEval;
+		bool improving = !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
 
 		// Pruning
