@@ -107,7 +107,8 @@ void MakeMove(Board &board, Move move, Search::Stack *ss){
 	else if (move.typeOf() == Move::CASTLING){
 
 		Square king = move.from();
-		Square kingTo = (king > move.to()) ? king - 2 : king + 2;
+		Square standardKing = stm == Color::WHITE ? Square::SQ_E1 : Square::SQ_E8; // For chess960
+		Square kingTo = (king > move.to()) ? standardKing - 2 : standardKing + 2;
 		Square rookTo = (king > move.to()) ? kingTo + 1 : kingTo - 1;
 
 		// Remove the king from sq
@@ -673,12 +674,12 @@ namespace Search {
 			}
 
 			// Reporting
-			uint64_t nodecnt = (*searcher).nodeCount();
+			uint64_t nodecnt = searcher->nodeCount();
 			
 			std::stringstream pvss; // String stream for the mainline
 			Board pvBoard = threadInfo.board; // Test board for WDL and eval normalization since we need the final board state of the mainline
 			for (int i=0;i<lastPV.length;i++){
-				pvss << uci::moveToUci(lastPV.moves[i]) << " ";
+				pvss << uci::moveToUci(lastPV.moves[i], pvBoard.chess960()) << " ";
 				pvBoard.makeMove(lastPV.moves[i]);
 			}
 			if (searcher->printInfo) {
