@@ -213,16 +213,15 @@ namespace Search {
 			eval = -INFINITE + ply;
 		}
 		else {
-			rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
-			//rawStaticEval = network.inference(&thread.board, ss->accumulator);
+			//rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
+			rawStaticEval = network.inference(&thread.board, ss->accumulator);
 			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
-			// TT Static Eval
-			// if (ttHit && (
-			// 	ttEntry->flag == TTFlag::EXACT || 
-			// 	(ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= eval) ||
-			// 	(ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= eval)
-			// )) 
-			// 	eval = ttEntry->score;
+			if (ttHit && (
+				ttEntry->flag == TTFlag::EXACT || 
+				(ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= eval) ||
+				(ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= eval)
+			)) 
+				eval = ttEntry->score;
 
 			if (eval >= beta)
 				return eval;
@@ -329,17 +328,17 @@ namespace Search {
 				ss->eval = -INFINITE;
 			}
 			else {
-				rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
-				//rawStaticEval = network.inference(&thread.board, ss->accumulator);
+				//rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
+				rawStaticEval = network.inference(&thread.board, ss->accumulator);
 				ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 				ss->eval = ss->staticEval;
-				// // TT Static Eval
-				// if (ttHit && (
-				// 	ttEntry->flag == TTFlag::EXACT || 
-				// 	(ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= ss->staticEval) ||
-				// 	(ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= ss->staticEval)
-				// )) 
-				// 	ss->eval = ttEntry->score;
+				
+				if (ttHit && (
+					ttEntry->flag == TTFlag::EXACT || 
+					(ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= ss->staticEval) ||
+					(ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= ss->staticEval)
+				)) 
+					ss->eval = ttEntry->score;
 			}
 		}
 
