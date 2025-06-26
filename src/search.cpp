@@ -278,7 +278,7 @@ namespace Search {
 			return -MATE + ply;
 
 		ttFlag = bestScore >= beta ? TTFlag::BETA_CUT : TTFlag::FAIL_LOW;
-		ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, 0, ttPV);
+		//ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, 0, ttPV);
 
 		return bestScore;
 
