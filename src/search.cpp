@@ -200,11 +200,13 @@ namespace Search {
 		uint8_t ttEntryFlag = 0;
 		uint16_t ttEntryMove = 0;
 		int ttEntryValue = -INFINITE;
+		int ttEntryEval = -INFINITE;
 		bool ttPV = isPV;
 
 		if (ttHit) {
 			ttEntryMove = ttEntry->move;
 			ttEntryValue = ttEntry->score;
+			ttEntryEval = ttEntry->staticEval;
 			ttEntryFlag = ttEntry->flag;
 			ttPV = ttPV || ttEntry->isPV;
 		}
@@ -225,17 +227,19 @@ namespace Search {
 			rawStaticEval = -INFINITE;
 			eval = -INFINITE + ply;
 		}
+		else if (ttHit && ttEntryEval != -INFINITE) {
+			rawStaticEval = ttEntryEval;
+			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+		}
 		else {
-			//int ttStaticEval = ttEntry->staticEval;
-			//rawStaticEval = (ttHit && ttStaticEval != -INFINITE) ? ttStaticEval : network.inference(&thread.board, ss->accumulator);
 			rawStaticEval = network.inference(&thread.board, ss->accumulator);
 			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
-
-			if (eval >= beta)
-				return eval;
-			if (eval > alpha)
-				alpha = eval;
 		}
+
+		if (eval >= beta)
+			return eval;
+		if (eval > alpha)
+			alpha = eval;
 
 		int bestScore = eval;
 		int moveCount = 0;
@@ -314,12 +318,14 @@ namespace Search {
 		uint8_t ttEntryFlag = 0;
 		uint16_t ttEntryMove = 0;
 		int ttEntryValue = -INFINITE;
+		int ttEntryEval = -INFINITE;
 		int ttEntryDepth = 0;
 		bool ttPV = isPV;
 
 		if (ttHit) {
 			ttEntryMove = ttEntry->move;
 			ttEntryValue = ttEntry->score;
+			ttEntryEval = ttEntry->staticEval;
 			ttEntryFlag = ttEntry->flag;
 			ttEntryDepth = ttEntry->depth;
 			ttPV = ttPV || ttEntry->isPV;
@@ -347,9 +353,11 @@ namespace Search {
 				ss->staticEval = rawStaticEval = -INFINITE;
 				ss->eval = -INFINITE;
 			}
+			else if (ttHit && ttEntryEval != -INFINITE) {
+				rawStaticEval = ttEntryEval;
+				ss->eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+			}
 			else {
-				//int ttStaticEval = ttEntry->staticEval;
-				//rawStaticEval = (ttHit && ttStaticEval != -INFINITE) ? ttStaticEval : network.inference(&thread.board, ss->accumulator);
 				rawStaticEval = network.inference(&thread.board, ss->accumulator);
 				ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 				ss->eval = ss->staticEval;
