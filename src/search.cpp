@@ -355,13 +355,11 @@ namespace Search {
 			}
 			else if (ttHit && ttEntryEval != -INFINITE) {
 				rawStaticEval = ttEntryEval;
-				ss->eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+				ss->staticEval = ss->eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 			}
 			else {
 				rawStaticEval = network.inference(&thread.board, ss->accumulator);
-				ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
-				ss->eval = ss->staticEval;
-
+				ss->staticEval = ss->eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 			}
 		}
 
