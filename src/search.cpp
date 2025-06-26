@@ -196,22 +196,15 @@ namespace Search {
 		ss->ply = ply;
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
-		int ttEntryScore;
-		uint16_t ttEntryMove;
-		int16_t ttEntryStaticEval;
-		uint8_t ttEntryFlag;
-		uint8_t ttEntryDepth;
+		int ttEntryScore = ttEntry->score;
+		uint16_t ttEntryMove = ttEntry->move;
+		int16_t ttEntryStaticEval = ttEntry->staticEval;
+		uint8_t ttEntryFlag = ttEntry->flag;
+		uint8_t ttEntryDepth = ttEntry->depth;
 
 		bool ttHit = ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
 		bool ttPV = isPV || (ttHit && ttEntry->isPV);
 
-		if (ttHit) {
-			ttEntryScore = ttEntry->score;
-			ttEntryMove = ttEntry->move;
-			ttEntryStaticEval = ttEntry->staticEval;
-			ttEntryFlag = ttEntry->flag;
-			ttEntryDepth = ttEntry->depth;
-		}
 
 		if (!isPV && ttHit
 			&& (ttEntryFlag == TTFlag::EXACT 
@@ -318,22 +311,15 @@ namespace Search {
 
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
-		int ttEntryScore;
-		uint16_t ttEntryMove;
-		int16_t ttEntryStaticEval;
-		uint8_t ttEntryFlag;
-		uint8_t ttEntryDepth;
+		int ttEntryScore = ttEntry->score;
+		uint16_t ttEntryMove = ttEntry->move;
+		int16_t ttEntryStaticEval = ttEntry->staticEval;
+		uint8_t ttEntryFlag = ttEntry->flag;
+		uint8_t ttEntryDepth = ttEntry->depth;
 
 		bool ttHit = moveIsNull(ss->excluded) && ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
 		bool ttPV = isPV || (ttHit && ttEntry->isPV);
 
-		if (ttHit) {
-			ttEntryScore = ttEntry->score;
-			ttEntryMove = ttEntry->move;
-			ttEntryStaticEval = ttEntry->staticEval;
-			ttEntryFlag = ttEntry->flag;
-			ttEntryDepth = ttEntry->depth;
-		}
 
 		if (!isPV && ttHit && ttEntryDepth >= depth
 			&& (ttEntryFlag == TTFlag::EXACT 
