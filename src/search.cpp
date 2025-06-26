@@ -281,7 +281,7 @@ namespace Search {
 		if (!moveCount && inCheck)
 			return -MATE + ply;
 
-		ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, 0, ttPV);
+		ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ttPV);
 
 		return bestScore;
 
@@ -314,7 +314,7 @@ namespace Search {
 
 
 		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
-		bool ttHit = moveIsNull(ss->excluded) && ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
+		bool ttHit = ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
 		uint8_t ttEntryFlag = 0;
 		uint16_t ttEntryMove = 0;
 		int ttEntryValue = -INFINITE;
@@ -322,7 +322,7 @@ namespace Search {
 		int ttEntryDepth = 0;
 		bool ttPV = isPV;
 
-		if (ttHit) {
+		if (ttHit && moveIsNull(ss->excluded)) {
 			ttEntryMove = ttEntry->move;
 			ttEntryValue = ttEntry->score;
 			ttEntryEval = ttEntry->staticEval;
@@ -342,34 +342,34 @@ namespace Search {
 
 		int bestScore = -INFINITE;
 		int oldAlpha = alpha;
-		int rawStaticEval = GETTING_MATED;
+		int rawStaticEval = -INFINITE;
 		int score = bestScore;
 		int moveCount = 0;
 		bool inCheck = thread.board.inCheck();
 		ss->conthist = nullptr;
 		// Get the corrected static evaluation if we're not in singular search or check
-		if (moveIsNull(ss->excluded)){
-			if (inCheck){
-				ss->staticEval = rawStaticEval = -INFINITE;
-				ss->eval = -INFINITE;
-			}
-			else if (ttHit && ttEntryEval != -INFINITE) {
-				rawStaticEval = ttEntryEval;
-				ss->staticEval = ss->eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
-			}
-			else {
-				rawStaticEval = network.inference(&thread.board, ss->accumulator);
-				ss->staticEval = ss->eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
-			}
-		}
 
+		if (inCheck) {
+			ss->staticEval = -INFINITE;
+		}
+		else if (!moveIsNull(ss->excluded)) {
+			rawStaticEval = ss->eval = ss->staticEval;
+		}
+		else if (ttHit) {
+			rawStaticEval = ttEntryEval != -INFINITE ? ttEntryEval : network.inference(&thread.board, ss->accumulator);
+			ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+		}
+		else {
+			rawStaticEval = network.inference(&thread.board, ss->accumulator);
+			ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+		}
 
 		// Improving heurstic
 		// We are better than 2 plies ago
-		bool improving = !inCheck && ply > 1 && (ss - 2)->staticEval < ss->staticEval;
+		bool improving = !inCheck && ply > 1 && (ss - 2)->staticEval != -INFINITE && (ss - 2)->staticEval < ss->staticEval;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
+
 		// Pruning
-		
 		if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)){
 			// Reverse Futility Pruning
 			if (depth <= 6 && ss->eval - RFP_SCALE() * (depth - improving) >= beta)
@@ -596,6 +596,8 @@ namespace Search {
 			
 		}
 		if (!moveCount){
+			if (!moveIsNull(ss->excluded))
+				return alpha;
 			return inCheck ? -MATE + ply : 0;
 		}
 		if (moveIsNull(ss->excluded)){
@@ -611,8 +613,9 @@ namespace Search {
 			}
 
 			// Update TT
-			ttEntry->updateEntry(thread.board.hash(), bestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, depth, ttPV);
+			ttEntry->updateEntry(thread.board.hash(), bestMove, bestScore, rawStaticEval, ttFlag, depth, ttPV);
 		}
+
 		return bestScore;
 
 	}
