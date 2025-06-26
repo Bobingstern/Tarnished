@@ -195,13 +195,14 @@ namespace Search {
 
 		ss->ply = ply;
 
-		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
-		bool ttHit = ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
+		TTEntry *ttEntryPtr = thread.TT.getEntry(thread.board.hash());
+		TTEntry ttEntry = *ttEntryPtr;
+		bool ttHit = ttEntry.zobrist == static_cast<uint32_t>(thread.board.hash());
 		if (!isPV && ttHit
-			&& (ttEntry->flag == TTFlag::EXACT 
-				|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= beta)
-				|| (ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= alpha))){
-			return ttEntry->score;
+			&& (ttEntry.flag == TTFlag::EXACT 
+				|| (ttEntry.flag == TTFlag::BETA_CUT && ttEntry.score >= beta)
+				|| (ttEntry.flag == TTFlag::FAIL_LOW && ttEntry.score <= alpha))){
+			return ttEntry.score;
 		}
 
 		bool inCheck = thread.board.inCheck();
@@ -213,15 +214,15 @@ namespace Search {
 			eval = -INFINITE + ply;
 		}
 		else {
-			rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
+			rawStaticEval = ttHit ? ttEntry.staticEval : network.inference(&thread.board, ss->accumulator);
 			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 			// TT Static Eval
 			if (ttHit && (
-				ttEntry->flag == TTFlag::EXACT || 
-				(ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= eval) ||
-				(ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= eval)
+				ttEntry.flag == TTFlag::EXACT || 
+				(ttEntry.flag == TTFlag::BETA_CUT && ttEntry.score >= eval) ||
+				(ttEntry.flag == TTFlag::FAIL_LOW && ttEntry.score <= eval)
 			)) 
-				eval = ttEntry->score;
+				eval = ttEntry.score;
 
 			if (eval >= beta)
 				return eval;
@@ -233,12 +234,12 @@ namespace Search {
 		int moveCount = 0;
 		Move qBestMove = Move::NO_MOVE;
 		uint8_t ttFlag = TTFlag::FAIL_LOW;
-		bool ttPV = isPV || (ttHit && ttEntry->isPV);
+		bool ttPV = isPV || (ttHit && ttEntry.isPV);
 
 
 		// This will do evasions as well
 		Move move;
-		MovePicker picker = MovePicker(&thread, ss, ttEntry->move, true);
+		MovePicker picker = MovePicker(&thread, ss, ttEntry.move, true);
 
 		while (!moveIsNull(move = picker.nextMove())){
 			if (thread.stopped || thread.exiting)
@@ -271,7 +272,7 @@ namespace Search {
 		if (!moveCount && inCheck)
 			return -MATE + ply;
 
-		ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, 0, ttPV);
+		ttEntryPtr->updateEntry(thread.board.hash(), qBestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, 0, ttPV);
 
 		return bestScore;
 
@@ -303,16 +304,17 @@ namespace Search {
 
 
 
-		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
-		bool ttHit = moveIsNull(ss->excluded) && ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
-		if (!isPV && ttHit && ttEntry->depth >= depth
-			&& (ttEntry->flag == TTFlag::EXACT 
-				|| (ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= beta)
-				|| (ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= alpha))){
-			return ttEntry->score;
+		TTEntry *ttEntryPtr = thread.TT.getEntry(thread.board.hash());
+		TTEntry ttEntry = *ttEntryPtr;
+		bool ttHit = moveIsNull(ss->excluded) && ttEntry.zobrist == static_cast<uint32_t>(thread.board.hash());
+		if (!isPV && ttHit && ttEntry.depth >= depth
+			&& (ttEntry.flag == TTFlag::EXACT 
+				|| (ttEntry.flag == TTFlag::BETA_CUT && ttEntry.score >= beta)
+				|| (ttEntry.flag == TTFlag::FAIL_LOW && ttEntry.score <= alpha))){
+			return ttEntry.score;
 		}
-		bool notHashMove = !ttHit || moveIsNull(Move(ttEntry->move));
-		bool ttPV = isPV || (ttHit && ttEntry->isPV);
+		bool notHashMove = !ttHit || moveIsNull(Move(ttEntry.move));
+		bool ttPV = isPV || (ttHit && ttEntry.isPV);
 
 		int bestScore = -INFINITE;
 		int oldAlpha = alpha;
@@ -328,16 +330,16 @@ namespace Search {
 				ss->eval = -INFINITE;
 			}
 			else {
-				rawStaticEval = ttHit ? ttEntry->staticEval : network.inference(&thread.board, ss->accumulator);
+				rawStaticEval = ttHit ? ttEntry.staticEval : network.inference(&thread.board, ss->accumulator);
 				ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 				ss->eval = ss->staticEval;
 				// TT Static Eval
 				if (ttHit && (
-					ttEntry->flag == TTFlag::EXACT || 
-					(ttEntry->flag == TTFlag::BETA_CUT && ttEntry->score >= ss->staticEval) ||
-					(ttEntry->flag == TTFlag::FAIL_LOW && ttEntry->score <= ss->staticEval)
+					ttEntry.flag == TTFlag::EXACT || 
+					(ttEntry.flag == TTFlag::BETA_CUT && ttEntry.score >= ss->staticEval) ||
+					(ttEntry.flag == TTFlag::FAIL_LOW && ttEntry.score <= ss->staticEval)
 				)) 
-					ss->eval = ttEntry->score;
+					ss->eval = ttEntry.score;
 			}
 		}
 
@@ -401,7 +403,7 @@ namespace Search {
 
 		Move bestMove = Move::NO_MOVE;
 		Move move;
-		MovePicker picker = MovePicker(&thread, ss, ttEntry->move, false);
+		MovePicker picker = MovePicker(&thread, ss, ttEntry.move, false);
 		
 
 		Movelist seenQuiets;
@@ -447,16 +449,16 @@ namespace Search {
 			// Sirius conditions
 			// https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
 			bool doSE = !root && moveIsNull(ss->excluded) &&
-						depth >= SE_MIN_DEPTH() && Move(ttEntry->move) == move && ttEntry->depth >= depth - 3
-						&& ttEntry->flag != TTFlag::FAIL_LOW && !isMateScore(ttEntry->score);	
+						depth >= SE_MIN_DEPTH() && Move(ttEntry.move) == move && ttEntry.depth >= depth - 3
+						&& ttEntry.flag != TTFlag::FAIL_LOW && !isMateScore(ttEntry.score);	
 			
 			int extension = 0;
 
 			if (doSE) {
-				int sBeta = std::max(-MATE, ttEntry->score - SE_BETA_SCALE() * depth / 16);
+				int sBeta = std::max(-MATE, ttEntry.score - SE_BETA_SCALE() * depth / 16);
 				int sDepth = (depth - 1) / 2;
 				// How good are we without this move
-				ss->excluded = Move(ttEntry->move);
+				ss->excluded = Move(ttEntry.move);
 				int seScore = search<false>(sDepth, ply+1, sBeta-1, sBeta, cutnode, ss, thread, limit);
 				ss->excluded = Move::NO_MOVE;
 
@@ -466,7 +468,7 @@ namespace Search {
 					else
 						extension = 1; // Singular Extension
 				}
-				else if (ttEntry->score >= beta)
+				else if (ttEntry.score >= beta)
 					extension = -2 + isPV; // Negative Extension
 
 			}					
@@ -590,7 +592,7 @@ namespace Search {
 			}
 
 			// Update TT
-			ttEntry->updateEntry(thread.board.hash(), bestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, depth, ttPV);
+			ttEntryPtr->updateEntry(thread.board.hash(), bestMove, bestScore, std::clamp(rawStaticEval, -INFINITE, INFINITE), ttFlag, depth, ttPV);
 		}
 		return bestScore;
 
