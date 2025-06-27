@@ -45,23 +45,23 @@ void Search::ThreadInfo::startSearching() {
 		searcher->waitForWorkersFinished();
 		//std::cout << "\nbestmove " << uci::moveToUci(bestMove) << std::endl;
 		ThreadInfo *bestSearcher = this;
-		for (auto &thread : searcher->threads) {
-			if (thread.get()->type == ThreadType::MAIN)
-				continue;
+		// for (auto &thread : searcher->threads) {
+		// 	if (thread.get()->type == ThreadType::MAIN)
+		// 		continue;
 			
-			// This should never happen but saftey
-			if (!isLegal(searcher->board, thread.get()->bestMove))
-				continue;
+		// 	// This should never happen but saftey
+		// 	if (!isLegal(searcher->board, thread.get()->bestMove))
+		// 		continue;
 
-			int bestDepth = bestSearcher->completed;
-			int bestScore = bestSearcher->bestRootScore;
-			int currentDepth = thread->completed;
-			int currentScore = thread->bestRootScore;
-			if ( (bestDepth == currentDepth && currentScore > bestScore) || (Search::isWin(currentScore) && currentScore > bestScore))
-				bestSearcher = thread.get();
-			if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isWin(bestScore) ))
-				bestSearcher = thread.get();
-		}
+		// 	int bestDepth = bestSearcher->completed;
+		// 	int bestScore = bestSearcher->bestRootScore;
+		// 	int currentDepth = thread->completed;
+		// 	int currentScore = thread->bestRootScore;
+		// 	if ( (bestDepth == currentDepth && currentScore > bestScore) || (Search::isWin(currentScore) && currentScore > bestScore))
+		// 		bestSearcher = thread.get();
+		// 	if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isWin(bestScore) ))
+		// 		bestSearcher = thread.get();
+		// }
 		std::cout << "\nbestmove " << uci::moveToUci(bestSearcher->bestMove, searcher->board.chess960()) << std::endl;
 	}
 }
