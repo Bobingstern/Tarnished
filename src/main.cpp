@@ -160,7 +160,7 @@ void UCISetOption(Searcher &searcher, Board& board, char *str) {
 void UCIInfo(){
     std::cout << "id name Tarnished v3.0 (Warrior)\n";
     std::cout << "id author Anik Patel\n";
-    std::cout << "option name Hash type spin default 16 min 2 max 4294967296\n";
+    std::cout << "option name Hash type spin default 16 min 2 max 16777216\n";
     std::cout << "option name Threads type spin default 1 min 1 max 1024\n";
     std::cout << "option name UCI_ShowWDL type check default true\n";
     std::cout << "option name UCI_Chess960 type check default false\n";
