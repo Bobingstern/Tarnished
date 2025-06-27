@@ -9,6 +9,10 @@
 #include <climits>
 #include <cstring>
 #include <iostream>
+#if defined(__linux__)
+#include <sys/mman.h>
+#endif
+
 
 using namespace chess;
 
@@ -72,23 +76,16 @@ struct TTEntry {
 	}
 	void updateEntry(uint64_t key, chess::Move best, int16_t score, int16_t eval, uint8_t flag, uint8_t depth, bool isPV) {
 		uint32_t key32 = static_cast<uint32_t>(key);
-		// if (!moveIsNull(best) || key32 != this->zobrist)
-		// 	this->move = best.move();
-		// if (flag == TTFlag::EXACT || key32 != this->zobrist || depth + 4 + 2 * isPV > this->depth){
-		// 	this->zobrist = key32;
-		// 	this->score = score;
-		// 	this->flag = flag;
-		// 	this->depth = depth;
-		// 	this->staticEval = eval;
-		// 	this->isPV = isPV;
-		// }
-		this->zobrist = key32;
-		this->score = score;
-		this->flag = flag;
-		this->depth = depth;
-		this->staticEval = eval;
-		this->isPV = isPV;
-		this->move = best.move();
+		if (!moveIsNull(best) || key32 != this->zobrist)
+			this->move = best.move();
+		if (flag == TTFlag::EXACT || key32 != this->zobrist || depth + 4 + 2 * isPV > this->depth){
+			this->zobrist = key32;
+			this->score = score;
+			this->flag = flag;
+			this->depth = depth;
+			this->staticEval = eval;
+			this->isPV = isPV;
+		}	
 	}
 };
 

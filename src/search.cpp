@@ -164,9 +164,8 @@ namespace Search {
 	}
 	void fillLmr(){
 		// Weiss formula for reductions is
-		// Captures/Promo: 0.2 + log(depth) * log(movecount) / 3.35
-		// Quiets: 		   1.35 + log(depth) * log(movecount) / 2.75
 		// https://www.chessprogramming.org/Late_Move_Reductions
+		// Maybe its possible to optimize a + log(x)log(y)/b with some gradient descent tuning method
 		for (int isQuiet = 0;isQuiet<=1;isQuiet++){
 			for (size_t depth=0;depth <= MAX_PLY;depth++){
 				for (int movecount=0;movecount<=218;movecount++){
