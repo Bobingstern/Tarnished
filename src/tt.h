@@ -23,32 +23,10 @@ enum TTFlag {
 	FAIL_LOW = 3
 };
 
-// PlentyChess yoink
-inline void* alignedAlloc(size_t alignment, size_t requiredBytes) {
-    void* ptr;
-#if defined(_WIN32)
-    ptr = _aligned_malloc(requiredBytes, alignment);
-#else
-    ptr = std::aligned_alloc(alignment, requiredBytes);
-#endif
 
-#if defined(__linux__)
-    madvise(ptr, requiredBytes, MADV_HUGEPAGE);
-#endif 
-
-    return ptr;
-}
-
-inline void alignedFree(void* ptr) {
-#if defined(_WIN32)
-    _aligned_free(ptr);
-#else
-    std::free(ptr);
-#endif
-}
-
+using ttkey = uint16_t;
 struct TTEntry {
-	uint32_t zobrist;
+	ttkey zobrist;
 	int16_t score;
 	int16_t staticEval;
 	uint16_t move;
@@ -66,7 +44,7 @@ struct TTEntry {
 	}
 	TTEntry(uint64_t key, chess::Move best, int16_t score, int16_t eval, uint8_t flag, uint8_t depth, bool isPV){
 		this->move = best.move();
-		this->zobrist = static_cast<uint32_t>(key);
+		this->zobrist = static_cast<ttkey>(key);
 		this->score = score;
 		this->flag = flag;
 		this->depth = depth;
@@ -75,7 +53,7 @@ struct TTEntry {
 		
 	}
 	void updateEntry(uint64_t key, chess::Move best, int16_t score, int16_t eval, uint8_t flag, uint8_t depth, bool isPV) {
-		uint32_t key32 = static_cast<uint32_t>(key);
+		ttkey key32 = static_cast<ttkey>(key);
 		if (!moveIsNull(best) || key32 != this->zobrist)
 			this->move = best.move();
 		if (flag == TTFlag::EXACT || key32 != this->zobrist || depth + 4 + 2 * isPV > this->depth){
@@ -125,8 +103,8 @@ public:
 	void resize(uint64_t MB){
 		size = MB * 1024 * 1024 / sizeof(TTEntry);
 		if (table != nullptr)
-			alignedFree(table);
-		table = static_cast<TTEntry*>(alignedAlloc(sizeof(TTEntry), size * sizeof(TTEntry)));
+			std::free(table);
+		table = static_cast<TTEntry*>(std::malloc(size * sizeof(TTEntry)));
 	}
 	uint64_t index(uint64_t key) { 
 		//return key % size;
