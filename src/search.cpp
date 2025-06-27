@@ -554,10 +554,7 @@ namespace Search {
 				bestScore = score;
 				if (score > alpha){
 					bestMove = move;
-					if (root) {
-						thread.bestMove = bestMove;
-						thread.bestRootScore = bestScore;
-					}
+					ss->bestMove = bestMove;
 					ttFlag = TTFlag::EXACT;
 					alpha = score;
 					if (isPV){
@@ -691,6 +688,8 @@ namespace Search {
 
 			// Save best scores
 			threadInfo.completed = depth;
+			threadInfo.bestMove = ss->bestMove;
+			threadInfo.bestRootScore = score;
 
 			if (!isMain){
 				continue;

@@ -68,6 +68,7 @@ struct Stack {
     std::array<uint64_t, 2> nonPawnKey;
 
     Move excluded{};
+    Move bestMove{};
     MultiArray<int16_t, 2, 6, 64> *conthist;
 
     Accumulator accumulator;
