@@ -288,7 +288,7 @@ namespace Search {
 		if (!moveCount && inCheck)
 			return -MATE + ply;
 
-		ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ttPV);
+		//ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ttPV);
 
 		return bestScore;
 
