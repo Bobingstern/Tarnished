@@ -19,6 +19,30 @@ enum TTFlag {
 	FAIL_LOW = 3
 };
 
+// PlentyChess yoink
+inline void* alignedAlloc(size_t alignment, size_t requiredBytes) {
+    void* ptr;
+#if defined(_WIN32)
+    ptr = _aligned_malloc(requiredBytes, alignment);
+#else
+    ptr = std::aligned_alloc(alignment, requiredBytes);
+#endif
+
+#if defined(__linux__)
+    madvise(ptr, requiredBytes, MADV_HUGEPAGE);
+#endif 
+
+    return ptr;
+}
+
+inline void alignedFree(void* ptr) {
+#if defined(_WIN32)
+    _aligned_free(ptr);
+#else
+    std::free(ptr);
+#endif
+}
+
 struct TTEntry {
 	uint32_t zobrist;
 	int16_t score;
@@ -97,8 +121,8 @@ public:
 	void resize(uint64_t MB){
 		size = MB * 1024 * 1024 / sizeof(TTEntry);
 		if (table != nullptr)
-			std::free(table);
-		table = static_cast<TTEntry*>(std::malloc(size * sizeof(TTEntry)));
+			alignedFree(table);
+		table = static_cast<TTEntry*>(alignedAlloc(sizeof(TTEntry), size * sizeof(TTEntry)));
 	}
 	uint64_t index(uint64_t key) { 
 		//return key % size;

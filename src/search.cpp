@@ -195,7 +195,7 @@ namespace Search {
 
 		ss->ply = ply;
 
-		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
+		TTEntry *ttEntry = thread.searcher->TT.getEntry(thread.board.hash());
 		bool ttHit = ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
 		uint8_t ttEntryFlag = 0;
 		uint16_t ttEntryMove = 0;
@@ -232,11 +232,11 @@ namespace Search {
 			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 
 			// Use tt value as a better eval
-			if (ttEntryValue != EVAL_NONE
-				&& (ttEntryFlag == TTFlag::EXACT
-					|| (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue < eval)
-					|| (ttEntryFlag == TTFlag::BETA_CUT && ttEntryValue > eval)))
-				eval = ttEntryValue;
+			// if (ttEntryValue != EVAL_NONE
+			// 	&& (ttEntryFlag == TTFlag::EXACT
+			// 		|| (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue < eval)
+			// 		|| (ttEntryFlag == TTFlag::BETA_CUT && ttEntryValue > eval)))
+			// 	eval = ttEntryValue;
 		}
 		else {
 			rawStaticEval = network.inference(&thread.board, ss->accumulator);
@@ -320,7 +320,7 @@ namespace Search {
 
 
 
-		TTEntry *ttEntry = thread.TT.getEntry(thread.board.hash());
+		TTEntry *ttEntry = thread.searcher->TT.getEntry(thread.board.hash());
 		bool ttHit = ttEntry->zobrist == static_cast<uint32_t>(thread.board.hash());
 		uint8_t ttEntryFlag = 0;
 		uint16_t ttEntryMove = 0;
@@ -368,11 +368,11 @@ namespace Search {
 			ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
 
 			// Use tt value as a better score
-			if (ttEntryValue != EVAL_NONE
-				&& (ttEntryFlag == TTFlag::EXACT
-					|| (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue < ss->eval)
-					|| (ttEntryFlag == TTFlag::BETA_CUT && ttEntryValue > ss->eval)))
-				ss->eval = ttEntryValue;
+			// if (ttEntryValue != EVAL_NONE
+			// 	&& (ttEntryFlag == TTFlag::EXACT
+			// 		|| (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue < ss->eval)
+			// 		|| (ttEntryFlag == TTFlag::BETA_CUT && ttEntryValue > ss->eval)))
+			// 	ss->eval = ttEntryValue;
 		}
 		else {
 			rawStaticEval = network.inference(&thread.board, ss->accumulator);
