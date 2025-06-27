@@ -13,6 +13,7 @@
 using namespace chess;
 
 enum TTFlag {
+	NO_BOUND = 0,
 	EXACT = 1,
 	BETA_CUT = 2,
 	FAIL_LOW = 3

@@ -156,7 +156,7 @@ struct ThreadInfo {
 	Board board;
 	Limit limit;
 	Accumulator accumulator;
-	std::atomic<uint64_t> nodes;
+	uint64_t nodes;
 	
 	Move bestMove;
 	int bestRootScore;
@@ -185,7 +185,7 @@ struct ThreadInfo {
 	ThreadInfo(ThreadType t, TTable &tt, Searcher *s);
 	ThreadInfo(int id, TTable &tt, Searcher *s);
 	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), history(other.history), 
-											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), bestRootScore(other.bestRootScore) {
+											bestMove(other.bestMove), nodes(other.nodes), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), bestRootScore(other.bestRootScore) {
 		this->board = other.board;
 		conthist = other.conthist;
 		capthist = other.capthist;
@@ -194,7 +194,6 @@ struct ThreadInfo {
 		minorCorrhist = other.minorCorrhist;
 		whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
 		blackNonPawnCorrhist = other.blackNonPawnCorrhist;
-		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}
 	void exit();
 	void startSearching();
@@ -282,7 +281,7 @@ struct ThreadInfo {
 		return std::clamp(corrected, -INFINITE + 1, INFINITE - 1);
 	}
 	void reset(){
-		nodes.store(0, std::memory_order_relaxed);
+		nodes = 0;
 		bestMove = Move::NO_MOVE;
 		history.fill((int)DEFAULT_HISTORY);
 		conthist.fill(DEFAULT_HISTORY);
