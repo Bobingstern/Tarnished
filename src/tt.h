@@ -56,20 +56,20 @@ struct TTEntry {
 		ttkey keyShrink = static_cast<ttkey>(key);
 		if (!moveIsNull(best) || keyShrink != this->zobrist)
 			this->move = best.move();
-		// if (flag == TTFlag::EXACT || keyShrink != this->zobrist || depth + 4 + 2 * isPV > this->depth){
-		// 	this->zobrist = keyShrink;
-		// 	this->score = score;
-		// 	this->flag = flag;
-		// 	this->depth = depth;
-		// 	this->staticEval = eval;
-		// 	this->isPV = isPV;
-		// }	
-		this->zobrist = keyShrink;
-		this->score = score;
-		this->flag = flag;
-		this->depth = depth;
-		this->staticEval = eval;
-		this->isPV = isPV;
+		if (flag == TTFlag::EXACT || keyShrink != this->zobrist || depth + 4 + 2 * isPV > this->depth){
+			this->zobrist = keyShrink;
+			this->score = score;
+			this->flag = flag;
+			this->depth = depth;
+			this->staticEval = eval;
+			this->isPV = isPV;
+		}	
+		// this->zobrist = keyShrink;
+		// this->score = score;
+		// this->flag = flag;
+		// this->depth = depth;
+		// this->staticEval = eval;
+		// this->isPV = isPV;
 		//this->move = best.move();
 	}
 };
