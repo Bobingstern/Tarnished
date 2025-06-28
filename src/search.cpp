@@ -162,6 +162,11 @@ namespace Search {
 	bool isMateScore(int score){
 		return std::abs(score) >= FOUND_MATE;
 	}
+	int storeScore(int score, int ply) {
+		if (isMateScore(score))
+			score += score < 0 ? -ply : ply;
+		return score;
+	}
 	void fillLmr(){
 		// Weiss formula for reductions is
 		// https://www.chessprogramming.org/Late_Move_Reductions
@@ -286,7 +291,7 @@ namespace Search {
 		if (!moveCount && inCheck)
 			return -MATE + ply;
 
-		ttEntry->updateEntry(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ttPV);
+		ttEntry->updateEntry(thread.board.hash(), qBestMove, storeScore(bestScore, ply), rawStaticEval, ttFlag, 0, ttPV);
 
 		return bestScore;
 
@@ -623,7 +628,7 @@ namespace Search {
 			}
 
 			// Update TT
-			ttEntry->updateEntry(thread.board.hash(), bestMove, bestScore, rawStaticEval, ttFlag, depth, ttPV);
+			ttEntry->updateEntry(thread.board.hash(), bestMove, storeScore(bestScore, ply), rawStaticEval, ttFlag, depth, ttPV);
 		}
 
 		return bestScore;

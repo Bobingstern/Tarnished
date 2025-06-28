@@ -78,6 +78,7 @@ void fillLmr();
 bool isMateScore(int score);
 bool isWin(int score);
 bool isLoss(int score);
+int storeScore(int score, int ply);
 struct Limit {
 	TimeLimit timer;
 	int64_t depth;
