@@ -224,24 +224,17 @@ namespace Search {
 		}
 
 		bool inCheck = thread.board.inCheck();
-		int rawStaticEval, eval;
+		int rawStaticEval, eval = 0;
 
 		// Get the corrected static eval if not in check
 		if (inCheck){
 			rawStaticEval = -INFINITE;
-			eval = -INFINITE + ply;
+			eval = -INFINITE;
 		}
-		// else if (ttHit && ttEntryEval != EVAL_NONE) {
-		// 	rawStaticEval = ttEntryEval;
-		// 	eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
-
-		// 	// Use tt value as a better eval
-		// 	if (ttEntryValue != EVAL_NONE
-		// 		&& (ttEntryFlag == TTFlag::EXACT
-		// 			|| (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue < eval)
-		// 			|| (ttEntryFlag == TTFlag::BETA_CUT && ttEntryValue > eval)))
-		// 		eval = ttEntryValue;
-		// }
+		else if (ttHit && ttEntryEval != EVAL_NONE) {
+			rawStaticEval = ttEntryEval;
+			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+		}
 		else {
 			rawStaticEval = network.inference(&thread.board, ss->accumulator);
 			eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
@@ -366,16 +359,10 @@ namespace Search {
 		else if (!moveIsNull(ss->excluded)) {
 			rawStaticEval = ss->eval = ss->staticEval;
 		}
-		// else if (ttHit) {
-		// 	rawStaticEval = ttEntryEval != EVAL_NONE ? ttEntryEval : network.inference(&thread.board, ss->accumulator);
-		// 	ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
-		// 	// Use tt value as a better score
-		// 	if (ttEntryValue != EVAL_NONE
-		// 		&& (ttEntryFlag == TTFlag::EXACT
-		// 			|| (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue < ss->eval)
-		// 			|| (ttEntryFlag == TTFlag::BETA_CUT && ttEntryValue > ss->eval)))
-		// 		ss->eval = ttEntryValue;
-		// }
+		else if (ttHit) {
+			rawStaticEval = ttEntryEval != EVAL_NONE ? ttEntryEval : network.inference(&thread.board, ss->accumulator);
+			ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+		}
 		else {
 			rawStaticEval = network.inference(&thread.board, ss->accumulator);
 			ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
