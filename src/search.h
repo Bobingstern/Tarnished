@@ -79,6 +79,8 @@ bool isMateScore(int score);
 bool isWin(int score);
 bool isLoss(int score);
 int storeScore(int score, int ply);
+int readScore(int score, int ply);
+int evaluate(Board *board, Accumulator &accumulator);
 struct Limit {
 	TimeLimit timer;
 	int64_t depth;

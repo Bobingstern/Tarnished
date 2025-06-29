@@ -62,7 +62,7 @@ void ParseTimeControl(char *str, Color color, Search::Limit &limit) {
     }
     if (strstr(str, "infinite")){
         ctime = 0;
-        mtime = 320000;
+        mtime = 0;
         nodes = -1;
         softnodes = -1;
         depth = 0;
