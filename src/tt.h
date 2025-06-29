@@ -9,18 +9,25 @@
 #include <climits>
 #include <cstring>
 #include <iostream>
+#if defined(__linux__)
+#include <sys/mman.h>
+#endif
+
 
 using namespace chess;
 
 enum TTFlag {
+	NO_BOUND = 0,
 	EXACT = 1,
 	BETA_CUT = 2,
 	FAIL_LOW = 3
 };
 
+
+using ttkey = uint16_t;
 struct TTEntry {
-	uint32_t zobrist;
-	int score;
+	ttkey zobrist;
+	int16_t score;
 	int16_t staticEval;
 	uint16_t move;
 	uint8_t flag;
@@ -29,15 +36,15 @@ struct TTEntry {
 	TTEntry(){
 		this->zobrist = 0;
 		this->move = 0;
-		this->score = 0;
+		this->score = -32767;
 		this->flag = 0;
 		this->depth = 0;
 		this->staticEval = -32767;
 		this->isPV = false;
 	}
-	TTEntry(uint64_t key, chess::Move best, int score, int16_t eval, uint8_t flag, uint8_t depth, bool isPV){
+	TTEntry(uint64_t key, chess::Move best, int16_t score, int16_t eval, uint8_t flag, uint8_t depth, bool isPV){
 		this->move = best.move();
-		this->zobrist = static_cast<uint32_t>(key);
+		this->zobrist = static_cast<ttkey>(key);
 		this->score = score;
 		this->flag = flag;
 		this->depth = depth;
@@ -45,18 +52,16 @@ struct TTEntry {
 		this->isPV = isPV;
 		
 	}
-	void updateEntry(uint64_t key, chess::Move best, int score, int16_t eval, uint8_t flag, uint8_t depth, bool isPV) {
-		uint32_t key32 = static_cast<uint32_t>(key);
-		if (!moveIsNull(best) || key32 != this->zobrist)
+	void updateEntry(uint64_t key, chess::Move best, int score, int eval, uint8_t flag, uint8_t depth, bool isPV) {
+		ttkey keyShrink = static_cast<ttkey>(key);
+		if (!moveIsNull(best) || keyShrink != this->zobrist)
 			this->move = best.move();
-		if (flag == TTFlag::EXACT || key32 != this->zobrist || depth + 4 + 2 * isPV > this->depth){
-			this->zobrist = key32;
-			this->score = score;
-			this->flag = flag;
-			this->depth = depth;
-			this->staticEval = eval;
-			this->isPV = isPV;
-		}
+		this->zobrist = keyShrink;
+		this->score = static_cast<int16_t>(score);
+		this->flag = flag;
+		this->depth = depth;
+		this->staticEval = static_cast<int16_t>(eval);
+		this->isPV = isPV;
 	}
 };
 

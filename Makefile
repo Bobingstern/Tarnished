@@ -16,7 +16,7 @@ ifndef EVALFILE
     NO_EVALFILE_SET = true
 endif
 
-CXXFLAGS := -O3 -march=native -fno-finite-math-only -funroll-loops -flto -fuse-ld=lld -std=c++20 -static -DNDEBUG -pthread -DEVALFILE=\"$(EVALFILE)\"
+CXXFLAGS := -O3 -march=native -fno-finite-math-only -funroll-loops -flto -fuse-ld=lld -std=c++20 -DNDEBUG -static -pthread -DEVALFILE=\"$(EVALFILE)\"
 
 ifdef NO_EVALFILE_SET
 $(EVALFILE):

@@ -68,6 +68,7 @@ struct Stack {
     std::array<uint64_t, 2> nonPawnKey;
 
     Move excluded{};
+    Move bestMove{};
     MultiArray<int16_t, 2, 6, 64> *conthist;
 
     Accumulator accumulator;
@@ -75,6 +76,11 @@ struct Stack {
 
 void fillLmr();
 bool isMateScore(int score);
+bool isWin(int score);
+bool isLoss(int score);
+int storeScore(int score, int ply);
+int readScore(int score, int ply);
+int evaluate(Board *board, Accumulator &accumulator);
 struct Limit {
 	TimeLimit timer;
 	int64_t depth;
@@ -153,9 +159,10 @@ struct ThreadInfo {
 	Board board;
 	Limit limit;
 	Accumulator accumulator;
-	std::atomic<uint64_t> nodes;
+	uint64_t nodes;
+	
 	Move bestMove;
-	int threadBestScore;
+	int bestRootScore;
 	int minNmpPly;
 	int rootDepth;
 	int completed;
@@ -181,7 +188,7 @@ struct ThreadInfo {
 	ThreadInfo(ThreadType t, TTable &tt, Searcher *s);
 	ThreadInfo(int id, TTable &tt, Searcher *s);
 	ThreadInfo(const ThreadInfo &other) : type(other.type), TT(other.TT), history(other.history), 
-											bestMove(other.bestMove), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), threadBestScore(other.threadBestScore) {
+											bestMove(other.bestMove), nodes(other.nodes), minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), bestRootScore(other.bestRootScore) {
 		this->board = other.board;
 		conthist = other.conthist;
 		capthist = other.capthist;
@@ -190,7 +197,6 @@ struct ThreadInfo {
 		minorCorrhist = other.minorCorrhist;
 		whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
 		blackNonPawnCorrhist = other.blackNonPawnCorrhist;
-		nodes.store(other.nodes.load(std::memory_order_relaxed), std::memory_order_relaxed);
 	}
 	void exit();
 	void startSearching();
@@ -278,7 +284,7 @@ struct ThreadInfo {
 		return std::clamp(corrected, -INFINITE + 1, INFINITE - 1);
 	}
 	void reset(){
-		nodes.store(0, std::memory_order_relaxed);
+		nodes = 0;
 		bestMove = Move::NO_MOVE;
 		history.fill((int)DEFAULT_HISTORY);
 		conthist.fill(DEFAULT_HISTORY);
@@ -288,7 +294,7 @@ struct ThreadInfo {
 		minorCorrhist.fill(DEFAULT_HISTORY);
 		whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
 		blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
-		threadBestScore = -INFINITE;
+		bestRootScore = -INFINITE;
 		rootDepth = 0;
 		completed = 0;
 	}
@@ -298,5 +304,5 @@ struct ThreadInfo {
 
 //int search(Board &board, int depth, int ply, int alpha, int beta, Stack *ss, ThreadInfo &thread);
 //int iterativeDeepening(Board board, ThreadInfo &threadInfo, Searcher *searcher);
-int iterativeDeepening(Board &board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher);
+int iterativeDeepening(Board board, ThreadInfo &threadInfo, Limit limit, Searcher *searcher);
 } 
