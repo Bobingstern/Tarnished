@@ -450,7 +450,9 @@ namespace Search {
                 if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
                     break;
 
-                if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
+
+                int seeMargin = isQuiet ? SEE_QUIET_PRUNING_SCALE() * depth : SEE_NOISY_PRUNING_SCALE() * depth;
+                if (!SEE(thread.board, move, seeMargin))
                     continue;
             }
 
