@@ -1,11 +1,12 @@
 #pragma once
 #include <bit>
-#include <vector>
-#include <sstream>
 #include <cassert>
-#include <cstring>
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <list>
+#include <sstream>
+#include <vector>
 
 #define MAX_PLY 125
 #define BENCH_DEPTH 12
@@ -18,18 +19,17 @@ using u128 = std::_Unsigned128;
 using u128 = unsigned __int128;
 #endif
 
-//#define TUNE
-//#define LMR_TUNE
+// #define TUNE
+// #define LMR_TUNE
 
 // Struct for tunable parameters
-struct TunableParam
-{
-    std::string name;
-    int value;
-    int defaultValue;
-    int min;
-    int max;
-    int step;
+struct TunableParam {
+        std::string name;
+        int value;
+        int defaultValue;
+        int min;
+        int max;
+        int step;
 };
 
 std::list<TunableParam>& tunables();
@@ -37,10 +37,11 @@ TunableParam& addTunableParam(std::string name, int value, int min, int max, int
 int lmrConvolution(std::array<bool, 6> features);
 void printWeatherFactoryConfig();
 
-#define TUNABLE_PARAM(name, val, min, max, step) \
-    inline TunableParam& name##Param = addTunableParam(#name, val, min, max, step); \
-    inline int name() { return name##Param.value; }
-
+#define TUNABLE_PARAM(name, val, min, max, step)                                                                       \
+    inline TunableParam& name##Param = addTunableParam(#name, val, min, max, step);                                    \
+    inline int name() {                                                                                                \
+        return name##Param.value;                                                                                      \
+    }
 
 // History Constants
 constexpr int16_t MAX_HISTORY = 16383;
@@ -52,7 +53,7 @@ constexpr int16_t HL_N = 1024;
 constexpr int16_t QA = 255;
 constexpr int16_t QB = 64;
 constexpr int16_t NNUE_SCALE = 400;
-constexpr int OUTPUT_BUCKETS = 8; 
+constexpr int OUTPUT_BUCKETS = 8;
 
 // Factorized LMR arrays
 // {isQuiet, !isPV, improving, cutnode, ttpv, tthit}

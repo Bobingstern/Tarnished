@@ -1,19 +1,19 @@
 BasedOnStyle: LLVM
 
-AccessModifierOffset: 2
+AccessModifierOffset: 4
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 BreakBeforeBraces: Attach
-ContinuationIndentWidth: 2
-# ColumnLimit: 0
+ContinuationIndentWidth: 4
+ColumnLimit: 120
 FixNamespaceComments: false
-TabWidth: 2
+TabWidth: 4
 IndentAccessModifiers: true
 IndentCaseLabels: true
 IndentGotoLabels: true
 IndentPPDirectives: BeforeHash
-IndentWidth: 2
+IndentWidth: 4
 NamespaceIndentation: All
 PointerAlignment: Left
 UseTab: Never
