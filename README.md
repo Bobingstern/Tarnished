@@ -14,6 +14,7 @@
 | 1.0 | 2025-05-10 | 2432 |
 | 2.0 | 2025-05-17 | 3156 |
 | 2.1 | 2025-05-24 | 3375 |
+| 3.0 | 2025-06-29 | 3450* |
 
 </div>
 
@@ -41,6 +42,7 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
     - Aspiration Windows
     - Shared Transposition Table
     - Move Ordering
+        - Staged Move Picker
         - MVV-LVA
         - TT Move
         - Killer Move Heuristic 
@@ -50,7 +52,7 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
         - Capture History
         - SEE Move Ordering
     - Selectivity
-        - TT Cut-offs
+        - TT Cutoffs
         - Reverse Futility Pruning
         - Null Move Pruning
         - Improving Heuristic
@@ -65,10 +67,13 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
         - Internal Iterative Reductions
  - Misc
      - Static Evaluation Correction History (Pawn, Non-Pawn, Major, Minor Hashes)
-     - TT Static Evaluation Cut-offs
+     - TT Static Evaluation Cutoffs
      - Soft time management
+     - Node time management
      - Lazy SMP
+     - Thread Meritocracy
      - SPSA Parameter Tuning
+     - Supports FRC (Chess960)
 
 ## Non-standard UCI Commands
 
@@ -78,6 +83,8 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
     - Prints the current position's static evaluation for the side to move
 - `go softnodes <nodes>`
     - Start search with a soft node limit (only checked once per iteration of deepening)
+- `wait`
+    - Ignore all input until search is completed. Useful for scripts
 - `bench`
     - Runs an OpenBench style benchmark on 50 positions. Alternatively run `./tarnished bench`
  - `datagen name Threads value <threads>`
