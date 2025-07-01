@@ -7,7 +7,9 @@
 #include "util.h"
 
 #include <algorithm>
+#include <array>
 #include <random>
+
 
 using namespace chess;
 

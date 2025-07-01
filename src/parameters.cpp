@@ -1,11 +1,13 @@
 #include "parameters.h"
 #include "external/chess.hpp"
+#include <array>
 #include <bit>
 #include <cassert>
 #include <cmath>
 #include <cstring>
 #include <sstream>
 #include <vector>
+
 
 using namespace chess;
 
