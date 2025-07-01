@@ -59,11 +59,16 @@ namespace Search {
     struct Stack;
 };
 
+// Utility Attacks
+Bitboard pieceAttacks(Board& board, Square sq, PieceType pt, Color c, Bitboard occ);
+
 // Hash Keys
 uint64_t resetPawnHash(Board& board);
 uint64_t resetNonPawnHash(Board& board, Color c);
 uint64_t resetMajorHash(Board& board);
 uint64_t resetMinorHash(Board& board);
+uint64_t threatsHash(Board &board);
+
 bool isMajor(PieceType pt);
 bool isMinor(PieceType pt);
 

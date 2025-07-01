@@ -95,6 +95,9 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
 
     board.makeMove(move);
 
+    // Threats key isn't incremental
+    (ss + 1)->threatsKey = threatsHash(board);
+
     if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION) {
         // For now just recalculate on special moves like these
         (ss + 1)->accumulator.refresh(board);
@@ -629,6 +632,7 @@ namespace Search {
             ss->pawnKey = resetPawnHash(threadInfo.board);
             ss->majorKey = resetMajorHash(threadInfo.board);
             ss->minorKey = resetMinorHash(threadInfo.board);
+            ss->threatsKey = threatsHash(threadInfo.board);
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
             ss->accumulator = baseAcc;

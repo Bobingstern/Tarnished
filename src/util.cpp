@@ -10,6 +10,32 @@
 Bitboard BetweenBB[64][64] = {};
 Bitboard Rays[64][8] = {};
 
+// Attacks
+Bitboard pieceAttacks(Board& board, Square sq, PieceType pt, Color c, Bitboard occ) {
+    Bitboard result;
+    switch (pt) {
+        case int(PieceType::PAWN):
+            result = attacks::pawn(c, sq);
+            break;
+        case int(PieceType::KNIGHT):
+            result = attacks::knight(sq);
+            break;
+        case int(PieceType::BISHOP):
+            result = attacks::bishop(sq, occ);
+            break;
+        case int(PieceType::ROOK):
+            result = attacks::rook(sq, occ);
+            break;
+        case int(PieceType::QUEEN):
+            result = attacks::queen(sq, occ);
+            break;
+        case int(PieceType::KING):
+            result = attacks::king(sq);
+            break;
+    }
+    return result;
+}
+
 // Pawn Hash reset
 uint64_t resetPawnHash(Board& board) {
     uint64_t key = 0ULL;
@@ -30,41 +56,50 @@ uint64_t resetNonPawnHash(Board& board, Color c) {
     }
     return key;
 }
+// Major Piece Hash
 uint64_t resetMajorHash(Board& board) {
     uint64_t key = 0ULL;
-    Bitboard occ = board.pieces(PieceType::ROOK) |
-                   board.pieces(PieceType::QUEEN) |
-                   board.pieces(PieceType::KING);
+    Bitboard occ = board.pieces(PieceType::ROOK) | board.pieces(PieceType::QUEEN) | board.pieces(PieceType::KING);
     while (occ) {
         Square sq = occ.pop();
         key ^= Zobrist::piece(board.at(sq), sq);
     }
     return key;
 }
-
+// Minor Piece Hash
 uint64_t resetMinorHash(Board& board) {
     uint64_t key = 0ULL;
-    Bitboard occ = board.pieces(PieceType::KNIGHT) |
-                   board.pieces(PieceType::BISHOP) |
-                   board.pieces(PieceType::KING);
+    Bitboard occ = board.pieces(PieceType::KNIGHT) | board.pieces(PieceType::BISHOP) | board.pieces(PieceType::KING);
     while (occ) {
         Square sq = occ.pop();
         key ^= Zobrist::piece(board.at(sq), sq);
     }
     return key;
+}
+// Threats Hash
+uint64_t threatsHash(Board& board) {
+    Color color = ~board.sideToMove();
+    Bitboard threats = Bitboard(0);
+    Bitboard occ = board.occ();
+    Bitboard opposing = board.us(color);
+
+    while (opposing) {
+        Square sq = opposing.pop();
+        PieceType pt = board.at<PieceType>(sq);
+        threats |= pieceAttacks(board, sq, pt, color, occ);
+    }
+    return murmurHash3(threats.getBits());
 }
 
 bool isMajor(PieceType pt) {
-    return pt == PieceType::ROOK || pt == PieceType::QUEEN ||
-           pt == PieceType::KING;
+    return pt == PieceType::ROOK || pt == PieceType::QUEEN || pt == PieceType::KING;
 }
 
 bool isMinor(PieceType pt) {
-    return pt == PieceType::KNIGHT || pt == PieceType::BISHOP ||
-           pt == PieceType::KING;
+    return pt == PieceType::KNIGHT || pt == PieceType::BISHOP || pt == PieceType::KING;
 }
 
-// Pseudo Legal Check
+// Legal Check
 bool isLegal(Board& board, Move move) {
     if (moveIsNull(move))
         return false;
@@ -82,8 +117,7 @@ bool isLegal(Board& board, Move move) {
     // Lazy Solution
     // Make this sane later
     Movelist legals;
-    movegen::legalmoves<movegen::MoveGenType::ALL>(legals, board,
-                                                   1 << (int)srcPieceType);
+    movegen::legalmoves<movegen::MoveGenType::ALL>(legals, board, 1 << (int)srcPieceType);
     if (std::find(legals.begin(), legals.end(), move) == legals.end())
         return false;
     return true;
@@ -91,16 +125,11 @@ bool isLegal(Board& board, Move move) {
 
 // Utility attackers
 Bitboard attackersTo(Board& board, Square s, Bitboard occ) {
-    return (attacks::pawn(Color::WHITE, s) &
-            board.pieces(PieceType::PAWN, Color::BLACK)) |
-           (attacks::pawn(Color::BLACK, s) &
-            board.pieces(PieceType::PAWN, Color::WHITE)) |
-           (attacks::rook(s, occ) &
-            (board.pieces(PieceType::ROOK) | board.pieces(PieceType::QUEEN))) |
-           (attacks::bishop(s, occ) & (board.pieces(PieceType::BISHOP) |
-                                       board.pieces(PieceType::QUEEN))) |
-           (attacks::knight(s) & board.pieces(PieceType::KNIGHT)) |
-           (attacks::king(s) & board.pieces(PieceType::KING));
+    return (attacks::pawn(Color::WHITE, s) & board.pieces(PieceType::PAWN, Color::BLACK)) |
+           (attacks::pawn(Color::BLACK, s) & board.pieces(PieceType::PAWN, Color::WHITE)) |
+           (attacks::rook(s, occ) & (board.pieces(PieceType::ROOK) | board.pieces(PieceType::QUEEN))) |
+           (attacks::bishop(s, occ) & (board.pieces(PieceType::BISHOP) | board.pieces(PieceType::QUEEN))) |
+           (attacks::knight(s) & board.pieces(PieceType::KNIGHT)) | (attacks::king(s) & board.pieces(PieceType::KING));
 }
 
 int oppDir(int dir) {
@@ -225,10 +254,8 @@ void pinnersBlockers(Board& board, Color stm, StateInfo* sti) {
     Bitboard blockers = Bitboard(0);
     Square ksq = board.kingSq(stm);
     Bitboard snipers =
-        ((attacks::rook(ksq, Bitboard()) &
-          (board.pieces(PieceType::QUEEN) | board.pieces(PieceType::ROOK))) |
-         (attacks::bishop(ksq, Bitboard()) &
-          (board.pieces(PieceType::QUEEN) | board.pieces(PieceType::BISHOP)))) &
+        ((attacks::rook(ksq, Bitboard()) & (board.pieces(PieceType::QUEEN) | board.pieces(PieceType::ROOK))) |
+         (attacks::bishop(ksq, Bitboard()) & (board.pieces(PieceType::QUEEN) | board.pieces(PieceType::BISHOP)))) &
         board.us(~stm);
     Bitboard occ = board.occ() ^ snipers;
 
@@ -262,8 +289,7 @@ bool SEE(Board& board, Move& move, int margin) {
     if (swap <= 0)
         return true;
 
-    Bitboard occupied =
-        board.occ() ^ Bitboard::fromSquare(from) ^ Bitboard::fromSquare(to);
+    Bitboard occupied = board.occ() ^ Bitboard::fromSquare(from) ^ Bitboard::fromSquare(to);
     Color stm = board.sideToMove();
     Bitboard attackers = attackersTo(board, to, occupied);
     Bitboard stmAttackers = Bitboard();
@@ -286,9 +312,8 @@ bool SEE(Board& board, Move& move, int margin) {
             if ((swap = PawnValue - swap) < res)
                 break;
             occupied ^= Bitboard::fromSquare(bb.lsb());
-            attackers |= attacks::bishop(to, occupied) &
-                         (board.pieces(PieceType::BISHOP) |
-                          board.pieces(PieceType::QUEEN));
+            attackers |=
+                attacks::bishop(to, occupied) & (board.pieces(PieceType::BISHOP) | board.pieces(PieceType::QUEEN));
         } else if ((bb = stmAttackers & board.pieces(PieceType::KNIGHT))) {
             if ((swap = KnightValue - swap) < res)
                 break;
@@ -297,25 +322,19 @@ bool SEE(Board& board, Move& move, int margin) {
             if ((swap = BishopValue - swap) < res)
                 break;
             occupied ^= Bitboard::fromSquare(bb.lsb());
-            attackers |= attacks::bishop(to, occupied) &
-                         (board.pieces(PieceType::BISHOP) |
-                          board.pieces(PieceType::QUEEN));
+            attackers |=
+                attacks::bishop(to, occupied) & (board.pieces(PieceType::BISHOP) | board.pieces(PieceType::QUEEN));
         } else if ((bb = stmAttackers & board.pieces(PieceType::ROOK))) {
             if ((swap = RookValue - swap) < res)
                 break;
             occupied ^= Bitboard::fromSquare(bb.lsb());
-            attackers |=
-                attacks::rook(to, occupied) & (board.pieces(PieceType::ROOK) |
-                                               board.pieces(PieceType::QUEEN));
+            attackers |= attacks::rook(to, occupied) & (board.pieces(PieceType::ROOK) | board.pieces(PieceType::QUEEN));
         } else if ((bb = stmAttackers & board.pieces(PieceType::QUEEN))) {
             swap = QueenValue - swap;
             occupied ^= Bitboard::fromSquare(bb.lsb());
-            attackers |= attacks::bishop(to, occupied) &
-                         (board.pieces(PieceType::BISHOP) |
-                          board.pieces(PieceType::QUEEN));
             attackers |=
-                attacks::rook(to, occupied) & (board.pieces(PieceType::ROOK) |
-                                               board.pieces(PieceType::QUEEN));
+                attacks::bishop(to, occupied) & (board.pieces(PieceType::BISHOP) | board.pieces(PieceType::QUEEN));
+            attackers |= attacks::rook(to, occupied) & (board.pieces(PieceType::ROOK) | board.pieces(PieceType::QUEEN));
         } else
             return (attackers & ~board.us(stm)).empty() ? res : res ^ 1;
     }

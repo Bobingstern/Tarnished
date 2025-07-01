@@ -71,6 +71,7 @@ namespace Search {
             uint64_t pawnKey;
             uint64_t majorKey;
             uint64_t minorKey;
+            uint64_t threatsKey;
             std::array<uint64_t, 2> nonPawnKey;
 
             Move excluded{};
@@ -178,6 +179,7 @@ namespace Search {
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> pawnCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> majorCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> minorCorrhist;
+            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> threatsCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
 
@@ -191,6 +193,7 @@ namespace Search {
                 capthist = other.capthist;
                 pawnCorrhist = other.pawnCorrhist;
                 majorCorrhist = other.majorCorrhist;
+                threatsCorrhist = other.threatsCorrhist;
                 minorCorrhist = other.minorCorrhist;
                 whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
                 blackNonPawnCorrhist = other.blackNonPawnCorrhist;
@@ -244,6 +247,7 @@ namespace Search {
                 updateEntry(pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES]);
                 updateEntry(majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES]);
                 updateEntry(minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES]);
+                updateEntry(threatsCorrhist[board.sideToMove()][ss->threatsKey % CORR_HIST_ENTRIES]);
                 updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
                 updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
             }
@@ -279,6 +283,7 @@ namespace Search {
                 correction += PAWN_CORR_WEIGHT() * pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES];
                 correction += MAJOR_CORR_WEIGHT() * majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES];
                 correction += MINOR_CORR_WEIGHT() * minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES];
+                correction += THREATS_CORR_WEIGHT() * threatsCorrhist[board.sideToMove()][ss->threatsKey % CORR_HIST_ENTRIES];
                 correction += NON_PAWN_STM_CORR_WEIGHT() *
                               whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES];
                 correction += NON_PAWN_NSTM_CORR_WEIGHT() *
@@ -296,6 +301,7 @@ namespace Search {
                 pawnCorrhist.fill(DEFAULT_HISTORY);
                 majorCorrhist.fill(DEFAULT_HISTORY);
                 minorCorrhist.fill(DEFAULT_HISTORY);
+                threatsCorrhist.fill(DEFAULT_HISTORY);
                 whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
                 blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
                 bestRootScore = -INFINITE;
