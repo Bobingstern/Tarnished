@@ -202,7 +202,7 @@ namespace Search {
 
         ss->ply = ply;
 
-        TTEntry* ttEntry = thread.searcher->TT.getEntry(thread.board.hash());
+        TTEntry* ttEntry = thread.TT.getEntry(thread.board.hash());
         bool ttHit = ttEntry->zobrist == static_cast<ttkey>(thread.board.hash());
         uint8_t ttEntryFlag = 0;
         uint16_t ttEntryMove = 0;
@@ -315,7 +315,7 @@ namespace Search {
             }
         }
 
-        TTEntry* ttEntry = thread.searcher->TT.getEntry(thread.board.hash());
+        TTEntry* ttEntry = thread.TT.getEntry(thread.board.hash());
         bool ttHit = ttEntry->zobrist == static_cast<ttkey>(thread.board.hash());
         uint8_t ttEntryFlag = 0;
         uint16_t ttEntryMove = 0;
