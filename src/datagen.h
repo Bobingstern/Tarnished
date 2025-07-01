@@ -1,6 +1,7 @@
 #pragma once
 
 #include "external/chess.hpp"
+#include "frc.h"
 #include "search.h"
 #include <bit>
 #include <cassert>
@@ -9,6 +10,9 @@
 #include <vector>
 
 using namespace chess;
+
+#define DFRC_DATAGEN
+
 constexpr int SOFT_NODE_COUNT = 5000;
 constexpr int HARD_NODE_COUNT = 100000;
 constexpr int GAMES_BUFFER = 250;
@@ -27,21 +31,11 @@ template <size_t size> class U4array {
         uint8_t operator[](size_t index) const {
             assert(index < size);
             return (data[index / 2] >> ((index % 2) * 4)) & 0xF;
-            // if (index % 2 == 0) return data[index / 2] & 0b1111;
-            // return data[index / 2] >> 4;
         }
 
         void set(int index, uint8_t value) {
             assert(value == (value & 0b1111));
             data[index / 2] |= value << ((index % 2) * 4);
-            // if (index % 2 == 0) {
-            //     data[index / 2] &= 0b11110000;
-            //     data[index / 2] |= value;
-            // }
-            // else {
-            //     data[index / 2] &= 0b1111;
-            //     data[index / 2] |= value << 4;
-            // }
         }
 };
 
@@ -81,3 +75,5 @@ struct ViriEntry {
 void startDatagen(size_t tc);
 uint16_t packMove(Move m);
 void writeViriformat(std::ofstream& outFile, ViriEntry& game);
+std::string randomDFRC();
+
