@@ -1,5 +1,6 @@
 #include "parameters.h"
 #include "external/chess.hpp"
+#include <array>
 #include <bit>
 #include <cassert>
 #include <cmath>
