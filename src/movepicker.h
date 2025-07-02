@@ -23,6 +23,12 @@ struct MovePicker {
         int currMove;
         bool isQS;
 
+        // Threats
+        Bitboard pawnThreats;
+        Bitboard knightThreats;
+        Bitboard bishopThreats;
+        Bitboard rookThreats;
+
         MovePicker(Search::ThreadInfo* T, Search::Stack* ss, uint16_t ttm, bool qs) {
             this->thread = T;
             this->ss = ss;
@@ -35,4 +41,5 @@ struct MovePicker {
         Move nextMove();
         void scoreMoves(Movelist& moves);
         Move selectHighest(Movelist& moves);
+        void generateThreats();
 };

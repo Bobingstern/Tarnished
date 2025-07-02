@@ -7,6 +7,35 @@
 // Based off Weiss
 using enum MPStage;
 
+void MovePicker::generateThreats() {
+    Color color = ~thread->board.sideToMove();
+    Bitboard occ = thread->board.occ();
+    Bitboard pawns = thread->board.pieces(PieceType::PAWN, color);
+    Bitboard knights = thread->board.pieces(PieceType::KNIGHT, color);
+    Bitboard bishops = thread->board.pieces(PieceType::BISHOP, color);
+    Bitboard rooks = thread->board.pieces(PieceType::ROOK, color);
+
+    if (color == Color::WHITE)
+        pawnThreats = attacks::pawnLeftAttacks<Color::WHITE>(pawns) | attacks::pawnRightAttacks<Color::WHITE>(pawns);
+    else
+        pawnThreats = attacks::pawnLeftAttacks<Color::BLACK>(pawns) | attacks::pawnRightAttacks<Color::BLACK>(pawns);
+    knightThreats.clear();
+    bishopThreats.clear();
+    rookThreats.clear();
+    while (knights) {
+        Square sq = knights.pop();
+        knightThreats |= attacks::knight(sq);
+    }
+    while (bishops) {
+        Square sq = bishops.pop();
+        bishopThreats |= attacks::bishop(sq, occ);
+    }
+    while (rooks) {
+        Square sq = rooks.pop();
+        rookThreats |= attacks::rook(sq, occ);
+    }
+}
+
 void MovePicker::scoreMoves(Movelist& moves) {
     for (auto& move : moves) {
         if (stage == GEN_NOISY || move.typeOf() == Move::CASTLING) {
@@ -17,7 +46,32 @@ void MovePicker::scoreMoves(Movelist& moves) {
                 thread->getCapthist(thread->board, move) + MVV_VALUES[to];
             move.setScore(score);
         } else {
-            move.setScore(thread->getQuietHistory(thread->board, move, ss));
+            PieceType pt = thread->board.at<PieceType>(move.from());
+            Bitboard fromBB = Bitboard::fromSquare(move.from());
+            Bitboard toBB = Bitboard::fromSquare(move.to());
+
+            int score = thread->getQuietHistory(thread->board, move, ss);
+            // Penalize if we're moving into a threat and vice versa
+            if (pt == PieceType::QUEEN) {
+                // Everything threatens a queen
+                Bitboard threats = pawnThreats | knightThreats | bishopThreats | rookThreats;
+                score += (threats & fromBB).empty() ? 0 : 12228;
+                score -= (threats & toBB).empty() ? 0 : 11264;
+            }
+            else if (pt == PieceType::ROOK) {
+                // P, N, B
+                Bitboard threats = pawnThreats | knightThreats | bishopThreats;
+                score += (threats & fromBB).empty() ? 0 : 10240;
+                score -= (threats & toBB).empty() ? 0 : 9216;
+            }
+            else if (pt == PieceType::BISHOP || pt == PieceType::KNIGHT) {
+                // P
+                Bitboard threats = pawnThreats;
+                score += (threats & fromBB).empty() ? 0 : 8192;
+                score -= (threats & toBB).empty() ? 0 : 7168;
+            }
+
+            move.setScore(score);
         }
     }
 }
@@ -77,6 +131,7 @@ Move MovePicker::nextMove() {
             if (thread->board.inCheck() || !isQS) {
                 movegen::legalmoves<movegen::MoveGenType::QUIET>(movesList,
                                                                  thread->board);
+                generateThreats();
                 scoreMoves(movesList);
             }
             ++stage;

@@ -6,7 +6,7 @@
 #include <sstream>
 #include <vector>
 
-static std::array<std::string, 960> frcFens = {
+const static std::array<std::string, 960> frcFens = {
     "bbqnnrkr", "bqnbnrkr", "bqnnrbkr", "bqnnrkrb", "qbbnnrkr", "qnbbnrkr", "qnbnrbkr", "qnbnrkrb", "qbnnbrkr",
     "qnnbbrkr", "qnnrbbkr", "qnnrbkrb", "qbnnrkbr", "qnnbrkbr", "qnnrkbbr", "qnnrkrbb", "bbnqnrkr", "bnqbnrkr",
     "bnqnrbkr", "bnqnrkrb", "nbbqnrkr", "nqbbnrkr", "nqbnrbkr", "nqbnrkrb", "nbqnbrkr", "nqnbbrkr", "nqnrbbkr",
