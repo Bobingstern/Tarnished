@@ -70,7 +70,8 @@ void MovePicker::scoreMoves(Movelist& moves) {
                 score += (threats & fromBB).empty() ? 0 : 8192;
                 score -= (threats & toBB).empty() ? 0 : 7168;
             }
-
+            if (move.typeOf() == Move::PROMOTION)
+                score += 100 * (static_cast<int>(move.promotionType()) - 1);
             move.setScore(score);
         }
     }
