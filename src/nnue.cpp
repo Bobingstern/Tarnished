@@ -180,9 +180,9 @@ void NNUE::randomize() {
         outputBias[i] = distrib(gen);
 }
 
-int NNUE::inference(Board* board, Accumulator& accumulator) {
+int NNUE::inference(Board& board, Accumulator& accumulator) {
 
-    Color stm = board->sideToMove();
+    Color stm = board.sideToMove();
 
     const std::array<int16_t, HL_N>& accumulatorSTM =
         stm == Color::WHITE ? accumulator.white : accumulator.black;
@@ -192,7 +192,7 @@ int NNUE::inference(Board* board, Accumulator& accumulator) {
     // Output buckets are calculated using piececount. Each bucket corresponds
     // to (cnt-2)/(32/N)
     const size_t outputBucket =
-        (board->occ().count() - 2) / (32 / OUTPUT_BUCKETS);
+        (board.occ().count() - 2) / (32 / OUTPUT_BUCKETS);
 
     int64_t eval = 0;
 

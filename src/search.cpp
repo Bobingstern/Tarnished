@@ -164,8 +164,10 @@ namespace Search {
             score += score < 0 ? ply : -ply;
         return score;
     }
-    int evaluate(Board* board, Accumulator& accumulator) {
-        return std::clamp(network.inference(board, accumulator), GETTING_MATED + 1, FOUND_MATE - 1);
+    int evaluate(Board& board, Accumulator& accumulator) {
+        int eval = std::clamp(network.inference(board, accumulator), GETTING_MATED + 1, FOUND_MATE - 1);
+        eval = eval * (22400 + materialPhase(board)) / 32768; // Calvin yoink
+        return eval;
     }
     void fillLmr() {
         // https://www.chessprogramming.org/Late_Move_Reductions
@@ -198,7 +200,7 @@ namespace Search {
             thread.searcher->stopSearching();
         }
         if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1) {
-            return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(&thread.board, ss->accumulator)
+            return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(thread.board, ss->accumulator)
                                                                    : 0;
         }
 
@@ -236,7 +238,7 @@ namespace Search {
         } else {
             rawStaticEval = ttHit && ttEntryEval != EVAL_NONE && !isMateScore(ttEntryEval)
                                 ? ttEntryEval
-                                : evaluate(&thread.board, ss->accumulator);
+                                : evaluate(thread.board, ss->accumulator);
             eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
         }
 
@@ -312,7 +314,7 @@ namespace Search {
             }
             if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1) {
                 return (ply >= MAX_PLY - 1 && !thread.board.inCheck())
-                           ? network.inference(&thread.board, ss->accumulator)
+                           ? network.inference(thread.board, ss->accumulator)
                            : 0;
             }
         }
@@ -359,7 +361,7 @@ namespace Search {
         } else {
             rawStaticEval = ttHit && ttEntryEval != EVAL_NONE && !isMateScore(ttEntryEval)
                                 ? ttEntryEval
-                                : evaluate(&thread.board, ss->accumulator);
+                                : evaluate(thread.board, ss->accumulator);
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
         }
         // Improving heurstic

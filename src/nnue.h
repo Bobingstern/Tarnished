@@ -67,7 +67,7 @@ struct NNUE {
 
         int32_t optimizedSCReLU(const std::array<int16_t, HL_N>& STM, const std::array<int16_t, HL_N>& OPP, Color col,
                                 size_t bucket);
-        int inference(Board* board, Accumulator& accumulator);
+        int inference(Board& board, Accumulator& accumulator);
 };
 
 extern NNUE network;

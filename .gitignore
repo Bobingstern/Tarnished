@@ -30,6 +30,8 @@
 *.exe
 *.out
 *.app
+*.o
+tarnished
 
 # Networks
 *.bin
