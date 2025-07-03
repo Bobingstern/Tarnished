@@ -90,8 +90,7 @@ bool isMinor(PieceType pt) {
 }
 
 // Threats
-Bitboard opposingThreats(Board& board) {
-    Color color = ~board.sideToMove();
+Bitboard opposingThreats(Board& board, Color color) {
     Bitboard threats = Bitboard(0);
     Bitboard occ = board.occ();
     Bitboard opposing = board.us(color);

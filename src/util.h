@@ -69,7 +69,7 @@ bool isMinor(PieceType pt);
 
 // Threats
 Bitboard pieceAttacks(Board& board, Square sq, PieceType pt, Color c, Bitboard occ);
-Bitboard opposingThreats(Board &board);
+Bitboard opposingThreats(Board &board, Color c);
 
 // Legality
 bool isLegal(Board& board, Move move);

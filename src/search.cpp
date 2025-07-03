@@ -30,6 +30,9 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
     (ss + 1)->minorKey = ss->minorKey;
     (ss + 1)->nonPawnKey[0] = ss->nonPawnKey[0];
     (ss + 1)->nonPawnKey[1] = ss->nonPawnKey[1];
+    // Not going to bother making incremental threats
+    // We generate for the stm since making the move flips the side ofc
+    (ss + 1)->threats = opposingThreats(board, ~board.sideToMove());
     // Accumulator copy
     (ss + 1)->accumulator = ss->accumulator;
     if (move == Move::NULL_MOVE) {
@@ -96,9 +99,6 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
     }
 
     board.makeMove(move);
-
-    // Not going to bother making incremental threats
-    (ss + 1)->threats = opposingThreats(board);
 
     if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION) {
         // For now just recalculate on special moves like these
@@ -642,7 +642,7 @@ namespace Search {
             ss->minorKey = resetMinorHash(threadInfo.board);
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
-            ss->threats = opposingThreats(threadInfo.board);
+            ss->threats = opposingThreats(threadInfo.board, ~threadInfo.board.sideToMove());
             ss->accumulator = baseAcc;
 
             // Aspiration Windows
