@@ -31,7 +31,7 @@ namespace Search {
     bool isLoss(int score);
     int storeScore(int score, int ply);
     int readScore(int score, int ply);
-    int evaluate(Board* board, Accumulator& accumulator);
+    int evaluate(Board& board, Accumulator& accumulator);
 
     inline int historyBonus(int depth) {
         return std::min(HIST_BONUS_QUADRATIC() * depth * depth + HIST_BONUS_LINEAR() * depth - HIST_BONUS_OFFSET(),
@@ -285,7 +285,7 @@ namespace Search {
                               blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
 
                 int corrected = eval + correction / 2048;
-                return std::clamp(corrected, -INFINITE + 1, INFINITE - 1);
+                return std::clamp(corrected, GETTING_MATED + 1, FOUND_MATE - 1);
             }
             void reset() {
                 nodes = 0;

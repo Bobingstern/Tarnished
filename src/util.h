@@ -70,12 +70,6 @@ bool isMinor(PieceType pt);
 // Legality
 bool isLegal(Board& board, Move move);
 
-// Phase
-inline int materialPhase(Board& board) {
-    return 3 * board.pieces(PieceType::KNIGHT).count() + 3 * board.pieces(PieceType::BISHOP).count() +
-           5 * board.pieces(PieceType::ROOK).count() + 10 * board.pieces(PieceType::QUEEN).count();
-}
-
 // Accumulator wrapper
 void MakeMove(Board& board, Move move, Search::Stack* ss);
 void UnmakeMove(Board& board, Move move);

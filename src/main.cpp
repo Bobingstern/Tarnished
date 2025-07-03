@@ -194,7 +194,7 @@ void UCIInfo() {
 void UCIEvaluate(Board& board) {
     Accumulator a;
     a.refresh(board);
-    int eval = network.inference(board, a);
+    int eval = Search::evaluate(board, a);
     std::cout << "Raw: " << eval << std::endl;
     std::cout << "Normalized: " << scaleEval(eval, board) << std::endl;
 }
