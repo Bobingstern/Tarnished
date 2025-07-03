@@ -96,9 +96,6 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
     }
 
     board.makeMove(move);
-    // Not going to bother making incremental threats
-    // We generate for the stm since making the move flips the side ofc
-    (ss + 1)->threats = opposingThreats(board, board.sideToMove());
 
     if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION) {
         // For now just recalculate on special moves like these
@@ -229,7 +226,7 @@ namespace Search {
             return ttEntryValue;
         }
 
-        bool inCheck = thread.board.inCheck();
+        bool inCheck = !(ss->threats & thread.board.pieces(PieceType::KING, thread.board.sideToMove())).empty();
         int rawStaticEval, eval = 0;
 
         // Get the corrected static eval if not in check
@@ -296,7 +293,10 @@ namespace Search {
         // bool isPV = alpha != beta - 1;
         bool root = ply == 0;
         ss->ply = ply;
+        ss->threats = opposingThreats(thread.board, ~thread.board.sideToMove());
 
+        bool inCheck = !(ss->threats & thread.board.pieces(PieceType::KING, thread.board.sideToMove())).empty();
+    
         if (isPV)
             ss->pv.length = 0;
         if (depth <= 0) {
@@ -350,7 +350,7 @@ namespace Search {
         int rawStaticEval = EVAL_NONE;
         int score = bestScore;
         int moveCount = 0;
-        bool inCheck = thread.board.inCheck();
+
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
 
@@ -642,7 +642,6 @@ namespace Search {
             ss->minorKey = resetMinorHash(threadInfo.board);
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
-            ss->threats = opposingThreats(threadInfo.board, ~threadInfo.board.sideToMove());
             ss->accumulator = baseAcc;
 
             // Aspiration Windows

@@ -93,12 +93,35 @@ bool isMinor(PieceType pt) {
 Bitboard opposingThreats(Board& board, Color color) {
     Bitboard threats = Bitboard(0);
     Bitboard occ = board.occ();
-    Bitboard opposing = board.us(color);
 
-    while (opposing) {
-        Square sq = opposing.pop();
-        PieceType pt = board.at<PieceType>(sq);
-        threats |= pieceAttacks(board, sq, pt, color, occ);
+    Bitboard pawns = board.pieces(PieceType::PAWN, color);
+    Bitboard knights = board.pieces(PieceType::KNIGHT, color);
+    Bitboard bishops = board.pieces(PieceType::BISHOP, color);
+    Bitboard rooks = board.pieces(PieceType::ROOK, color);
+    Bitboard queens = board.pieces(PieceType::QUEEN, color);
+
+    if (color == Color::WHITE)
+        threats |= attacks::pawnLeftAttacks<Color::WHITE>(pawns) | attacks::pawnRightAttacks<Color::WHITE>(pawns);
+    else
+        threats |= attacks::pawnLeftAttacks<Color::BLACK>(pawns) | attacks::pawnRightAttacks<Color::BLACK>(pawns);
+
+    threats |= attacks::king(board.kingSq(color));
+
+    while (knights) {
+        Square sq = knights.pop();
+        threats |= attacks::knight(sq);
+    }
+    while (bishops) {
+        Square sq = bishops.pop();
+        threats |= attacks::bishop(sq, occ);
+    }
+    while (rooks) {
+        Square sq = rooks.pop();
+        threats |= attacks::rook(sq, occ);
+    }
+    while (queens) {
+        Square sq = queens.pop();
+        threats |= attacks::queen(sq, occ);
     }
     return threats;
 }
