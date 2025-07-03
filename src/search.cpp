@@ -97,6 +97,9 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
 
     board.makeMove(move);
 
+    // Not going to bother making incremental threats
+    (ss + 1)->threats = opposingThreats(board);
+
     if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION) {
         // For now just recalculate on special moves like these
         (ss + 1)->accumulator.refresh(board);
@@ -564,12 +567,12 @@ namespace Search {
                 int bonus = historyBonus(depth);
                 int malus = historyMalus(depth);
                 if (isQuiet) {
-                    thread.updateHistory(thread.board.sideToMove(), move, bonus);
+                    thread.updateHistory(thread.board.sideToMove(), move, ss->threats, bonus);
                     thread.updateConthist(ss, thread.board, move, bonus);
                     for (const Move quietMove : seenQuiets) {
                         if (quietMove == move)
                             continue;
-                        thread.updateHistory(thread.board.sideToMove(), quietMove, malus);
+                        thread.updateHistory(thread.board.sideToMove(), quietMove, ss->threats, malus);
                         thread.updateConthist(ss, thread.board, quietMove, malus);
                     }
                 } else {
@@ -639,6 +642,7 @@ namespace Search {
             ss->minorKey = resetMinorHash(threadInfo.board);
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
+            ss->threats = opposingThreats(threadInfo.board);
             ss->accumulator = baseAcc;
 
             // Aspiration Windows

@@ -67,6 +67,10 @@ uint64_t resetMinorHash(Board& board);
 bool isMajor(PieceType pt);
 bool isMinor(PieceType pt);
 
+// Threats
+Bitboard pieceAttacks(Board& board, Square sq, PieceType pt, Color c, Bitboard occ);
+Bitboard opposingThreats(Board &board);
+
 // Legality
 bool isLegal(Board& board, Move move);
 

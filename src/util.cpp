@@ -10,6 +10,31 @@
 Bitboard BetweenBB[64][64] = {};
 Bitboard Rays[64][8] = {};
 
+// Attacks
+Bitboard pieceAttacks(Board& board, Square sq, PieceType pt, Color c, Bitboard occ) {
+    Bitboard result;
+    switch (pt) {
+        case int(PieceType::PAWN):
+            result = attacks::pawn(c, sq);
+            break;
+        case int(PieceType::KNIGHT):
+            result = attacks::knight(sq);
+            break;
+        case int(PieceType::BISHOP):
+            result = attacks::bishop(sq, occ);
+            break;
+        case int(PieceType::ROOK):
+            result = attacks::rook(sq, occ);
+            break;
+        case int(PieceType::QUEEN):
+            result = attacks::queen(sq, occ);
+            break;
+        case int(PieceType::KING):
+            result = attacks::king(sq);
+            break;
+    }
+    return result;
+}
 // Pawn Hash reset
 uint64_t resetPawnHash(Board& board) {
     uint64_t key = 0ULL;
@@ -62,6 +87,21 @@ bool isMajor(PieceType pt) {
 bool isMinor(PieceType pt) {
     return pt == PieceType::KNIGHT || pt == PieceType::BISHOP ||
            pt == PieceType::KING;
+}
+
+// Threats
+Bitboard opposingThreats(Board& board) {
+    Color color = ~board.sideToMove();
+    Bitboard threats = Bitboard(0);
+    Bitboard occ = board.occ();
+    Bitboard opposing = board.us(color);
+
+    while (opposing) {
+        Square sq = opposing.pop();
+        PieceType pt = board.at<PieceType>(sq);
+        threats |= pieceAttacks(board, sq, pt, color, occ);
+    }
+    return threats;
 }
 
 // Pseudo Legal Check

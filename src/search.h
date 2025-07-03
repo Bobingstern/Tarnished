@@ -73,6 +73,8 @@ namespace Search {
             uint64_t minorKey;
             std::array<uint64_t, 2> nonPawnKey;
 
+            Bitboard threats;
+
             Move excluded{};
             Move bestMove{};
             MultiArray<int16_t, 2, 6, 64>* conthist;
@@ -168,8 +170,8 @@ namespace Search {
             Searcher* searcher;
             int threadId;
 
-            // indexed by [stm][from][to]
-            MultiArray<int, 2, 64, 64> history;
+            // indexed by [stm][from][to][from threated][to threatened]
+            MultiArray<int, 2, 64, 64, 2, 2> history;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
             // indexed by [stm][moving pt][cap pt][to]
@@ -206,10 +208,13 @@ namespace Search {
             // bonus is clamped with max_hist and max_hist/4 for correction history
 
             // Butterfly history
-            void updateHistory(Color c, Move m, int bonus) {
+            void updateHistory(Color c, Move m, Bitboard threats, int bonus) {
                 int clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
-                history[(int)c][m.from().index()][m.to().index()] +=
-                    clamped - history[(int)c][m.from().index()][m.to().index()] * std::abs(clamped) / MAX_HISTORY;
+                int& entry = history[(int)c][m.from().index()][m.to().index()]
+                              [(threats & Bitboard::fromSquare(m.from())).empty()]
+                              [(threats & Bitboard::fromSquare(m.to())).empty()];
+
+                entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
             }
 
             // Capture History
@@ -248,8 +253,10 @@ namespace Search {
                 updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
             }
             // ----------------- History getters
-            int getHistory(Color c, Move m) {
-                return history[(int)c][m.from().index()][m.to().index()];
+            int getHistory(Color c, Move m, Bitboard threats) {
+                return history[(int)c][m.from().index()][m.to().index()]
+                              [(threats & Bitboard::fromSquare(m.from())).empty()]
+                              [(threats & Bitboard::fromSquare(m.to())).empty()];
             }
 
             int getCapthist(Board& board, Move m) {
@@ -266,7 +273,7 @@ namespace Search {
             }
 
             int getQuietHistory(Board& board, Move m, Stack* ss) {
-                int hist = getHistory(board.sideToMove(), m);
+                int hist = getHistory(board.sideToMove(), m, ss->threats);
                 if (ss != nullptr && ss->ply > 0 && (ss - 1)->conthist != nullptr)
                     hist += getConthist((ss - 1)->conthist, board, m);
                 if (ss != nullptr && ss->ply > 1 && (ss - 2)->conthist != nullptr)
