@@ -454,6 +454,12 @@ namespace Search {
 
                 if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
                     continue;
+
+                if (!isPV && isQuiet && depth <= 4 && thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth) {
+                    skipQuiets = true;
+                    continue;
+                }
+
             }
 
             // Singular Extensions
