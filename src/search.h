@@ -287,6 +287,15 @@ namespace Search {
                 int corrected = eval + correction / 2048;
                 return std::clamp(corrected, GETTING_MATED + 1, FOUND_MATE - 1);
             }
+            int squaredCorrectionTerms(Stack* ss, Board& board) {
+                int pawn = pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES];
+                int major = majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES];
+                int minor = minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES];
+                int white = whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES];
+                int black = blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
+
+                return pawn * pawn + major * major + minor * minor + white * white + black * black;
+            }
             void reset() {
                 nodes = 0;
                 bestMove = Move::NO_MOVE;
