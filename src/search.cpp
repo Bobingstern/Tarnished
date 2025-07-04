@@ -214,13 +214,13 @@ namespace Search {
         TTEntry* ttEntry = thread.TT.getEntry(thread.board.hash());
         bool ttHit = ttEntry->zobrist == static_cast<ttkey>(thread.board.hash());
         uint8_t ttEntryFlag = 0;
-        uint16_t ttEntryMove = 0;
+        uint16_t ttEntryMoveRaw = 0;
         int ttEntryValue = EVAL_NONE;
         int ttEntryEval = EVAL_NONE;
         bool ttPV = isPV;
 
         if (ttHit) {
-            ttEntryMove = ttEntry->move;
+            ttEntryMoveRaw = ttEntry->move;
             ttEntryValue = readScore(ttEntry->score, ply);
             ttEntryEval = ttEntry->staticEval;
             ttEntryFlag = ttEntry->flag;
@@ -259,7 +259,7 @@ namespace Search {
 
         // This will do evasions as well
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttEntryMove, true);
+        MovePicker picker = MovePicker(&thread, ss, ttEntryMoveRaw, true);
 
         while (!moveIsNull(move = picker.nextMove())) {
             if (thread.stopped || thread.exiting)
@@ -327,14 +327,16 @@ namespace Search {
         TTEntry* ttEntry = thread.TT.getEntry(thread.board.hash());
         bool ttHit = ttEntry->zobrist == static_cast<ttkey>(thread.board.hash());
         uint8_t ttEntryFlag = 0;
-        uint16_t ttEntryMove = 0;
+        uint16_t ttEntryMoveRaw = 0;
+        Move ttEntryMove = Move::NO_MOVE;
         int ttEntryValue = EVAL_NONE;
         int ttEntryEval = EVAL_NONE;
         int ttEntryDepth = 0;
         bool ttPV = isPV;
 
         if (ttHit && moveIsNull(ss->excluded)) {
-            ttEntryMove = ttEntry->move;
+            ttEntryMoveRaw = ttEntry->move;
+            ttEntryMove = Move(ttEntryMoveRaw);
             ttEntryValue = readScore(ttEntry->score, ply);
             ttEntryEval = ttEntry->staticEval;
             ttEntryFlag = ttEntry->flag;
@@ -347,7 +349,7 @@ namespace Search {
              (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue <= alpha))) {
             return ttEntryValue;
         }
-        bool notHashMove = !ttHit || moveIsNull(Move(ttEntryMove));
+        bool notHashMove = !ttHit || moveIsNull(Move(ttEntryMoveRaw));
 
         int bestScore = -INFINITE;
         int oldAlpha = alpha;
@@ -355,10 +357,16 @@ namespace Search {
         int score = bestScore;
         int moveCount = 0;
         bool inCheck = thread.board.inCheck();
+
+        bool noisyTTMove = ttEntryMoveRaw != 0 && 
+                            ttEntryMove.typeOf() != Move::CASTLING && 
+                            (ttEntryMove.typeOf() == Move::ENPASSANT || thread.board.at(ttEntryMove.to()) != Piece::NONE);
+
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
 
         // Get the corrected static evaluation if we're not in singular search or check
+        int corrplexity = 0;
         if (inCheck) {
             ss->staticEval = EVAL_NONE;
         } else if (!moveIsNull(ss->excluded)) {
@@ -368,6 +376,7 @@ namespace Search {
                                 ? ttEntryEval
                                 : evaluate(thread.board, ss->accumulator);
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+            corrplexity = ss->staticEval - rawStaticEval;
         }
         // Improving heurstic
         // We are better than 2 plies ago
@@ -424,14 +433,9 @@ namespace Search {
         if (canIIR)
             depth--;
 
-        // Thought
-        // What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
-        // and use some sort of data generation method to create a pruning heuristic
-        // with something like sigmoid(C dot I) >= 0.75 ?
-
         Move bestMove = Move::NO_MOVE;
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttEntryMove, false);
+        MovePicker picker = MovePicker(&thread, ss, ttEntryMoveRaw, false);
 
         Movelist seenQuiets;
         Movelist seenCaptures;
@@ -472,7 +476,7 @@ namespace Search {
             // Singular Extensions
             // Sirius conditions
             // https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
-            bool doSE = !root && moveIsNull(ss->excluded) && depth >= SE_MIN_DEPTH() && Move(ttEntryMove) == move &&
+            bool doSE = !root && moveIsNull(ss->excluded) && depth >= SE_MIN_DEPTH() && Move(ttEntryMoveRaw) == move &&
                         ttEntryDepth >= depth - 3 && ttEntryFlag != TTFlag::FAIL_LOW && !isMateScore(ttEntryValue);
 
             int extension = 0;
@@ -504,11 +508,24 @@ namespace Search {
             thread.nodes++;
 
             int newDepth = depth - 1 + extension;
+            bool givesCheck = thread.board.inCheck();
             // Late Move Reduction
             if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_BASE_MOVECOUNT() + root) {
                 int reduction =
                     LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
-                std::array<bool, 6> features = {isQuiet, !isPV, improving, cutnode, ttPV, ttHit};
+                std::array<bool, LMR_NUM_ONE_PAIR> features = {
+                    isQuiet, 
+                    !isPV, 
+                    improving, 
+                    cutnode, 
+                    ttPV, 
+                    ttHit, 
+                    std::abs(corrplexity) > LMR_CORRPLEXITY_MARGIN(), 
+                    givesCheck, 
+                    noisyTTMove,
+                    ttHit && ttEntryValue <= alpha // tthit will already be considered in second slice but it 
+                                                   // makes no sense to consider tt score without tthit
+                };
 
                 // Factorized "inference"
                 // ---------------------------------------------------------------
@@ -710,7 +727,7 @@ namespace Search {
                     }
                 }
                 std::cout << " hashfull " << searcher->TT.hashfull();
-                std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " pv ";
+                std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " time " << limit.timer.elapsed() << " pv ";
                 std::cout << pvss.str() << std::endl;
             }
             if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes))

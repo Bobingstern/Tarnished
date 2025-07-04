@@ -360,6 +360,7 @@ int main(int agrc, char* argv[]) {
             case BENCH      : bench(searcher);                            break;
             case DATAGEN    : BeginDatagen(str);                          break;
             case WAIT       : searcher.waitForSearchFinished();           break;
+            case CONFIG     : printLMRConfig();                           break;
 
         }
     }
