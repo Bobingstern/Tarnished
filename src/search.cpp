@@ -510,7 +510,7 @@ namespace Search {
             int newDepth = depth - 1 + extension;
             bool givesCheck = thread.board.inCheck();
             // Late Move Reduction
-            if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_BASE_MOVECOUNT() + root) {
+            if (depth >= LMR_MIN_DEPTH() && moveCount > 2 + root) {
                 int reduction =
                     LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
                 std::array<bool, LMR_NUM_ONE_PAIR> features = {
@@ -533,9 +533,9 @@ namespace Search {
                 // | to 3 way interactions between them. For example, a two way  |
                 // | interaction would be two_way_table[i] * (x && y), three     |
                 // | way would be three_way_table[j] * (x && y && z) etc         |
-                // | For the 6 variables here, that gives us a one way           |
-                // | table of 6, two table of 6x5/2=15, and three way of         |
-                // | 6x5x3/3!=20. Thanks to AGE for this idea                    |
+                // | For the 10 variables here, that gives us a one way          |
+                // | table of 10, two table of 10x9/2=45, and three way of       |
+                // | 10x9x8/3!=120. Thanks to AGE for this idea                  |
                 // ---------------------------------------------------------------
                 reduction += lmrConvolution(features);
                 // Reduce less if good history
