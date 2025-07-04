@@ -359,6 +359,7 @@ namespace Search {
         ss->eval = EVAL_NONE;
 
         // Get the corrected static evaluation if we're not in singular search or check
+        int corrplexity = 0;
         if (inCheck) {
             ss->staticEval = EVAL_NONE;
         } else if (!moveIsNull(ss->excluded)) {
@@ -368,6 +369,7 @@ namespace Search {
                                 ? ttEntryEval
                                 : evaluate(thread.board, ss->accumulator);
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+            corrplexity = ss->staticEval - rawStaticEval;
         }
         // Improving heurstic
         // We are better than 2 plies ago
@@ -505,7 +507,7 @@ namespace Search {
 
             int newDepth = depth - 1 + extension;
             // Late Move Reduction
-            if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_BASE_MOVECOUNT() + root) {
+            if (depth >= LMR_MIN_DEPTH() && moveCount > 2 + root) {
                 int reduction =
                     LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
                 std::array<bool, 6> features = {isQuiet, !isPV, improving, cutnode, ttPV, ttHit};
@@ -523,6 +525,8 @@ namespace Search {
                 reduction += lmrConvolution(features);
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
+                // Reduce less if high corrplexity
+                reduction -= LMR_CORRPLEXITY_SCALE() * (std::abs(corrplexity) >= LMR_CORRPLEXITY_MARGIN());
 
                 reduction /= 1024;
 
