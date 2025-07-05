@@ -170,8 +170,9 @@ namespace Search {
                             1250 * board.pieces(PieceType::QUEEN).count();
 
         int eval = network.inference(board, accumulator);
+        eval = eval * (26500 + materialOffset) / 32768;
+        eval = eval * (200 - static_cast<uint16_t>(board.halfMoveClock())) / 200;
 
-        eval = eval * (26500 + materialOffset) / 32768; // Calvin yoink
         return std::clamp(eval, GETTING_MATED + 1, FOUND_MATE - 1);
     }
     void fillLmr() {
