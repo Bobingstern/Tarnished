@@ -360,6 +360,7 @@ namespace Search {
 
         // Get the corrected static evaluation if we're not in singular search or check
         int chefplexity = 0;
+        int corrplexity = 0;
         if (inCheck) {
             ss->staticEval = EVAL_NONE;
         } else if (!moveIsNull(ss->excluded)) {
@@ -370,6 +371,7 @@ namespace Search {
                                 : evaluate(thread.board, ss->accumulator);
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
             chefplexity = thread.squaredCorrectionTerms(ss, thread.board); // Chef corrplexity idea
+            corrplexity = rawStaticEval - ss->staticEval;
         }
         // Improving heurstic
         // We are better than 2 plies ago
@@ -526,7 +528,8 @@ namespace Search {
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
                 // Reduce less if high corrplexity
-                reduction -= chefplexity / LMR_CORRPLEXITY_DIVISOR();
+                if (std::abs(corrplexity) >= 128) // complexity threshold
+                    reduction -= chefplexity / LMR_COMPLEXITY_DIVISOR();
 
                 reduction /= 1024;
 
@@ -607,7 +610,7 @@ namespace Search {
                 (ttFlag == TTFlag::EXACT || ttFlag == TTFlag::BETA_CUT && bestScore > ss->staticEval ||
                  ttFlag == TTFlag::FAIL_LOW && bestScore < ss->staticEval)) {
                 int bonus =
-                    static_cast<int>((CORRHIST_BONUS_WEIGHT() / 100.0) * (bestScore - ss->staticEval) * depth / 8);
+                    static_cast<int>((bestScore - ss->staticEval) * depth / 8);
                 thread.updateCorrhist(ss, thread.board, bonus);
             }
 
