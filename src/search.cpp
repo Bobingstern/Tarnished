@@ -464,18 +464,21 @@ namespace Search {
             ss->historyScore =
                 isQuiet ? thread.getQuietHistory(thread.board, move, ss) : thread.getCapthist(thread.board, move);
 
+            int baseLMR = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+
             if (!root && bestScore > GETTING_MATED) {
+                int lmrDepth = std::max(depth - baseLMR / 1024, 0);
                 // Late Move Pruning
                 if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
                     break;
-
-                if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
-                    continue;
 
                 if (!isPV && isQuiet && depth <= 4 && thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth) {
                     skipQuiets = true;
                     continue;
                 }
+
+                if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * lmrDepth))
+                    continue;
 
             }
 
@@ -516,8 +519,7 @@ namespace Search {
             int newDepth = depth - 1 + extension;
             // Late Move Reduction
             if (depth >= 3 && moveCount > 2 + root) {
-                int reduction =
-                    LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
+                int reduction = baseLMR;
 
                 // Factorized "inference"
                 // ---------------------------------------------------------------
