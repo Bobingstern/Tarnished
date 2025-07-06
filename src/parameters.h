@@ -33,17 +33,6 @@ struct TunableParam {
         int step;
 };
 
-std::list<TunableParam>& tunables();
-TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
-int lmrConvolution(std::array<bool, 6> features);
-void printWeatherFactoryConfig();
-
-#define TUNABLE_PARAM(name, val, min, max, step)                                                                       \
-    inline TunableParam& name##Param = addTunableParam(#name, val, min, max, step);                                    \
-    inline int name() {                                                                                                \
-        return name##Param.value;                                                                                      \
-    }
-
 // History Constants
 constexpr int16_t MAX_HISTORY = 16383;
 const int16_t DEFAULT_HISTORY = 0;
@@ -58,9 +47,24 @@ constexpr int OUTPUT_BUCKETS = 8;
 
 // Factorized LMR arrays
 // {isQuiet, !isPV, improving, cutnode, ttpv, tthit}
-extern std::array<int, 6> LMR_ONE_PAIR;
-extern std::array<int, 15> LMR_TWO_PAIR;
-extern std::array<int, 20> LMR_THREE_PAIR;
+const int LMR_ONE_COUNT = 6;
+const int LMR_TWO_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) / 2;
+const int LMR_THREE_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) * (LMR_ONE_COUNT - 2) / 6;
+extern std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR;
+extern std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR;
+extern std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR;
+
+
+std::list<TunableParam>& tunables();
+TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
+int lmrConvolution(std::array<bool, 6> features);
+void printWeatherFactoryConfig();
+
+#define TUNABLE_PARAM(name, val, min, max, step)                                                                       \
+    inline TunableParam& name##Param = addTunableParam(#name, val, min, max, step);                                    \
+    inline int name() {                                                                                                \
+        return name##Param.value;                                                                                      \
+    }
 
 // History Parameters
 TUNABLE_PARAM(PAWN_CORR_WEIGHT, 186, 64, 2048, 32)

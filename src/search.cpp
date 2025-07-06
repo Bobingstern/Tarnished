@@ -437,6 +437,10 @@ namespace Search {
         Movelist seenCaptures;
 
         bool skipQuiets = false;
+
+        int lmrConvolutionQuiet = lmrConvolution({true, !isPV, improving, cutnode, ttPV, ttHit});
+        int lmrConvolutionNoisy = lmrConvolution({false, !isPV, improving, cutnode, ttPV, ttHit});
+
         while (!moveIsNull(move = picker.nextMove())) {
             if (thread.stopped || thread.exiting)
                 return bestScore;
@@ -508,7 +512,6 @@ namespace Search {
             if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_BASE_MOVECOUNT() + root) {
                 int reduction =
                     LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
-                std::array<bool, 6> features = {isQuiet, !isPV, improving, cutnode, ttPV, ttHit};
 
                 // Factorized "inference"
                 // ---------------------------------------------------------------
@@ -520,7 +523,12 @@ namespace Search {
                 // | table of 6, two table of 6x5/2=15, and three way of         |
                 // | 6x5x3/3!=20. Thanks to AGE for this idea                    |
                 // ---------------------------------------------------------------
-                reduction += lmrConvolution(features);
+
+                // This can be incrementally updated, since for the current feature set
+                // only the first feature changes over the moveloop (isQuiet)
+                // we simply precompute both scenarios and use those
+                reduction += isQuiet ? lmrConvolutionQuiet : lmrConvolutionNoisy;
+
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
 

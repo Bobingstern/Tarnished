@@ -78,6 +78,7 @@ namespace Search {
             MultiArray<int16_t, 2, 6, 64>* conthist;
 
             Accumulator accumulator;
+            std::array<bool, LMR_ONE_COUNT> lmrFeatures = {0};
     };
 
     struct Limit {

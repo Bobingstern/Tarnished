@@ -8,16 +8,14 @@
 #include <sstream>
 #include <vector>
 
-
 using namespace chess;
 
 // LMR
-std::array<int, 6> LMR_ONE_PAIR = {6, 682, -1104, 1994, -928, -295};
-std::array<int, 15> LMR_TWO_PAIR = {-256, -14, 53,   178, -54, -188, 84, 74,
-                                    -111, 47,  -142, -79, -7,  -91,  334};
-std::array<int, 20> LMR_THREE_PAIR = {-205, 95,  -65,  -125, 58,  97,   96,
-                                      32,   155, -21,  -101, -30, -139, -97,
-                                      -75,  117, -207, 68,   9,   36};
+std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR = {6, 682, -1104, 1994, -928, -295};
+std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR = {-256, -14, 53,   178, -54, -188, 84, 74,
+                                               -111, 47,  -142, -79, -7,  -91,  334};
+std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR = {-205, 95,  -65,  -125, 58,  97,  96,   32, 155, -21,
+                                                   -101, -30, -139, -97,  -75, 117, -207, 68, 9,   36};
 // Code from Sirius
 // https://github.com/mcthouacbb/Sirius/blob/b80a3d18461d97e94ba3102bc3fb422db66f4e7d/Sirius/src/search_params.cpp#L17C1-L29C2
 std::list<TunableParam>& tunables() {
@@ -25,8 +23,7 @@ std::list<TunableParam>& tunables() {
     return params;
 }
 
-TunableParam& addTunableParam(std::string name, int value, int min, int max,
-                              int step) {
+TunableParam& addTunableParam(std::string name, int value, int min, int max, int step) {
     tunables().push_back({name, value, value, min, max, step});
     TunableParam& param = tunables().back();
     return param;
@@ -43,8 +40,7 @@ int lmrConvolution(std::array<bool, 6> features) {
             output += LMR_TWO_PAIR[twoIndex] * (features[i] && features[j]);
 
             for (int k = j + 1; k < 6; k++) {
-                output += LMR_THREE_PAIR[threeIndex] *
-                          (features[i] && features[j] && features[k]);
+                output += LMR_THREE_PAIR[threeIndex] * (features[i] && features[j] && features[k]);
 
                 threeIndex++;
             }
