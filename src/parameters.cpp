@@ -29,17 +29,17 @@ TunableParam& addTunableParam(std::string name, int value, int min, int max, int
     return param;
 }
 
-int lmrConvolution(std::array<bool, 6> features) {
+int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features) {
     int output = 0;
     int twoIndex = 0;
     int threeIndex = 0;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < LMR_ONE_COUNT; i++) {
         output += LMR_ONE_PAIR[i] * features[i];
 
-        for (int j = i + 1; j < 6; j++) {
+        for (int j = i + 1; j < LMR_ONE_COUNT; j++) {
             output += LMR_TWO_PAIR[twoIndex] * (features[i] && features[j]);
 
-            for (int k = j + 1; k < 6; k++) {
+            for (int k = j + 1; k < LMR_ONE_COUNT; k++) {
                 output += LMR_THREE_PAIR[threeIndex] * (features[i] && features[j] && features[k]);
 
                 threeIndex++;

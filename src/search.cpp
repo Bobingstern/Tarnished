@@ -359,6 +359,7 @@ namespace Search {
         ss->eval = EVAL_NONE;
 
         // Get the corrected static evaluation if we're not in singular search or check
+        int corrplexity = 0;
         if (inCheck) {
             ss->staticEval = EVAL_NONE;
         } else if (!moveIsNull(ss->excluded)) {
@@ -368,6 +369,7 @@ namespace Search {
                                 ? ttEntryEval
                                 : evaluate(thread.board, ss->accumulator);
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+            corrplexity = rawStaticEval - ss->staticEval;
         }
         // Improving heurstic
         // We are better than 2 plies ago
@@ -378,7 +380,10 @@ namespace Search {
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
-            if (depth <= 6 && ss->eval - RFP_SCALE() * (depth - improving) >= beta)
+            int rfpMargin = RFP_SCALE() * (depth - improving);
+            rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
+
+            if (depth <= 6 && ss->eval - rfpMargin >= beta)
                 return ss->eval;
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
@@ -438,6 +443,7 @@ namespace Search {
 
         bool skipQuiets = false;
 
+        // Precomputed lmr reductions
         int lmrConvolutionQuiet = lmrConvolution({true, !isPV, improving, cutnode, ttPV, ttHit});
         int lmrConvolutionNoisy = lmrConvolution({false, !isPV, improving, cutnode, ttPV, ttHit});
 
@@ -509,7 +515,7 @@ namespace Search {
 
             int newDepth = depth - 1 + extension;
             // Late Move Reduction
-            if (depth >= LMR_MIN_DEPTH() && moveCount > LMR_BASE_MOVECOUNT() + root) {
+            if (depth >= 3 && moveCount > 2 + root) {
                 int reduction =
                     LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
 
