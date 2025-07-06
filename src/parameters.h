@@ -57,7 +57,7 @@ extern std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR;
 
 std::list<TunableParam>& tunables();
 TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
-int lmrConvolution(std::array<bool, 6> features);
+int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features);
 void printWeatherFactoryConfig();
 
 #define TUNABLE_PARAM(name, val, min, max, step)                                                                       \
@@ -84,6 +84,7 @@ TUNABLE_PARAM(HIST_MALUS_OFFSET, 169, 64, 768, 64);
 
 // Search Parameters
 TUNABLE_PARAM(RFP_SCALE, 76, 30, 100, 8);
+TUNABLE_PARAM(RFP_CORRPLEXITY_SCALE, 64, 16, 128, 5);
 
 TUNABLE_PARAM(RAZORING_SCALE, 300, 100, 350, 40);
 
@@ -102,9 +103,6 @@ TUNABLE_PARAM(LMR_BASE_QUIET, 137, -50, 200, 5);
 TUNABLE_PARAM(LMR_DIVISOR_QUIET, 275, 150, 350, 5);
 TUNABLE_PARAM(LMR_BASE_NOISY, 17, -50, 200, 5);
 TUNABLE_PARAM(LMR_DIVISOR_NOISY, 329, 150, 350, 5);
-// LMR Conditions
-TUNABLE_PARAM(LMR_MIN_DEPTH, 3, 1, 8, 1);
-TUNABLE_PARAM(LMR_BASE_MOVECOUNT, 2, 1, 10, 1);
 // Reduction Constants
 TUNABLE_PARAM(LMR_HIST_DIVISOR, 7952, 4096, 16385, 650);
 TUNABLE_PARAM(LMR_BASE_SCALE, 979, 256, 2048, 64)
