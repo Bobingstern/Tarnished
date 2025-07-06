@@ -558,7 +558,7 @@ namespace Search {
                     newDepth -= doShallower;
 
                     int nscore = -search<false>(newDepth, ply + 1, -alpha - 1, -alpha, !cutnode, ss + 1, thread, limit);
-                    if (!isMateScore(score) && !isMateScore(nscore) && isQuiet) {
+                    if (!isMateScore(score) && !isMateScore(nscore) && isQuiet && !inCheck) {
                         thread.updateCorrhistLMR(ss, thread.board, (nscore - score) * depth / 8);
                     }
                     score = nscore;
