@@ -32,12 +32,12 @@ struct StateInfo {
             kingBlockers[1] = Bitboard(0);
         }
 };
-// Values taken from SF
+// Values taken from SP
 constexpr int PawnValue = 100;
-constexpr int KnightValue = 316;
-constexpr int BishopValue = 328;
-constexpr int RookValue = 493;
-constexpr int QueenValue = 982;
+constexpr int KnightValue = 450;
+constexpr int BishopValue = 450;
+constexpr int RookValue = 650;
+constexpr int QueenValue = 1250;
 
 inline std::array<int, 8> PieceValue = {PawnValue, KnightValue, BishopValue, RookValue, QueenValue, 0, 0};
 

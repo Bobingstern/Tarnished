@@ -266,7 +266,7 @@ namespace Search {
                 return bestScore;
 
             // SEE Pruning
-            if (bestScore > GETTING_MATED && !SEE(thread.board, move, 0))
+            if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_THRESHOLD()))
                 continue;
 
             MakeMove(thread.board, move, ss);
@@ -477,7 +477,7 @@ namespace Search {
                     continue;
                 }
 
-                int seeMargin = isQuiet ? SEE_PRUNING_SCALAR_QUIET() * lmrDepth * lmrDepth : SEE_PRUNING_SCALAR_NOISY() * lmrDepth;
+                int seeMargin = isQuiet ? SEE_PRUNING_SCALAR_QUIET() * lmrDepth * lmrDepth : SEE_PRUNING_SCALAR_NOISY() * depth;
                 if (!SEE(thread.board, move, seeMargin))
                     continue;
 
