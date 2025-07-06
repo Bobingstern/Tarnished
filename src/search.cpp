@@ -545,6 +545,8 @@ namespace Search {
                 int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
 
                 score = -search<false>(lmrDepth, ply + 1, -alpha - 1, -alpha, true, ss + 1, thread, limit);
+                if (!isMateScore(score))
+                    score = thread.correctLMRScore(ss, thread.board, score);
                 // Re-search at normal depth
                 if (score > alpha && lmrDepth < newDepth) {
                     bool doDeeper = score > bestScore + LMR_DEEPER_BASE() + LMR_DEEPER_SCALE() * newDepth;
@@ -553,7 +555,11 @@ namespace Search {
                     newDepth += doDeeper;
                     newDepth -= doShallower;
 
-                    score = -search<false>(newDepth, ply + 1, -alpha - 1, -alpha, !cutnode, ss + 1, thread, limit);
+                    int nscore = -search<false>(newDepth, ply + 1, -alpha - 1, -alpha, !cutnode, ss + 1, thread, limit);
+                    if (!isMateScore(score) && !isMateScore(nscore)) {
+                        thread.updateCorrhistLMR(ss, thread.board, (nscore - score) * depth / 8);
+                    }
+                    score = nscore;
                 }
             } else if (!isPV || moveCount > 1) {
                 score = -search<false>(newDepth, ply + 1, -alpha - 1, -alpha, !cutnode, ss + 1, thread, limit);

@@ -181,6 +181,8 @@ namespace Search {
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> minorCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
+            // lmr corrhist
+            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> pawnCorrhistLMR;
 
             ThreadInfo(ThreadType t, TTable& tt, Searcher* s);
             ThreadInfo(int id, TTable& tt, Searcher* s);
@@ -195,6 +197,8 @@ namespace Search {
                 minorCorrhist = other.minorCorrhist;
                 whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
                 blackNonPawnCorrhist = other.blackNonPawnCorrhist;
+
+                pawnCorrhistLMR = other.pawnCorrhistLMR;
             }
             void exit();
             void startSearching();
@@ -248,6 +252,14 @@ namespace Search {
                 updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
                 updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
             }
+            // LMR Correction History
+            void updateCorrhistLMR(Stack* ss, Board& board, int bonus) {
+                auto updateEntry = [&](int16_t& entry) {
+                    int16_t clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
+                    entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
+                };
+                updateEntry(pawnCorrhistLMR[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES]);
+            }
             // ----------------- History getters
             int getHistory(Color c, Move m) {
                 return history[(int)c][m.from().index()][m.to().index()];
@@ -288,6 +300,11 @@ namespace Search {
                 int corrected = eval + correction / 2048;
                 return std::clamp(corrected, GETTING_MATED + 1, FOUND_MATE - 1);
             }
+            int correctLMRScore(Stack* ss, Board& board, int score) {
+                int correction = PAWN_CORR_LMR_WEIGHT() * pawnCorrhistLMR[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES];
+                int corrected = score + correction / 2048;
+                return std::clamp(corrected, GETTING_MATED + 1, FOUND_MATE - 1);
+            }
             void reset() {
                 nodes = 0;
                 bestMove = Move::NO_MOVE;
@@ -299,6 +316,9 @@ namespace Search {
                 minorCorrhist.fill(DEFAULT_HISTORY);
                 whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
                 blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
+
+                pawnCorrhistLMR.fill(DEFAULT_HISTORY);
+
                 bestRootScore = -INFINITE;
                 rootDepth = 0;
                 completed = 0;
