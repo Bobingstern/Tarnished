@@ -459,13 +459,20 @@ namespace Search {
                 if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
                     break;
 
-                if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
-                    continue;
-
                 if (!isPV && isQuiet && depth <= 4 && thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth) {
                     skipQuiets = true;
                     continue;
                 }
+
+                if (!inCheck && isQuiet && depth <= 8 && std::abs(alpha) < 2000 && ss->staticEval + PVS_FP_MARGIN() + PVS_FP_SCALE() * depth <= alpha) {
+                    skipQuiets = true;
+                    continue;
+                }
+
+                if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * depth))
+                    continue;
+
+                
 
             }
 
