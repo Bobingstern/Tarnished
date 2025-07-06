@@ -477,7 +477,8 @@ namespace Search {
                     continue;
                 }
 
-                if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * lmrDepth))
+                int seeMargin = isQuiet ? SEE_PRUNING_SCALAR_QUIET() * lmrDepth * lmrDepth : SEE_PRUNING_SCALAR_NOISY() * lmrDepth;
+                if (!SEE(thread.board, move, seeMargin))
                     continue;
 
             }
