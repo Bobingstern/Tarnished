@@ -214,13 +214,13 @@ namespace Search {
         TTEntry* ttEntry = thread.TT.getEntry(thread.board.hash());
         bool ttHit = ttEntry->zobrist == static_cast<ttkey>(thread.board.hash());
         uint8_t ttEntryFlag = 0;
-        uint16_t ttEntryMove = 0;
+        uint16_t ttEntryMoveRaw = 0;
         int ttEntryValue = EVAL_NONE;
         int ttEntryEval = EVAL_NONE;
         bool ttPV = isPV;
 
         if (ttHit) {
-            ttEntryMove = ttEntry->move;
+            ttEntryMoveRaw = ttEntry->move;
             ttEntryValue = readScore(ttEntry->score, ply);
             ttEntryEval = ttEntry->staticEval;
             ttEntryFlag = ttEntry->flag;
@@ -259,7 +259,7 @@ namespace Search {
 
         // This will do evasions as well
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttEntryMove, true);
+        MovePicker picker = MovePicker(&thread, ss, ttEntryMoveRaw, true);
 
         while (!moveIsNull(move = picker.nextMove())) {
             if (thread.stopped || thread.exiting)
@@ -327,14 +327,16 @@ namespace Search {
         TTEntry* ttEntry = thread.TT.getEntry(thread.board.hash());
         bool ttHit = ttEntry->zobrist == static_cast<ttkey>(thread.board.hash());
         uint8_t ttEntryFlag = 0;
-        uint16_t ttEntryMove = 0;
+        uint16_t ttEntryMoveRaw = 0;
+        Move ttEntryMove = Move::NO_MOVE;
         int ttEntryValue = EVAL_NONE;
         int ttEntryEval = EVAL_NONE;
         int ttEntryDepth = 0;
         bool ttPV = isPV;
 
         if (ttHit && moveIsNull(ss->excluded)) {
-            ttEntryMove = ttEntry->move;
+            ttEntryMoveRaw = ttEntry->move;
+            ttEntryMove = Move(ttEntryMoveRaw);
             ttEntryValue = readScore(ttEntry->score, ply);
             ttEntryEval = ttEntry->staticEval;
             ttEntryFlag = ttEntry->flag;
@@ -347,7 +349,7 @@ namespace Search {
              (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue <= alpha))) {
             return ttEntryValue;
         }
-        bool notHashMove = !ttHit || moveIsNull(Move(ttEntryMove));
+        bool notHashMove = !ttHit || moveIsNull(ttEntryMove);
 
         int bestScore = -INFINITE;
         int oldAlpha = alpha;
@@ -355,10 +357,15 @@ namespace Search {
         int score = bestScore;
         int moveCount = 0;
         bool inCheck = thread.board.inCheck();
+        bool noisyTTMove = ttEntryMoveRaw != 0 && 
+                            ttEntryMove.typeOf() != Move::CASTLING && 
+                            (ttEntryMove.typeOf() == Move::ENPASSANT || thread.board.at(ttEntryMove.to()) != Piece::NONE);
+
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
 
         // Get the corrected static evaluation if we're not in singular search or check
+        int corrplexity = 0;
         if (inCheck) {
             ss->staticEval = EVAL_NONE;
         } else if (!moveIsNull(ss->excluded)) {
@@ -368,6 +375,7 @@ namespace Search {
                                 ? ttEntryEval
                                 : evaluate(thread.board, ss->accumulator);
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+            corrplexity = ss->staticEval - rawStaticEval;
         }
         // Improving heurstic
         // We are better than 2 plies ago
@@ -431,15 +439,15 @@ namespace Search {
 
         Move bestMove = Move::NO_MOVE;
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttEntryMove, false);
+        MovePicker picker = MovePicker(&thread, ss, ttEntryMoveRaw, false);
 
         Movelist seenQuiets;
         Movelist seenCaptures;
 
         bool skipQuiets = false;
 
-        int lmrConvolutionQuiet = lmrConvolution({true, !isPV, improving, cutnode, ttPV, ttHit});
-        int lmrConvolutionNoisy = lmrConvolution({false, !isPV, improving, cutnode, ttPV, ttHit});
+        int lmrConvolutionQuiet = lmrConvolution({true, !isPV, improving, cutnode, ttPV, ttHit, std::abs(corrplexity) >= LMR_CORRPLEXITY_MARGIN(), noisyTTMove});
+        int lmrConvolutionNoisy = lmrConvolution({false, !isPV, improving, cutnode, ttPV, ttHit, std::abs(corrplexity) >= LMR_CORRPLEXITY_MARGIN(), noisyTTMove});
 
         while (!moveIsNull(move = picker.nextMove())) {
             if (thread.stopped || thread.exiting)
@@ -476,7 +484,7 @@ namespace Search {
             // Singular Extensions
             // Sirius conditions
             // https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
-            bool doSE = !root && moveIsNull(ss->excluded) && depth >= SE_MIN_DEPTH() && Move(ttEntryMove) == move &&
+            bool doSE = !root && moveIsNull(ss->excluded) && depth >= SE_MIN_DEPTH() && Move(ttEntryMoveRaw) == move &&
                         ttEntryDepth >= depth - 3 && ttEntryFlag != TTFlag::FAIL_LOW && !isMateScore(ttEntryValue);
 
             int extension = 0;
@@ -485,7 +493,7 @@ namespace Search {
                 int sBeta = std::max(-MATE, ttEntryValue - SE_BETA_SCALE() * depth / 16);
                 int sDepth = (depth - 1) / 2;
                 // How good are we without this move
-                ss->excluded = Move(ttEntryMove);
+                ss->excluded = Move(ttEntryMoveRaw);
                 int seScore = search<false>(sDepth, ply + 1, sBeta - 1, sBeta, cutnode, ss, thread, limit);
                 ss->excluded = Move::NO_MOVE;
 
@@ -519,9 +527,9 @@ namespace Search {
                 // | to 3 way interactions between them. For example, a two way  |
                 // | interaction would be two_way_table[i] * (x && y), three     |
                 // | way would be three_way_table[j] * (x && y && z) etc         |
-                // | For the 6 variables here, that gives us a one way           |
-                // | table of 6, two table of 6x5/2=15, and three way of         |
-                // | 6x5x3/3!=20. Thanks to AGE for this idea                    |
+                // | For the 8 variables here, that gives us a one way           |
+                // | table of 6, two table of 8x7/2=28, and three way of         |
+                // | 8x7x6/3!=56. Thanks to AGE for this idea                    |
                 // ---------------------------------------------------------------
 
                 // This can be incrementally updated, since for the current feature set

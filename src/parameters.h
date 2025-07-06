@@ -21,7 +21,7 @@ using u128 = unsigned __int128;
 #endif
 
 // #define TUNE
-// #define LMR_TUNE
+#define LMR_TUNE
 
 // Struct for tunable parameters
 struct TunableParam {
@@ -46,8 +46,8 @@ constexpr int16_t NNUE_SCALE = 400;
 constexpr int OUTPUT_BUCKETS = 8;
 
 // Factorized LMR arrays
-// {isQuiet, !isPV, improving, cutnode, ttpv, tthit}
-const int LMR_ONE_COUNT = 6;
+// {isQuiet, !isPV, improving, cutnode, ttpv, tthit, noisyTTMove, corrplexity > margin}
+const int LMR_ONE_COUNT = 8;
 const int LMR_TWO_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) / 2;
 const int LMR_THREE_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) * (LMR_ONE_COUNT - 2) / 6;
 extern std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR;
@@ -57,8 +57,9 @@ extern std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR;
 
 std::list<TunableParam>& tunables();
 TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
-int lmrConvolution(std::array<bool, 6> features);
+int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features);
 void printWeatherFactoryConfig();
+void printLMRConfig();
 
 #define TUNABLE_PARAM(name, val, min, max, step)                                                                       \
     inline TunableParam& name##Param = addTunableParam(#name, val, min, max, step);                                    \
@@ -108,6 +109,7 @@ TUNABLE_PARAM(LMR_BASE_MOVECOUNT, 2, 1, 10, 1);
 // Reduction Constants
 TUNABLE_PARAM(LMR_HIST_DIVISOR, 7952, 4096, 16385, 650);
 TUNABLE_PARAM(LMR_BASE_SCALE, 979, 256, 2048, 64)
+TUNABLE_PARAM(LMR_CORRPLEXITY_MARGIN, 130, 50, 350, 5)
 // Deeper/Shallower
 TUNABLE_PARAM(LMR_DEEPER_BASE, 38, 16, 64, 4)
 TUNABLE_PARAM(LMR_DEEPER_SCALE, 4, 3, 12, 1)

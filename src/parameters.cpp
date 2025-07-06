@@ -11,11 +11,9 @@
 using namespace chess;
 
 // LMR
-std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR = {6, 682, -1104, 1994, -928, -295};
-std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR = {-256, -14, 53,   178, -54, -188, 84, 74,
-                                               -111, 47,  -142, -79, -7,  -91,  334};
-std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR = {-205, 95,  -65,  -125, 58,  97,  96,   32, 155, -21,
-                                                   -101, -30, -139, -97,  -75, 117, -207, 68, 9,   36};
+std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR = {6, 682, -1104, 1994, -928, -295, 0, 0};
+std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR = {0};
+std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR = {0};
 // Code from Sirius
 // https://github.com/mcthouacbb/Sirius/blob/b80a3d18461d97e94ba3102bc3fb422db66f4e7d/Sirius/src/search_params.cpp#L17C1-L29C2
 std::list<TunableParam>& tunables() {
@@ -29,17 +27,17 @@ TunableParam& addTunableParam(std::string name, int value, int min, int max, int
     return param;
 }
 
-int lmrConvolution(std::array<bool, 6> features) {
+int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features) {
     int output = 0;
     int twoIndex = 0;
     int threeIndex = 0;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < LMR_ONE_COUNT; i++) {
         output += LMR_ONE_PAIR[i] * features[i];
 
-        for (int j = i + 1; j < 6; j++) {
+        for (int j = i + 1; j < LMR_ONE_COUNT; j++) {
             output += LMR_TWO_PAIR[twoIndex] * (features[i] && features[j]);
 
-            for (int k = j + 1; k < 6; k++) {
+            for (int k = j + 1; k < LMR_ONE_COUNT; k++) {
                 output += LMR_THREE_PAIR[threeIndex] * (features[i] && features[j] && features[k]);
 
                 threeIndex++;
@@ -64,4 +62,30 @@ void printWeatherFactoryConfig() {
         std::cout << "\n";
     }
     std::cout << "}" << std::endl;
+}
+
+void printLMRConfig() {
+    for (auto& param : tunables()) {
+        if (param.name.substr(0, 3) == "LMR") {
+            std::cout << param.name << ", ";
+            std::cout << "int, ";
+            std::cout << param.defaultValue << ", ";
+            std::cout << param.min << ", ";
+            std::cout << param.max << ", ";
+            std::cout << param.step << ", ";
+            std::cout << "0.002" << std::endl;
+        }
+    }
+    for (int i = 0; i < LMR_ONE_PAIR.size(); i++) {
+        std::cout << "LMR_ONE_PAIR_" + std::to_string(i) << ", int, " << LMR_ONE_PAIR[i];
+        std::cout << ", -2048, 2048, 200, 0.002" << std::endl;
+    }
+    for (int i = 0; i < LMR_TWO_PAIR.size(); i++) {
+        std::cout << "LMR_TWO_PAIR_" + std::to_string(i) << ", int, " << LMR_TWO_PAIR[i];
+        std::cout << ", -2048, 2048, 200, 0.002" << std::endl;
+    }
+    for (int i = 0; i < LMR_THREE_PAIR.size(); i++) {
+        std::cout << "LMR_THREE_PAIR_" + std::to_string(i) << ", int, " << LMR_THREE_PAIR[i];
+        std::cout << ", -2048, 2048, 200, 0.002" << std::endl;
+    }
 }
