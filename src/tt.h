@@ -70,11 +70,14 @@ struct TTEntry {
             ttkey keyShrink = static_cast<ttkey>(key);
             if (!moveIsNull(best) || keyShrink != this->zobrist)
                 this->move = best.move();
-            this->zobrist = keyShrink;
-            this->score = static_cast<int16_t>(score);
-            this->flags = uint8_t(flag + (isPV << 2)) | TT_GENERATION_COUNTER;
-            this->depth = depth;
-            this->staticEval = static_cast<int16_t>(eval);
+
+            if (flag == TTFlag::EXACT || keyShrink != this->zobrist || depth + 2 * isPV + 4 > this->depth) {
+                this->zobrist = keyShrink;
+                this->score = static_cast<int16_t>(score);
+                this->flags = uint8_t(flag + (isPV << 2)) | TT_GENERATION_COUNTER;
+                this->depth = depth;
+                this->staticEval = static_cast<int16_t>(eval);
+            }
         }
         bool getPV() {
             return this->flags & 0x4;
@@ -121,7 +124,7 @@ public:
 
     TTEntry* probe(uint64_t key, bool &tthit) {
         TTCluster* cluster = &table[index(key)];
-        uint64_t key16 = static_cast<ttkey>(key);
+        uint16_t key16 = static_cast<ttkey>(key);
 
         TTEntry* replace = &cluster->entries[0];
 
