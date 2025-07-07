@@ -205,6 +205,7 @@ void UCIGo(Searcher& searcher, Board& board, char* str) {
     Search::Limit limit = Search::Limit();
     ParseTimeControl(str, board.sideToMove(), limit);
 
+    searcher.TT.newSearch();
     searcher.startSearching(board, limit);
     // searcher.stop();
 }
@@ -280,10 +281,10 @@ void bench(Searcher& searcher) {
     TimeLimit timer = TimeLimit();
     searcher.printInfo = false;
     searcher.waitForSearchFinished();
+    searcher.reset();
     for (auto fen : fens) {
         timer.start();
         Board board(fen);
-        searcher.reset();
         Search::Limit limit = Search::Limit();
         limit.depth = (int64_t)BENCH_DEPTH;
         limit.movetime = 0;

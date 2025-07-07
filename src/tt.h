@@ -166,5 +166,7 @@ public:
         for (auto& t : ts) {
             t.join();
         }
+
+        TT_GENERATION_COUNTER = 0;
     }
 };
