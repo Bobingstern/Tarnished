@@ -155,16 +155,6 @@ namespace Search {
     bool isMateScore(int score) {
         return std::abs(score) >= FOUND_MATE;
     }
-    int storeScore(int score, int ply) {
-        if (isMateScore(score))
-            score += score < 0 ? -ply : ply;
-        return score;
-    }
-    int readScore(int score, int ply) {
-        if (isMateScore(score))
-            score += score < 0 ? ply : -ply;
-        return score;
-    }
     int evaluate(Board& board, Accumulator& accumulator) {
         int materialOffset = 100 * board.pieces(PieceType::PAWN).count() + 450 * board.pieces(PieceType::KNIGHT).count() + 
                             450 * board.pieces(PieceType::BISHOP).count() + 650 * board.pieces(PieceType::ROOK).count() + 
@@ -212,27 +202,17 @@ namespace Search {
 
         ss->ply = ply;
 
-        TTEntry* ttEntry = nullptr;
+        ProbedTTEntry ttData = {};
         bool ttHit = false;
-        uint8_t ttEntryFlag = 0;
-        uint16_t ttEntryMove = 0;
-        int ttEntryValue = EVAL_NONE;
-        int ttEntryEval = EVAL_NONE;
-        bool ttPV = isPV;
 
-        ttEntry = thread.TT.probe(thread.board.hash(), ttHit);
-        if (ttHit) {
-            ttEntryMove = ttEntry->move;
-            ttEntryValue = readScore(ttEntry->score, ply);
-            ttEntryEval = ttEntry->staticEval;
-            ttEntryFlag = ttEntry->getFlag();
-            ttPV = ttPV || ttEntry->getPV();
-        }
+        ttHit = thread.TT.probe(thread.board.hash(), ply, ttData);
+        
+        bool ttPV = isPV || (ttHit && ttData.pv);
 
-        if (!isPV && ttEntryValue != EVAL_NONE &&
-            (ttEntryFlag == TTFlag::EXACT || (ttEntryFlag == TTFlag::BETA_CUT && ttEntryValue >= beta) ||
-             (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue <= alpha))) {
-            return ttEntryValue;
+        if (!isPV && ttData.score != EVAL_NONE &&
+            (ttData.bound == TTFlag::EXACT || (ttData.bound == TTFlag::BETA_CUT && ttData.score >= beta) ||
+             (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= alpha))) {
+            return ttData.score;
         }
 
         bool inCheck = thread.board.inCheck();
@@ -243,8 +223,8 @@ namespace Search {
             rawStaticEval = -INFINITE;
             eval = -INFINITE;
         } else {
-            rawStaticEval = ttHit && ttEntryEval != EVAL_NONE && !isMateScore(ttEntryEval)
-                                ? ttEntryEval
+            rawStaticEval = ttHit && ttData.staticEval != EVAL_NONE && !isMateScore(ttData.staticEval)
+                                ? ttData.staticEval
                                 : evaluate(thread.board, ss->accumulator);
             eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
         }
@@ -261,7 +241,7 @@ namespace Search {
 
         // This will do evasions as well
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttEntryMove, true);
+        MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
 
         while (!moveIsNull(move = picker.nextMove())) {
             if (thread.stopped || thread.exiting)
@@ -292,8 +272,7 @@ namespace Search {
         if (!moveCount && inCheck)
             return -MATE + ply;
 
-        ttEntry->updateEntry(thread.board.hash(), qBestMove, storeScore(bestScore, ply), rawStaticEval, ttFlag, 0,
-                             ttPV);
+        thread.TT.store(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ply, ttPV);
 
         return bestScore;
     }
@@ -326,31 +305,21 @@ namespace Search {
             }
         }
 
-        TTEntry* ttEntry = nullptr;
+        ProbedTTEntry ttData = {};
         bool ttHit = false;
-        uint8_t ttEntryFlag = 0;
-        uint16_t ttEntryMove = 0;
-        int ttEntryValue = EVAL_NONE;
-        int ttEntryEval = EVAL_NONE;
-        int ttEntryDepth = 0;
-        bool ttPV = isPV;
 
-        ttEntry = thread.TT.probe(thread.board.hash(), ttHit);
-        if (ttHit && moveIsNull(ss->excluded)) {
-            ttEntryMove = ttEntry->move;
-            ttEntryValue = readScore(ttEntry->score, ply);
-            ttEntryEval = ttEntry->staticEval;
-            ttEntryFlag = ttEntry->getFlag();
-            ttEntryDepth = ttEntry->depth;
-            ttPV = ttPV || ttEntry->getPV();
+        if (moveIsNull(ss->excluded)) {
+            ttHit = thread.TT.probe(thread.board.hash(), ply, ttData);
         }
 
-        if (!isPV && ttHit && ttEntryDepth >= depth && ttEntryValue != EVAL_NONE &&
-            (ttEntryFlag == TTFlag::EXACT || (ttEntryFlag == TTFlag::BETA_CUT && ttEntryValue >= beta) ||
-             (ttEntryFlag == TTFlag::FAIL_LOW && ttEntryValue <= alpha))) {
-            return ttEntryValue;
+        bool ttPV = isPV || (ttHit && ttData.pv);
+
+        if (!isPV && ttHit && ttData.depth >= depth &&
+            (ttData.bound == TTFlag::EXACT || (ttData.bound == TTFlag::BETA_CUT && ttData.score >= beta) ||
+             (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= alpha))) {
+            return ttData.score;
         }
-        bool notHashMove = !ttHit || moveIsNull(Move(ttEntryMove));
+        bool notHashMove = !ttHit || moveIsNull(Move(ttData.move));
 
         int bestScore = -INFINITE;
         int oldAlpha = alpha;
@@ -368,8 +337,8 @@ namespace Search {
         } else if (!moveIsNull(ss->excluded)) {
             rawStaticEval = ss->eval = ss->staticEval;
         } else {
-            rawStaticEval = ttHit && ttEntryEval != EVAL_NONE && !isMateScore(ttEntryEval)
-                                ? ttEntryEval
+            rawStaticEval = ttHit && ttData.staticEval != EVAL_NONE && !isMateScore(ttData.staticEval)
+                                ? ttData.staticEval
                                 : evaluate(thread.board, ss->accumulator);
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
             corrplexity = rawStaticEval - ss->staticEval;
@@ -439,7 +408,7 @@ namespace Search {
 
         Move bestMove = Move::NO_MOVE;
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttEntryMove, false);
+        MovePicker picker = MovePicker(&thread, ss, ttData.move, false);
 
         Movelist seenQuiets;
         Movelist seenCaptures;
@@ -488,16 +457,16 @@ namespace Search {
             // Singular Extensions
             // Sirius conditions
             // https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
-            bool doSE = !root && moveIsNull(ss->excluded) && depth >= SE_MIN_DEPTH() && Move(ttEntryMove) == move &&
-                        ttEntryDepth >= depth - 3 && ttEntryFlag != TTFlag::FAIL_LOW && !isMateScore(ttEntryValue);
+            bool doSE = !root && moveIsNull(ss->excluded) && depth >= SE_MIN_DEPTH() && Move(ttData.move) == move &&
+                        ttData.depth >= depth - 3 && ttData.bound != TTFlag::FAIL_LOW && !isMateScore(ttData.score);
 
             int extension = 0;
 
             if (doSE) {
-                int sBeta = std::max(-MATE, ttEntryValue - SE_BETA_SCALE() * depth / 16);
+                int sBeta = std::max(-MATE, ttData.score - SE_BETA_SCALE() * depth / 16);
                 int sDepth = (depth - 1) / 2;
                 // How good are we without this move
-                ss->excluded = Move(ttEntryMove);
+                ss->excluded = Move(ttData.move);
                 int seScore = search<false>(sDepth, ply + 1, sBeta - 1, sBeta, cutnode, ss, thread, limit);
                 ss->excluded = Move::NO_MOVE;
 
@@ -506,7 +475,7 @@ namespace Search {
                         extension = 2; // Double extension
                     else
                         extension = 1; // Singular Extension
-                } else if (ttEntryValue >= beta)
+                } else if (ttData.score >= beta)
                     extension = -2 + isPV; // Negative Extension
             }
 
@@ -627,8 +596,7 @@ namespace Search {
             }
 
             // Update TT
-            ttEntry->updateEntry(thread.board.hash(), bestMove, storeScore(bestScore, ply), rawStaticEval, ttFlag,
-                                 depth, ttPV);
+            thread.TT.store(thread.board.hash(), bestMove, bestScore, rawStaticEval, ttFlag, depth, ply, ttPV);
         }
 
         return bestScore;

@@ -205,7 +205,6 @@ void UCIGo(Searcher& searcher, Board& board, char* str) {
     Search::Limit limit = Search::Limit();
     ParseTimeControl(str, board.sideToMove(), limit);
 
-    searcher.TT.newSearch();
     searcher.startSearching(board, limit);
     // searcher.stop();
 }
