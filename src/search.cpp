@@ -13,12 +13,13 @@
 
 using namespace chess;
 
+uint8_t TT_GENERATION_COUNTER = 0;
+
 // Accumulator wrappers
 // Update the accumulators incrementally and track the
 // pawn zobrist key for correction history (stored in the search stack)
 // The incremental hash logic is terrible and code is ugly. I will refactor into an add piece and remove piece
 // eventually
-
 void MakeMove(Board& board, Move move, Search::Stack* ss) {
     PieceType to = board.at<PieceType>(move.to());
     PieceType from = board.at<PieceType>(move.from());
@@ -211,20 +212,21 @@ namespace Search {
 
         ss->ply = ply;
 
-        TTEntry* ttEntry = thread.TT.getEntry(thread.board.hash());
-        bool ttHit = ttEntry->zobrist == static_cast<ttkey>(thread.board.hash());
+        TTEntry* ttEntry = nullptr;
+        bool ttHit = false;
         uint8_t ttEntryFlag = 0;
         uint16_t ttEntryMove = 0;
         int ttEntryValue = EVAL_NONE;
         int ttEntryEval = EVAL_NONE;
         bool ttPV = isPV;
 
+        ttEntry = thread.TT.probe(thread.board.hash(), ttHit);
         if (ttHit) {
             ttEntryMove = ttEntry->move;
             ttEntryValue = readScore(ttEntry->score, ply);
             ttEntryEval = ttEntry->staticEval;
-            ttEntryFlag = ttEntry->flag;
-            ttPV = ttPV || ttEntry->isPV;
+            ttEntryFlag = ttEntry->getFlag();
+            ttPV = ttPV || ttEntry->getPV();
         }
 
         if (!isPV && ttEntryValue != EVAL_NONE &&
@@ -324,8 +326,8 @@ namespace Search {
             }
         }
 
-        TTEntry* ttEntry = thread.TT.getEntry(thread.board.hash());
-        bool ttHit = ttEntry->zobrist == static_cast<ttkey>(thread.board.hash());
+        TTEntry* ttEntry = nullptr;
+        bool ttHit = false;
         uint8_t ttEntryFlag = 0;
         uint16_t ttEntryMove = 0;
         int ttEntryValue = EVAL_NONE;
@@ -333,13 +335,14 @@ namespace Search {
         int ttEntryDepth = 0;
         bool ttPV = isPV;
 
+        ttEntry = thread.TT.probe(thread.board.hash(), ttHit);
         if (ttHit && moveIsNull(ss->excluded)) {
             ttEntryMove = ttEntry->move;
             ttEntryValue = readScore(ttEntry->score, ply);
             ttEntryEval = ttEntry->staticEval;
-            ttEntryFlag = ttEntry->flag;
+            ttEntryFlag = ttEntry->getFlag();
             ttEntryDepth = ttEntry->depth;
-            ttPV = ttPV || ttEntry->isPV;
+            ttPV = ttPV || ttEntry->getPV();
         }
 
         if (!isPV && ttHit && ttEntryDepth >= depth && ttEntryValue != EVAL_NONE &&
