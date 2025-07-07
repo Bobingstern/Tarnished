@@ -34,7 +34,6 @@ struct Searcher {
             waitForSearchFinished();
             this->board = board;
             this->limit = limit;
-            TT.incAge();
             for (auto& thread : threads) {
                 thread.get()->stopped = false;
                 std::lock_guard<std::mutex> lock(thread.get()->mutex);

@@ -65,6 +65,7 @@ void Search::ThreadInfo::startSearching() {
                 (currentScore > bestScore || !Search::isWin(bestScore)))
                 bestSearcher = thread.get();
         }
+        searcher->TT.incAge();
         std::cout << "\nbestmove "
                   << uci::moveToUci(bestSearcher->bestMove,
                                     searcher->board.chess960())

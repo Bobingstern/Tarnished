@@ -44,7 +44,7 @@ enum TTFlag { NO_BOUND = 0, EXACT = 1, BETA_CUT = 2, FAIL_LOW = 3 };
 constexpr int ENTRY_COUNT = 3;
 constexpr size_t TT_ALIGNMENT = 64;
 static constexpr int GEN_CYCLE_LENGTH = 1 << 5;
-
+static constexpr uint32_t AGE_MASK = GEN_CYCLE_LENGTH - 1;
 
 inline int storeScore(int score, int ply) {
     if (std::abs(score) >= FOUND_MATE)
@@ -71,8 +71,8 @@ struct TTEntry {
 
     uint8_t bound() { return flags & 3; }
 
-    void setFlag(bool pv, uint8_t gen, uint8_t bound) {
-        flags = bound | (pv << 2) | (gen << 3);
+    void setFlag(bool pv, uint32_t gen, uint8_t bound) {
+        flags = static_cast<uint32_t>(bound) | (static_cast<uint32_t>(pv) << 2) | (gen << 3);
     }
 };
 
@@ -116,7 +116,7 @@ public:
         size_t idx = index(key);
         TTCluster& cluster = clusters[idx];
         int entryIdx = -1;
-        uint16_t key16 = key & 0xFFFF;
+        uint16_t key16 = static_cast<uint16_t>(key);
 
         for (int i = 0; i < ENTRY_COUNT; i++) {
             if (cluster.entries[i].key16 == key16) {
@@ -141,42 +141,45 @@ public:
     }
 
     void store(uint64_t key, Move move, int score, int staticEval, uint8_t bound, int depth, int ply, bool pv) {
-        uint16_t key16 = key & 0xFFFF;
+        uint16_t key16 = static_cast<uint16_t>(key);
         TTCluster& cluster = clusters[index(key)];
-        int currQuality = INT_MAX;
-        int replaceIdx = -1;
-        for (int i = 0; i < ENTRY_COUNT; i++) {
-            if (cluster.entries[i].key16 == key16) {
-                replaceIdx = i;
+
+        auto entryValue = [this](auto& entry) {
+            int32_t relativeAge = (GEN_CYCLE_LENGTH + currAge - entry.gen()) & AGE_MASK;
+            return entry.depth - relativeAge * 2;
+        };
+
+        TTEntry* entryPtr = nullptr;
+        auto minValue = std::numeric_limits<int32_t>::max();
+
+        for (auto& candidate : cluster.entries) {
+            if (candidate.key16 == key16 || candidate.bound() == TTFlag::NO_BOUND) {
+                entryPtr = &candidate;
                 break;
             }
 
-            int entryQuality = quality(cluster.entries[i].gen(), cluster.entries[i].depth);
-            if (entryQuality < currQuality) {
-                currQuality = entryQuality;
-                replaceIdx = i;
+            auto value = entryValue(candidate);
+            if (value < minValue) {
+                entryPtr = &candidate;
+                minValue = value;
             }
         }
 
-        TTEntry& replace = cluster.entries[replaceIdx];
-        if (!moveIsNull(move) || replace.key16 != key16)
-            replace.bestMove = move.move();
+        auto entry = *entryPtr;
 
-        if (bound == TTFlag::EXACT || replace.key16 != key16 || depth >= replace.depth - 4 - 2 * pv || replace.gen() != currAge) {
-            replace.key16 = key16;
-            replace.staticEval = staticEval;
-            replace.depth = static_cast<uint8_t>(depth);
-            replace.score = static_cast<int16_t>(storeScore(score, ply));
-            replace.setFlag(pv, static_cast<uint8_t>(currAge), bound);
-        }
-    }
+        if ( !(bound == TTFlag::EXACT || key16 != entry.key16 || entry.gen() != currAge || depth + 4 + pv * 2 > entry.depth) )
+            return;
 
-    int quality(int age, int depth) {
-        int ageDiff = currAge - age;
-        if (ageDiff < 0) {
-            ageDiff += GEN_CYCLE_LENGTH;
-        }
-        return depth - 2 * ageDiff;
+        if (!moveIsNull(move) || key16 != entry.key16)
+            entry.bestMove = move.move();
+
+        entry.key16 = key16;
+        entry.score = static_cast<int16_t>(storeScore(score, ply));
+        entry.staticEval = static_cast<int16_t>(staticEval);
+        entry.depth = static_cast<uint8_t>(depth);
+        entry.setFlag(pv, currAge, bound);
+
+        *entryPtr = entry;
     }
 
     void incAge() {
@@ -211,7 +214,7 @@ public:
 private:
     TTCluster* clusters;
     size_t size;
-    int currAge;
+    uint32_t currAge;
     uint32_t index(uint64_t key) {
         return static_cast<std::uint64_t>((static_cast<u128>(key) * static_cast<u128>(size)) >> 64);
     }
