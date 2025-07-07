@@ -85,7 +85,7 @@ struct ProbedTTEntry {
     uint8_t bound;
 };
 
-struct TTCluster {
+struct alignas(32) TTCluster {
     TTEntry entries[ENTRY_COUNT];
     char padding[2];
 };
@@ -143,7 +143,7 @@ public:
     void store(uint64_t key, Move move, int score, int staticEval, uint8_t bound, int depth, int ply, bool pv) {
         uint16_t key16 = key & 0xFFFF;
         TTCluster& cluster = clusters[index(key)];
-        int currQuality = 32768;
+        int currQuality = INT_MAX;
         int replaceIdx = -1;
         for (int i = 0; i < ENTRY_COUNT; i++) {
             if (cluster.entries[i].key16 == key16) {
@@ -162,7 +162,7 @@ public:
         if (!moveIsNull(move) || replace.key16 != key16)
             replace.bestMove = move.move();
 
-        if (bound == TTFlag::EXACT || replace.key16 != key16 || depth >= replace.depth - 2 - 2 * pv || replace.gen() != currAge) {
+        if (bound == TTFlag::EXACT || replace.key16 != key16 || depth >= replace.depth - 4 - 2 * pv || replace.gen() != currAge) {
             replace.key16 = key16;
             replace.staticEval = staticEval;
             replace.depth = static_cast<uint8_t>(depth);
