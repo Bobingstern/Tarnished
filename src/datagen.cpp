@@ -178,7 +178,10 @@ void runThread(int ti) {
             limit.start();
             thread->nodes = 0;
             thread->bestMove = Move::NO_MOVE;
+            
             int eval = Search::iterativeDeepening(board, *thread, limit, nullptr);
+            TT.incAge();
+            
             eval = std::min(std::max(-INFINITE, eval), INFINITE);
             eval = board.sideToMove() == Color::WHITE ? eval : -eval;
             Move m = thread->bestMove;

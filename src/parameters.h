@@ -10,7 +10,7 @@
 #include <vector>
 
 #define MAX_PLY 125
-#define BENCH_DEPTH 12
+#define BENCH_DEPTH 13
 
 // Random big num
 #ifdef _MSC_VER

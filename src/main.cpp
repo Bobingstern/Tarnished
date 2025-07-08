@@ -280,10 +280,10 @@ void bench(Searcher& searcher) {
     TimeLimit timer = TimeLimit();
     searcher.printInfo = false;
     searcher.waitForSearchFinished();
+    searcher.reset();
     for (auto fen : fens) {
         timer.start();
         Board board(fen);
-        searcher.reset();
         Search::Limit limit = Search::Limit();
         limit.depth = (int64_t)BENCH_DEPTH;
         limit.movetime = 0;

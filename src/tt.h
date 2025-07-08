@@ -1,6 +1,7 @@
 #pragma once
 
 #include "external/chess.hpp"
+#include "eval.h"
 #include "parameters.h"
 #include "util.h"
 #include <bitset>
@@ -13,111 +14,208 @@
     #include <sys/mman.h>
 #endif
 
+
+inline void* alignedAlloc(size_t alignment, size_t requiredBytes) {
+    void* ptr;
+#if defined(__MINGW32__)
+    int offset = alignment - 1;
+    void* p = (void*)malloc(requiredBytes + offset);
+    ptr = (void*)(((size_t)(p)+offset) & ~(alignment - 1));
+#elif defined (__GNUC__)
+    ptr = std::aligned_alloc(alignment, requiredBytes);
+#else
+#error "Compiler not supported"
+#endif
+
+#if defined(__linux__)
+    madvise(ptr, requiredBytes, MADV_HUGEPAGE);
+#endif 
+
+    return ptr;
+}
+
+
 using namespace chess;
 
 enum TTFlag { NO_BOUND = 0, EXACT = 1, BETA_CUT = 2, FAIL_LOW = 3 };
 
-using ttkey = uint16_t;
+// Heavily based off Stormphrax and Sirius
+
+constexpr int ENTRY_COUNT = 3;
+constexpr size_t TT_ALIGNMENT = 64;
+static constexpr int GEN_CYCLE_LENGTH = 1 << 5;
+static constexpr uint32_t AGE_MASK = GEN_CYCLE_LENGTH - 1;
+
+inline int storeScore(int score, int ply) {
+    if (std::abs(score) >= FOUND_MATE)
+        score += score < 0 ? -ply : ply;
+    return score;
+}
+inline int readScore(int score, int ply) {
+    if (std::abs(score) >= FOUND_MATE)
+        score += score < 0 ? ply : -ply;
+    return score;
+}
+
 struct TTEntry {
-        ttkey zobrist;
-        int16_t score;
-        int16_t staticEval;
-        uint16_t move;
-        uint8_t flag;
-        uint8_t depth;
-        bool isPV;
-        TTEntry() {
-            this->zobrist = 0;
-            this->move = 0;
-            this->score = -32767;
-            this->flag = 0;
-            this->depth = 0;
-            this->staticEval = -32767;
-            this->isPV = false;
-        }
-        TTEntry(uint64_t key, chess::Move best, int16_t score, int16_t eval, uint8_t flag, uint8_t depth, bool isPV) {
-            this->move = best.move();
-            this->zobrist = static_cast<ttkey>(key);
-            this->score = score;
-            this->flag = flag;
-            this->depth = depth;
-            this->staticEval = eval;
-            this->isPV = isPV;
-        }
-        void updateEntry(uint64_t key, chess::Move best, int score, int eval, uint8_t flag, uint8_t depth, bool isPV) {
-            ttkey keyShrink = static_cast<ttkey>(key);
-            if (!moveIsNull(best) || keyShrink != this->zobrist)
-                this->move = best.move();
-            this->zobrist = keyShrink;
-            this->score = static_cast<int16_t>(score);
-            this->flag = flag;
-            this->depth = depth;
-            this->staticEval = static_cast<int16_t>(eval);
-            this->isPV = isPV;
-        }
+    uint16_t key16;
+    int16_t score;
+    int16_t staticEval;
+    uint16_t bestMove;
+    uint8_t depth;
+    uint8_t flags;
+
+    bool pv() { return (flags >> 2) & 1; }
+
+    uint8_t gen() { return flags >> 3; }
+
+    uint8_t bound() { return flags & 3; }
+
+    void setFlag(bool pv, uint32_t gen, uint8_t bound) {
+        flags = static_cast<uint32_t>(bound) | (static_cast<uint32_t>(pv) << 2) | (gen << 3);
+    }
 };
 
-struct TTable {
-    private:
-        TTEntry* table;
+struct ProbedTTEntry {
+    int score;
+    int staticEval;
+    uint16_t move;
+    int depth;
+    bool pv;
+    uint8_t bound;
+};
 
-    public:
-        uint64_t size;
+struct alignas(32) TTCluster {
+    TTEntry entries[ENTRY_COUNT];
+    char padding[2];
+};
 
-        TTable(uint64_t sizeMB = 16) {
-            table = nullptr;
-            resize(sizeMB);
-        }
-        void clear(size_t threadCount = 1) {
-            std::vector<std::thread> threads;
+class TTable {
 
-            auto clearTT = [&](size_t threadId) {
-                // The segment length is the number of entries each thread must clear
-                // To find where your thread should start (in entries), you can do threadId * segmentLength
-                // Converting segment length into the number of entries to clear can be done via length * bytes per
-                // entry
+public:
+    TTable() {
+        resize(16);
+    }
+    ~TTable() {
+        std::free(clusters);
+    }
 
-                size_t start = (size * threadId) / threadCount;
-                size_t end = std::min((size * (threadId + 1)) / threadCount, size);
+    void resize(int mb = 16) {
+        size_t clusterCount = static_cast<uint64_t>(mb) * 1024 * 1024 / sizeof(TTCluster);
+        if (clusterCount == size)
+            return;
 
-                std::memset(table + start, 0, (end - start) * sizeof(TTEntry));
-            };
+        std::free(clusters);
 
-            for (size_t thread = 1; thread < threadCount; thread++)
-                threads.emplace_back(clearTT, thread);
+        size = clusterCount;
+        clusters = static_cast<TTCluster*>(alignedAlloc(TT_ALIGNMENT, size * sizeof(TTCluster)));
+        currAge = 0;
+    }
 
-            clearTT(0);
+    bool probe(uint64_t key, int ply, ProbedTTEntry& ttData) {
+        size_t idx = index(key);
+        TTCluster& cluster = clusters[idx];
+        int entryIdx = -1;
+        uint16_t key16 = static_cast<uint16_t>(key);
 
-            for (std::thread& t : threads)
-                if (t.joinable())
-                    t.join();
-        }
-        void resize(uint64_t MB) {
-            size = MB * 1024 * 1024 / sizeof(TTEntry);
-            if (table != nullptr)
-                std::free(table);
-            table = static_cast<TTEntry*>(std::malloc(size * sizeof(TTEntry)));
-        }
-        uint64_t index(uint64_t key) {
-            // return key % size;
-            return static_cast<std::uint64_t>((static_cast<u128>(key) * static_cast<u128>(size)) >> 64);
-        }
-
-        TTEntry* getEntry(uint64_t key) {
-            return &table[index(key)];
-        }
-
-        TTEntry getEntryCopy(uint64_t key) {
-            return table[index(key)];
+        for (int i = 0; i < ENTRY_COUNT; i++) {
+            if (cluster.entries[i].key16 == key16) {
+                entryIdx = i;
+                break;
+            }
         }
 
-        size_t hashfull() {
-            size_t samples = std::min((uint64_t)1000, size);
-            size_t hits = 0;
-            for (size_t sample = 0; sample < samples; sample++)
-                hits += table[sample].zobrist != 0;
-            size_t hash = (int)(hits / (double)samples * 1000);
-            assert(hash <= 1000);
-            return hash;
+        if (entryIdx == -1)
+            return false;
+
+        auto entry = cluster.entries[entryIdx];
+
+        ttData.score = readScore(entry.score, ply);
+        ttData.staticEval = entry.staticEval;
+        ttData.move = entry.bestMove;
+        ttData.depth = entry.depth;
+        ttData.bound = entry.bound();
+        ttData.pv = entry.pv();
+
+        return true;
+    }
+
+    void store(uint64_t key, Move move, int score, int staticEval, uint8_t bound, int depth, int ply, bool pv) {
+        uint16_t key16 = static_cast<uint16_t>(key);
+        TTCluster& cluster = clusters[index(key)];
+
+        auto entryValue = [this](auto& entry) {
+            int32_t relativeAge = (GEN_CYCLE_LENGTH + currAge - entry.gen()) & AGE_MASK;
+            return entry.depth - relativeAge * 2;
+        };
+
+        TTEntry* entryPtr = nullptr;
+        auto minValue = std::numeric_limits<int32_t>::max();
+
+        for (auto& candidate : cluster.entries) {
+            if (candidate.key16 == key16 || candidate.bound() == TTFlag::NO_BOUND) {
+                entryPtr = &candidate;
+                break;
+            }
+
+            auto value = entryValue(candidate);
+            if (value < minValue) {
+                entryPtr = &candidate;
+                minValue = value;
+            }
         }
+
+        auto entry = *entryPtr;
+
+        if ( !(bound == TTFlag::EXACT || key16 != entry.key16 || entry.gen() != currAge || depth + 4 + pv * 2 > entry.depth) )
+            return;
+
+        if (!moveIsNull(move) || key16 != entry.key16)
+            entry.bestMove = move.move();
+
+        entry.key16 = key16;
+        entry.score = static_cast<int16_t>(storeScore(score, ply));
+        entry.staticEval = static_cast<int16_t>(staticEval);
+        entry.depth = static_cast<uint8_t>(depth);
+        entry.setFlag(pv, currAge, bound);
+
+        *entryPtr = entry;
+    }
+
+    void incAge() {
+        currAge = (currAge + 1) % GEN_CYCLE_LENGTH;
+    }
+    void clear(int numThreads = 1) {
+        currAge = 0;
+        std::vector<std::jthread> threads;
+        threads.reserve(numThreads);
+        for (int i = 0; i < numThreads; i++) {
+            threads.emplace_back(
+                [i, this, numThreads]() {
+                    auto begin = clusters + size * i / numThreads;
+                    auto end = clusters + size * (i + 1) / numThreads;
+                    std::fill(begin, end, TTCluster{});
+                });
+        }
+    }
+
+    int hashfull() {
+        int count = 0;
+        for (int i = 0; i < 1000; i++) {
+            for (int j = 0; j < ENTRY_COUNT; j++) {
+                auto& entry = clusters[i].entries[j];
+                if (entry.bound() != TTFlag::NO_BOUND && entry.gen() == currAge)
+                    count++;
+            }
+        }
+        return count / ENTRY_COUNT;
+    }
+
+private:
+    TTCluster* clusters;
+    size_t size;
+    uint32_t currAge;
+    uint32_t index(uint64_t key) {
+        return static_cast<std::uint64_t>((static_cast<u128>(key) * static_cast<u128>(size)) >> 64);
+    }
 };
