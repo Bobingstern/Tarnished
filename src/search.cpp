@@ -697,7 +697,7 @@ namespace Search {
                     }
                 }
                 std::cout << " hashfull " << searcher->TT.hashfull();
-                std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " pv ";
+                std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " time " << limit.timer.elapsed() << " pv ";
                 std::cout << pvss.str() << std::endl;
             }
             if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes))
