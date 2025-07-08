@@ -192,10 +192,10 @@ namespace Search {
     }
     template <bool isPV> int qsearch(int ply, int alpha, const int beta, Stack* ss, ThreadInfo& thread, Limit& limit) {
         if (thread.type == ThreadType::MAIN &&
-            ((thread.nodes & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.nodes))) {
+            ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes()))) {
             thread.searcher->stopSearching();
         }
-        if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1) {
+        if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
             return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(thread.board, ss->accumulator)
                                                                    : 0;
         }
@@ -244,7 +244,7 @@ namespace Search {
         MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped || thread.exiting)
+            if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
 
             // SEE Pruning
@@ -252,7 +252,7 @@ namespace Search {
                 continue;
 
             MakeMove(thread.board, move, ss);
-            thread.nodes++;
+            thread.nodes.fetch_add(1, std::memory_order::relaxed);
             moveCount++;
             int score = -qsearch<isPV>(ply + 1, -beta, -alpha, ss + 1, thread, limit);
             UnmakeMove(thread.board, move);
@@ -294,11 +294,11 @@ namespace Search {
                 return 0;
 
             if (thread.type == ThreadType::MAIN &&
-                ((thread.nodes & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.nodes)) &&
+                ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes())) &&
                 thread.rootDepth != 1) {
                 thread.searcher->stopSearching();
             }
-            if (thread.stopped || thread.exiting || ply >= MAX_PLY - 1) {
+            if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
                 return (ply >= MAX_PLY - 1 && !thread.board.inCheck())
                            ? network.inference(thread.board, ss->accumulator)
                            : 0;
@@ -420,7 +420,7 @@ namespace Search {
         int lmrConvolutionNoisy = lmrConvolution({false, !isPV, improving, cutnode, ttPV, ttHit});
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped || thread.exiting)
+            if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
 
             bool isQuiet = !thread.board.isCapture(move);
@@ -482,11 +482,11 @@ namespace Search {
             // Update Continuation History
             ss->conthist = thread.getConthistSegment(thread.board, move);
 
-            uint64_t previousNodes = thread.nodes;
+            uint64_t previousNodes = thread.loadNodes();
 
             MakeMove(thread.board, move, ss);
             moveCount++;
-            thread.nodes++;
+            thread.nodes.fetch_add(1, std::memory_order::relaxed);
 
             int newDepth = depth - 1 + extension;
             // Late Move Reduction
@@ -536,7 +536,7 @@ namespace Search {
             UnmakeMove(thread.board, move);
 
             if (root && thread.type == ThreadType::MAIN)
-                limit.updateNodes(move, thread.nodes - previousNodes);
+                limit.updateNodes(move, thread.loadNodes() - previousNodes);
 
             if (score > bestScore) {
                 bestScore = score;
@@ -620,7 +620,7 @@ namespace Search {
         int64_t avgnps = 0;
         for (int depth = 1; depth <= limit.depth; depth++) {
             auto aborted = [&]() {
-                if (threadInfo.stopped)
+                if (threadInfo.stopped.load())
                     return true;
                 if (isMain)
                     return limit.outOfTime() || limit.outOfNodes(threadInfo.nodes) || limit.softNodes(threadInfo.nodes);

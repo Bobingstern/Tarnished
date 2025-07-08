@@ -151,14 +151,15 @@ namespace Search {
             std::mutex mutex;
             std::condition_variable cv;
 
-            bool searching = false;
-            bool stopped = false;
-            bool exiting = false;
+
+            std::atomic<bool> searching;;
+            std::atomic<bool> stopped = false;
+            std::atomic<bool> exiting = false;
 
             Board board;
             Limit limit;
             Accumulator accumulator;
-            uint64_t nodes;
+            std::atomic<uint64_t> nodes;
 
             Move bestMove;
             int bestRootScore;
@@ -185,9 +186,10 @@ namespace Search {
             ThreadInfo(ThreadType t, TTable& tt, Searcher* s);
             ThreadInfo(int id, TTable& tt, Searcher* s);
             ThreadInfo(const ThreadInfo& other)
-                : type(other.type), TT(other.TT), history(other.history), bestMove(other.bestMove), nodes(other.nodes),
+                : type(other.type), TT(other.TT), history(other.history), bestMove(other.bestMove),
                   minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), bestRootScore(other.bestRootScore) {
                 this->board = other.board;
+                nodes.store(other.nodes.load());
                 conthist = other.conthist;
                 capthist = other.capthist;
                 pawnCorrhist = other.pawnCorrhist;
@@ -200,6 +202,9 @@ namespace Search {
             void startSearching();
             void waitForSearchFinished();
             void idle();
+            size_t loadNodes() {
+                return nodes.load(std::memory_order::relaxed);
+            }
 
             // --------------- History updaters ---------------------
             // Make use of the history gravity formula:

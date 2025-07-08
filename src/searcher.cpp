@@ -26,8 +26,8 @@ Search::ThreadInfo::ThreadInfo(int id, TTable& tt, Searcher* s)
 void Search::ThreadInfo::exit() {
     {
         std::lock_guard<std::mutex> lock(mutex);
-        searching = true;
-        exiting = true;
+        searching.store(true);
+        exiting.store(true);
     }
     cv.notify_all();
     if (thread.joinable())
@@ -75,19 +75,19 @@ void Search::ThreadInfo::startSearching() {
 
 void Search::ThreadInfo::waitForSearchFinished() {
     std::unique_lock<std::mutex> lock(mutex);
-    cv.wait(lock, [&] { return !searching; });
+    cv.wait(lock, [&] { return !searching.load(); });
 }
 
 void Search::ThreadInfo::idle() {
-    while (!exiting) {
+    while (!exiting.load()) {
         std::unique_lock<std::mutex> lock(mutex);
-        cv.wait(lock, [&] { return searching; });
+        cv.wait(lock, [&] { return searching.load(); });
 
-        if (exiting)
+        if (exiting.load())
             return;
 
         startSearching();
-        searching = false;
+        searching.store(false);
 
         cv.notify_all();
     }
