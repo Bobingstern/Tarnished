@@ -75,7 +75,11 @@ namespace Search {
 
             Move excluded{};
             Move bestMove{};
+
+            Move move{};
+            PieceType movedPiece;
             MultiArray<int16_t, 2, 6, 64>* conthist;
+            MultiArray<int16_t, 2, 6, 64>* contCorrhist;
 
             Accumulator accumulator;
             std::array<bool, LMR_ONE_COUNT> lmrFeatures = {0};
@@ -174,6 +178,7 @@ namespace Search {
             MultiArray<int, 2, 64, 64> history;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
+            MultiArray<int16_t, 2, 6, 64, 2, 6, 64> contCorrhist;
             // indexed by [stm][moving pt][cap pt][to]
             MultiArray<int, 2, 6, 6, 64> capthist;
             // indexed by [stm][hash % entries]
@@ -191,6 +196,7 @@ namespace Search {
                 this->board = other.board;
                 nodes.store(other.nodes.load());
                 conthist = other.conthist;
+                contCorrhist = other.contCorrhist;
                 capthist = other.capthist;
                 pawnCorrhist = other.pawnCorrhist;
                 majorCorrhist = other.majorCorrhist;
@@ -252,6 +258,13 @@ namespace Search {
                 updateEntry(minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES]);
                 updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
                 updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
+                // Continuation Correction History
+                if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
+                    auto &table = *(ss - 2)->contCorrhist;
+                    updateEntry(
+                        table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()]
+                    );
+                }
             }
             // ----------------- History getters
             int getHistory(Color c, Move m) {
@@ -266,6 +279,10 @@ namespace Search {
             MultiArray<int16_t, 2, 6, 64>* getConthistSegment(Board& board, Move m) {
                 return &conthist[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
             }
+            MultiArray<int16_t, 2, 6, 64>* getContCorrhistSegment(Board& board, Move m) {
+                return &contCorrhist[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
+            }
+
             int16_t getConthist(MultiArray<int16_t, 2, 6, 64>* c, Board& board, Move m) {
                 assert(c != nullptr);
                 return (*c)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
@@ -290,6 +307,13 @@ namespace Search {
                 correction += NON_PAWN_NSTM_CORR_WEIGHT() *
                               blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
 
+                // Continuation Correction History
+                if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
+                    auto &table = *(ss - 2)->contCorrhist;
+                    correction += 
+                        CONT_CORR_WEIGHT() * table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()];
+                }
+
                 int corrected = eval + correction / 2048;
                 return std::clamp(corrected, GETTING_MATED + 1, FOUND_MATE - 1);
             }
@@ -298,6 +322,7 @@ namespace Search {
                 bestMove = Move::NO_MOVE;
                 history.fill((int)DEFAULT_HISTORY);
                 conthist.fill(DEFAULT_HISTORY);
+                contCorrhist.fill(DEFAULT_HISTORY);
                 capthist.fill((int)DEFAULT_HISTORY);
                 pawnCorrhist.fill(DEFAULT_HISTORY);
                 majorCorrhist.fill(DEFAULT_HISTORY);
