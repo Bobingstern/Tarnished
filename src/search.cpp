@@ -343,6 +343,11 @@ namespace Search {
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
             corrplexity = rawStaticEval - ss->staticEval;
         }
+
+        if (!ttHit) {
+            thread.TT.store(thread.board.hash(), Move::NO_MOVE, EVAL_NONE, rawStaticEval, TTFlag::NO_BOUND, 0, 0, ttPV);
+        }
+
         // Improving heurstic
         // We are better than 2 plies ago
         bool improving =
