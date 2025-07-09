@@ -451,7 +451,7 @@ namespace Search {
                 }
 
                 int futility = ss->staticEval + FP_SCALE() * depth + FP_OFFSET();
-                if (!isPV && !inCheck && isQuiet && depth <= 8 && std::abs(alpha) < 2000 && futility <= alpha) {
+                if (!inCheck && isQuiet && depth <= 8 && std::abs(alpha) < 2000 && futility <= alpha) {
                     skipQuiets = true;
                     continue;
                 }
