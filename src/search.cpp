@@ -326,6 +326,7 @@ namespace Search {
         int rawStaticEval = EVAL_NONE;
         int score = bestScore;
         int moveCount = 0;
+        int initialDepth = depth;
         bool inCheck = thread.board.inCheck();
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
@@ -349,6 +350,12 @@ namespace Search {
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
+        // Hindsight LMR
+        if (!root && !inCheck && moveIsNull(ss->excluded) && 
+            (ss - 1)->reduction >= HINDSIGHT_LMR_MARGIN() && 
+            (ss - 1)->staticEval != EVAL_NONE && ss->staticEval + (ss - 1)->staticEval < 0) {
+            depth++;
+        }
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
@@ -374,11 +381,14 @@ namespace Search {
 
                 ss->conthist = nullptr;
                 ss->contCorrhist = nullptr;
+                ss->reduction = 1024 * (reduction - 1);
 
                 MakeMove(thread.board, Move(Move::NULL_MOVE), ss);
                 int nmpScore =
                     -search<false>(depth - reduction, ply + 1, -beta, -beta + 1, !cutnode, ss + 1, thread, limit);
                 UnmakeMove(thread.board, Move(Move::NULL_MOVE));
+
+                ss->reduction = 0;
 
                 if (nmpScore >= beta) {
                     // Zugzwang verifiction
@@ -388,9 +398,13 @@ namespace Search {
                     if (depth <= 15 || thread.minNmpPly > 0)
                         return isWin(nmpScore) ? beta : nmpScore;
                     thread.minNmpPly = ply + (depth - reduction) * 3 / 4;
+                    ss->reduction = 1024 * (NMP_BASE_REDUCTION() - 1);
+
                     int verification =
                         search<false>(depth - NMP_BASE_REDUCTION(), ply + 1, beta - 1, beta, true, ss, thread, limit);
+
                     thread.minNmpPly = 0;
+                    ss->reduction = 0;
                     if (verification >= beta)
                         return verification;
                 }
@@ -516,11 +530,15 @@ namespace Search {
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
 
+                ss->reduction = reduction;
+
                 reduction /= 1024;
 
                 int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
 
                 score = -search<false>(lmrDepth, ply + 1, -alpha - 1, -alpha, true, ss + 1, thread, limit);
+
+                ss->reduction = 0;
                 // Re-search at normal depth
                 if (score > alpha && lmrDepth < newDepth) {
                     bool doDeeper = score > bestScore + LMR_DEEPER_BASE() + LMR_DEEPER_SCALE() * newDepth;
@@ -529,10 +547,16 @@ namespace Search {
                     newDepth += doDeeper;
                     newDepth -= doShallower;
 
+                    ss->reduction = 1024 * ((initialDepth - 1) - newDepth);
+
                     score = -search<false>(newDepth, ply + 1, -alpha - 1, -alpha, !cutnode, ss + 1, thread, limit);
+
+                    ss->reduction = 0;
                 }
             } else if (!isPV || moveCount > 1) {
+                ss->reduction = 1024 * ((initialDepth - 1) - newDepth);
                 score = -search<false>(newDepth, ply + 1, -alpha - 1, -alpha, !cutnode, ss + 1, thread, limit);
+                ss->reduction = 0;
             }
             if (isPV && (moveCount == 1 || score > alpha)) {
                 score = -search<isPV>(newDepth, ply + 1, -beta, -alpha, false, ss + 1, thread, limit);
