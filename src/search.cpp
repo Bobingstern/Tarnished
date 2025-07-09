@@ -373,6 +373,7 @@ namespace Search {
                                       std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE());
 
                 ss->conthist = nullptr;
+                ss->contCorrhist = nullptr;
 
                 MakeMove(thread.board, Move(Move::NULL_MOVE), ss);
                 int nmpScore =
@@ -480,7 +481,10 @@ namespace Search {
             }
 
             // Update Continuation History
+            ss->move = move;
+            ss->movedPiece = thread.board.at<PieceType>(move.from());
             ss->conthist = thread.getConthistSegment(thread.board, move);
+            ss->contCorrhist = thread.getContCorrhistSegment(thread.board, move);
 
             uint64_t previousNodes = thread.loadNodes();
 
