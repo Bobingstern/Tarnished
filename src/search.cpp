@@ -358,7 +358,13 @@ namespace Search {
             if (depth <= 6 && ss->eval - rfpMargin >= beta)
                 return ss->eval;
 
-            if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
+            // If we're in a heavily reduced search, not improving
+            // increase the razoring margin a little
+            int razorMargin = RAZORING_SCALE() * depth;
+            if (!improving && (ss - 1)->reduction >= PRIOR_LMR_RAZOR_MARGIN())
+                razorMargin += RAZOR_MARGIN_LMR_SCALE() * depth;
+
+            if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + razorMargin <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
                 if (score <= alpha)
                     return score;
@@ -515,6 +521,8 @@ namespace Search {
 
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
+
+                ss->reduction = reduction;
 
                 reduction /= 1024;
 
