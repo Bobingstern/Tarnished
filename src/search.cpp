@@ -345,8 +345,16 @@ namespace Search {
         }
         // Improving heurstic
         // We are better than 2 plies ago
-        bool improving =
-            !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
+        bool improving = [&] {
+            if (inCheck)
+                return false;
+            else if (ply >= 2 && (ss - 2)->staticEval != EVAL_NONE)
+                return ss->staticEval > (ss - 2)->staticEval;
+            else if (ply >= 4 && (ss - 4)->staticEval != EVAL_NONE)
+                return ss->staticEval > (ss - 4)->staticEval;
+            return true;
+        }();
+
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
         // Pruning
