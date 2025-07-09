@@ -588,6 +588,10 @@ namespace Search {
                 return alpha;
             return inCheck ? -MATE + ply : 0;
         }
+        // Sf fail firm idea
+        if (bestScore >= beta && !isMateScore(bestScore) && !isMateScore(alpha))
+            bestScore = (bestScore * depth + beta) / (depth + 1);
+
         if (moveIsNull(ss->excluded)) {
             // Update correction history
             bool isBestQuiet = !thread.board.isCapture(bestMove);
