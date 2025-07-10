@@ -148,6 +148,7 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
         }
 
         Search::fillLmr();
+        updatePieceValues();
     }
 }
 void UCIInfo() {
@@ -157,6 +158,14 @@ void UCIInfo() {
     std::cout << "option name Threads type spin default 1 min 1 max 1024\n";
     std::cout << "option name UCI_ShowWDL type check default true\n";
     std::cout << "option name UCI_Chess960 type check default false\n";
+
+    // Temporary
+    for (auto& param : tunables()) {
+        if (param.name.substr(0, 3) != "SEE")
+            continue;
+        std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min
+                  << " max " << param.max << std::endl;
+    }
 #ifdef TUNE
     for (auto& param : tunables()) {
         std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min
