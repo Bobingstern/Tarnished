@@ -394,6 +394,10 @@ namespace Search {
                     if (verification >= beta)
                         return verification;
                 }
+                // Clover idea
+                else if ((ss - 1)->reduction >= 1024 && !isMateScore(nmpScore) && nmpScore < beta - NMP_DEPTH_INC_BETA_MARGIN())
+                    depth++;
+
             }
         }
 
@@ -522,11 +526,11 @@ namespace Search {
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
 
-                reduction /= 1024;
+                int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction / 1024));
 
-                int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
-
+                ss->reduction = reduction;
                 score = -search<false>(lmrDepth, ply + 1, -alpha - 1, -alpha, true, ss + 1, thread, limit);
+                ss->reduction = 0;
                 // Re-search at normal depth
                 if (score > alpha && lmrDepth < newDepth) {
                     bool doDeeper = score > bestScore + LMR_DEEPER_BASE() + LMR_DEEPER_SCALE() * newDepth;
