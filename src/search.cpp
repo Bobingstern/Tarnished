@@ -327,6 +327,7 @@ namespace Search {
         int score = bestScore;
         int moveCount = 0;
         bool inCheck = thread.board.inCheck();
+        uint8_t ttFlag = TTFlag::FAIL_LOW;
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
 
@@ -347,7 +348,17 @@ namespace Search {
         // We are better than 2 plies ago
         bool improving =
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
-        uint8_t ttFlag = TTFlag::FAIL_LOW;
+
+        bool improvingAfterMove = [&]() {
+            if (inCheck || (ss - 1)->staticEval == EVAL_NONE)
+                return false;
+            return ss->staticEval + (ss - 1)->staticEval > 0;
+        }();
+
+        // Hindsight LMR
+        // If we're static evaluation got better, reduce less in hindsight
+        if (!root && !inCheck && (ss - 1)->reduction >= 3000 && !improvingAfterMove)
+            depth++;
 
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
@@ -522,11 +533,12 @@ namespace Search {
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
 
-                reduction /= 1024;
 
-                int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
+                int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction / 1024));
 
+                ss->reduction = reduction;
                 score = -search<false>(lmrDepth, ply + 1, -alpha - 1, -alpha, true, ss + 1, thread, limit);
+                ss->reduction = 0;
                 // Re-search at normal depth
                 if (score > alpha && lmrDepth < newDepth) {
                     bool doDeeper = score > bestScore + LMR_DEEPER_BASE() + LMR_DEEPER_SCALE() * newDepth;
