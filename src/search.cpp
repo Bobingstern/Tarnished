@@ -357,7 +357,7 @@ namespace Search {
 
         // Hindsight LMR
         // If we're static evaluation got better, reduce less in hindsight
-        if (!root && !inCheck && (ss - 1)->reduction >= 3000 && !improvingAfterMove)
+        if (!root && !inCheck && (ss - 1)->reduction >= 3 && !improvingAfterMove)
             depth++;
 
         // Pruning
@@ -536,7 +536,7 @@ namespace Search {
 
                 int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction / 1024));
 
-                ss->reduction = reduction;
+                ss->reduction = newDepth - lmrDepth;
                 score = -search<false>(lmrDepth, ply + 1, -alpha - 1, -alpha, true, ss + 1, thread, limit);
                 ss->reduction = 0;
                 // Re-search at normal depth
