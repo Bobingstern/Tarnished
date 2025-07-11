@@ -440,7 +440,7 @@ namespace Search {
             if (!root && bestScore > GETTING_MATED) {
                 int lmrDepth = std::max(depth - baseLMR / 1024, 0);
                 // Late Move Pruning
-                if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
+                if (!isPV && !inCheck && moveCount >= 2 + depth * depth / (2 - improving))
                     break;
 
                 if (!isPV && isQuiet && depth <= 4 && thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth) {
@@ -476,10 +476,11 @@ namespace Search {
                 ss->excluded = Move::NO_MOVE;
 
                 if (seScore < sBeta) {
+                    extension = 1;
                     if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN())
-                        extension = 2; // Double extension
-                    else
-                        extension = 1; // Singular Extension
+                        extension++; // Double extension
+                    if (!isPV && seScore < sBeta - SE_TRIPLE_MARGIN())
+                        extension++; // Triple Extension
                 } else if (ttData.score >= beta)
                     extension = -2 + isPV; // Negative Extension
             }
