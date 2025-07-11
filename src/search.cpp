@@ -354,8 +354,10 @@ namespace Search {
             int rfpMargin = RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
-            if (depth <= 6 && ss->eval - rfpMargin >= beta)
-                return ss->eval;
+            if (depth <= 6 && ss->eval - rfpMargin >= beta){
+                int firm = (1 - RFP_FIRM_LERP() / 100.0) * ss->eval + RFP_FIRM_LERP() * beta / 100.0;
+                return !isMateScore(ss->eval) && !isMateScore(beta) ? firm : ss->eval;
+            }
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
@@ -440,7 +442,7 @@ namespace Search {
             if (!root && bestScore > GETTING_MATED) {
                 int lmrDepth = std::max(depth - baseLMR / 1024, 0);
                 // Late Move Pruning
-                if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
+                if (!isPV && !inCheck && moveCount >= 2 + depth * depth / (2 - improving))
                     break;
 
                 if (!isPV && isQuiet && depth <= 4 && thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth) {
@@ -462,7 +464,7 @@ namespace Search {
             // Singular Extensions
             // Sirius conditions
             // https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
-            bool doSE = !root && moveIsNull(ss->excluded) && depth >= SE_MIN_DEPTH() && Move(ttData.move) == move &&
+            bool doSE = !root && moveIsNull(ss->excluded) && depth >= 7 && Move(ttData.move) == move &&
                         ttData.depth >= depth - 3 && ttData.bound != TTFlag::FAIL_LOW && !isMateScore(ttData.score);
 
             int extension = 0;
