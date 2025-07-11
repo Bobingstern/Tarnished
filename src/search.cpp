@@ -306,10 +306,13 @@ namespace Search {
         }
 
         ProbedTTEntry ttData = {};
+        Move ttMove = Move::NO_MOVE;
         bool ttHit = false;
 
         if (moveIsNull(ss->excluded)) {
             ttHit = thread.TT.probe(thread.board.hash(), ply, ttData);
+            if (ttHit)
+                ttMove = Move(ttData.move);
         }
 
         bool ttPV = isPV || (ttHit && ttData.pv);
@@ -326,6 +329,7 @@ namespace Search {
         int score = bestScore;
         int moveCount = 0;
         bool inCheck = thread.board.inCheck();
+        bool ttMoveNoisy = ttHit && (thread.board.at(ttMove.to()) != Piece::NONE || ttMove.typeOf() == Move::ENPASSANT);
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
 
@@ -477,10 +481,9 @@ namespace Search {
 
                 if (seScore < sBeta) {
                     extension = 1;
-                    if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN())
-                        extension++; // Double extension
-                    if (!isPV && seScore < sBeta - SE_TRIPLE_MARGIN())
-                        extension++; // Triple Extension
+                    if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN()) {
+                        extension += 1 + (ttMoveNoisy && seScore < sBeta - SE_TRIPLE_MARGIN());
+                    }
                 } else if (ttData.score >= beta)
                     extension = -2 + isPV; // Negative Extension
             }
