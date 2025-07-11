@@ -319,7 +319,6 @@ namespace Search {
              (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= alpha))) {
             return ttData.score;
         }
-        bool notHashMove = !ttHit || moveIsNull(Move(ttData.move));
 
         int bestScore = -INFINITE;
         int oldAlpha = alpha;
@@ -398,8 +397,7 @@ namespace Search {
         }
 
         // Internal Iterative Reduction
-        bool canIIR = notHashMove && depth >= IIR_MIN_DEPTH() && !inCheck && moveIsNull(ss->excluded);
-        if (canIIR)
+        if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;
 
         // Thought
