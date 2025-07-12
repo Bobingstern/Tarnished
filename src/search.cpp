@@ -440,7 +440,7 @@ namespace Search {
             if (!root && bestScore > GETTING_MATED) {
                 int lmrDepth = std::max(depth - baseLMR / 1024, 0);
                 // Late Move Pruning
-                if (!isPV && !inCheck && moveCount >= LMP_MIN_MOVES_BASE() + depth * depth / (2 - improving))
+                if (!isPV && !inCheck && moveCount >= 2 + depth * depth / (2 - improving))
                     break;
 
                 if (!isPV && isQuiet && depth <= 4 && thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth) {
@@ -448,8 +448,8 @@ namespace Search {
                     continue;
                 }
 
-                int futility = ss->staticEval + FP_SCALE() * depth + FP_OFFSET();
-                if (!inCheck && isQuiet && depth <= 8 && std::abs(alpha) < 2000 && futility <= alpha) {
+                int futility = ss->staticEval + FP_SCALE() * depth + FP_OFFSET() + ss->historyScore / FP_HIST_DIVISOR();
+                if (!inCheck && isQuiet && lmrDepth <= 8 && std::abs(alpha) < 2000 && futility <= alpha) {
                     skipQuiets = true;
                     continue;
                 }
@@ -462,7 +462,7 @@ namespace Search {
             // Singular Extensions
             // Sirius conditions
             // https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
-            bool doSE = !root && moveIsNull(ss->excluded) && depth >= SE_MIN_DEPTH() && Move(ttData.move) == move &&
+            bool doSE = !root && moveIsNull(ss->excluded) && depth >= 7 && Move(ttData.move) == move &&
                         ttData.depth >= depth - 3 && ttData.bound != TTFlag::FAIL_LOW && !isMateScore(ttData.score);
 
             int extension = 0;
