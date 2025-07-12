@@ -234,6 +234,7 @@ namespace Search {
         if (eval > alpha)
             alpha = eval;
 
+        int futility = eval + QS_FUTILITY_MARGIN();
         int bestScore = eval;
         int moveCount = 0;
         Move qBestMove = Move::NO_MOVE;
@@ -248,8 +249,17 @@ namespace Search {
                 return bestScore;
 
             // SEE Pruning
-            if (bestScore > GETTING_MATED && !SEE(thread.board, move, 0))
-                continue;
+            if (bestScore > GETTING_MATED) {
+
+                if (!inCheck && futility <= alpha && !SEE(thread.board, move, 1)) {
+                    if (bestScore < futility)
+                        bestScore = futility;
+                    continue;
+                }
+
+                if (!SEE(thread.board, move, 0))
+                    continue;
+            }
 
             MakeMove(thread.board, move, ss);
             thread.nodes.fetch_add(1, std::memory_order::relaxed);
