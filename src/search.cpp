@@ -629,7 +629,8 @@ namespace Search {
         int score = -INFINITE;
         int lastScore = -INFINITE;
 
-        int64_t avgnps = 0;
+        int rollingEval = evaluate(threadInfo.board, baseAcc);
+
         for (int depth = 1; depth <= limit.depth; depth++) {
             auto aborted = [&]() {
                 if (threadInfo.stopped.load())
@@ -646,8 +647,6 @@ namespace Search {
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
             ss->accumulator = baseAcc;
-            int eval = evaluate(threadInfo.board, ss->accumulator);
-
             
             // Aspiration Windows
             if (depth >= MIN_ASP_WINDOW_DEPTH()) {
@@ -714,10 +713,17 @@ namespace Search {
                 std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " time " << limit.timer.elapsed() << " pv ";
                 std::cout << pvss.str() << std::endl;
             }
-            // Time control (soft)
+            // Complexity time management
+            // The idea is that if the search score varies a lot
+            // from the initial static eval, it's likely a complex
+            // position and we should give more time to it
+            // The eval also "rolls" with the score by some k so that it 
+            // stays relevant to the current depth
             double complexity = 0;
-            if (!isMateScore(score))
-                complexity = 0.8 * std::abs(eval - score) * std::log(static_cast<double>(depth));
+            if (!isMateScore(score)) {
+                complexity = 0.8 * std::abs(rollingEval - score) * std::log(static_cast<double>(depth));
+                rollingEval = 0.9 * rollingEval + 0.1 * score;
+            }
             if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes, complexity))
                 break;
         }
