@@ -646,7 +646,9 @@ namespace Search {
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
             ss->accumulator = baseAcc;
+            int eval = evaluate(threadInfo.board, ss->accumulator);
 
+            
             // Aspiration Windows
             if (depth >= MIN_ASP_WINDOW_DEPTH()) {
                 int delta = INITIAL_ASP_WINDOW();
@@ -712,7 +714,11 @@ namespace Search {
                 std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " time " << limit.timer.elapsed() << " pv ";
                 std::cout << pvss.str() << std::endl;
             }
-            if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes))
+            // Time control (soft)
+            double complexity = 0;
+            if (!isMateScore(score))
+                complexity = 0.8 * std::abs(eval - score) * std::log(static_cast<double>(depth));
+            if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes, complexity))
                 break;
         }
 
