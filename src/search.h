@@ -260,11 +260,13 @@ namespace Search {
                 updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
                 updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
                 // Continuation Correction History
-                if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
-                    auto &table = *(ss - 2)->contCorrhist;
-                    updateEntry(
-                        table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()]
-                    );
+                for (int p : {2, 3}) {
+                    if (ss->ply >= 2 && (ss - p)->contCorrhist != nullptr && !moveIsNull((ss - p)->move) && !moveIsNull((ss - 1)->move)) {
+                        auto &table = *(ss - p)->contCorrhist;
+                        updateEntry(
+                            table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()]
+                        );
+                    }
                 }
             }
             // ----------------- History getters
@@ -312,7 +314,12 @@ namespace Search {
                 if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
                     auto &table = *(ss - 2)->contCorrhist;
                     correction += 
-                        CONT_CORR_WEIGHT() * table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()];
+                        CONT_CORR_ONE_WEIGHT() * table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()];
+                }
+                if (ss->ply >= 3 && (ss - 3)->contCorrhist != nullptr && !moveIsNull((ss - 3)->move) && !moveIsNull((ss - 1)->move)) {
+                    auto &table = *(ss - 3)->contCorrhist;
+                    correction += 
+                        CONT_CORR_TWO_WEIGHT() * table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()];
                 }
 
                 int corrected = eval + correction / 2048;
