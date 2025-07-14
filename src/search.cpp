@@ -353,6 +353,7 @@ namespace Search {
             // Reverse Futility Pruning
             int rfpMargin = RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
+            rfpMargin += (ss - 1)->historyScore / RFP_HIST_DIVISOR();
 
             if (depth <= 6 && ss->eval - rfpMargin >= beta)
                 return ss->eval;
