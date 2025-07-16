@@ -67,6 +67,7 @@ namespace Search {
             int eval;
             int historyScore;
             int ply;
+            int reduction;
 
             uint64_t pawnKey;
             uint64_t majorKey;

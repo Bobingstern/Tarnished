@@ -350,6 +350,10 @@ namespace Search {
 
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
+            // Hindsight Extension
+            if ((ss - 1)->reduction >= 4 && (ss - 1)->staticEval != EVAL_NONE && (ss - 1)->staticEval + ss->staticEval <= 0)
+                depth++;
+
             // Reverse Futility Pruning
             int rfpMargin = RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
@@ -532,7 +536,9 @@ namespace Search {
 
                 int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
 
+                ss->reduction = newDepth - lmrDepth;
                 score = -search<false>(lmrDepth, ply + 1, -alpha - 1, -alpha, true, ss + 1, thread, limit);
+                ss->reduction = 0;
                 // Re-search at normal depth
                 if (score > alpha && lmrDepth < newDepth) {
                     bool doDeeper = score > bestScore + LMR_DEEPER_BASE() + LMR_DEEPER_SCALE() * newDepth;
