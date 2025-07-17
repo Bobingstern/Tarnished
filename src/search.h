@@ -178,6 +178,8 @@ namespace Search {
 
             // indexed by [stm][from][to]
             MultiArray<int, 2, 64, 64> history;
+            // indexed by [stm][hash % entries][pt][to]
+            MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> pawnHistory;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> contCorrhist;
@@ -198,6 +200,7 @@ namespace Search {
                 this->board = other.board;
                 nodes.store(other.nodes.load());
                 conthist = other.conthist;
+                pawnHistory = other.pawnHistory;
                 contCorrhist = other.contCorrhist;
                 capthist = other.capthist;
                 pawnCorrhist = other.pawnCorrhist;
@@ -221,14 +224,14 @@ namespace Search {
 
             // Butterfly history
             void updateHistory(Color c, Move m, int bonus) {
-                int clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+                int clamped = std::clamp(int(bonus), int(-MAX_HISTORY), int(MAX_HISTORY));
                 history[(int)c][m.from().index()][m.to().index()] +=
                     clamped - history[(int)c][m.from().index()][m.to().index()] * std::abs(clamped) / MAX_HISTORY;
             }
 
             // Capture History
             void updateCapthist(Board& board, Move m, int bonus) {
-                int clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+                int clamped = std::clamp(int(bonus), int(-MAX_HISTORY), int(MAX_HISTORY));
                 int& entry = capthist[board.sideToMove()][board.at<PieceType>(m.from())][board.at<PieceType>(m.to())]
                                      [m.to().index()];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
@@ -239,7 +242,7 @@ namespace Search {
                 auto updateEntry = [&](int16_t& entry) {
                     int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
                     entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
-                    entry = std::clamp((int)entry, int(-MAX_HISTORY), int(MAX_HISTORY));
+                    entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
                 };
                 if (ss->ply > 0 && (ss - 1)->conthist != nullptr)
                     updateEntry(
@@ -249,9 +252,19 @@ namespace Search {
                         (*(ss - 2)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()]);
             }
 
+            // Pawn History
+            void updatePawnhist(Stack* ss, Board& board, Move m, int16_t bonus) {
+                int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+                int16_t& entry = 
+                    pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+                entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+                entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
+            }
+
             void updateQuietHistory(Stack* ss, Move m, int bonus) {
                 updateHistory(board.sideToMove(), m, bonus);
                 updateConthist(ss, board, m, int16_t(bonus));
+                updatePawnhist(ss, board, m, int16_t(bonus));
             }
 
             // Static eval correction history
@@ -295,8 +308,13 @@ namespace Search {
                 return (*c)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
             }
 
+            int16_t getPawnhist(Board& board, Move m, Stack* ss) {
+                return pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+            }
+
             int getQuietHistory(Board& board, Move m, Stack* ss) {
                 int hist = getHistory(board.sideToMove(), m);
+                hist += getPawnhist(board, m, ss);
                 if (ss != nullptr && ss->ply > 0 && (ss - 1)->conthist != nullptr)
                     hist += getConthist((ss - 1)->conthist, board, m);
                 if (ss != nullptr && ss->ply > 1 && (ss - 2)->conthist != nullptr)
@@ -329,6 +347,7 @@ namespace Search {
                 bestMove = Move::NO_MOVE;
                 history.fill((int)DEFAULT_HISTORY);
                 conthist.fill(DEFAULT_HISTORY);
+                pawnHistory.fill(DEFAULT_HISTORY);
                 contCorrhist.fill(DEFAULT_HISTORY);
                 capthist.fill((int)DEFAULT_HISTORY);
                 pawnCorrhist.fill(DEFAULT_HISTORY);
