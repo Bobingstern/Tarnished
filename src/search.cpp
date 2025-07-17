@@ -328,6 +328,7 @@ namespace Search {
         bool inCheck = thread.board.inCheck();
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
+        (ss + 1)->failHighs = 0;
 
         // Get the corrected static evaluation if we're not in singular search or check
         int corrplexity = 0;
@@ -527,7 +528,9 @@ namespace Search {
 
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
-
+                // This will be factorized later
+                reduction += 1024 * ((ss + 1)->failHighs > 2);
+                
                 reduction /= 1024;
 
                 int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
@@ -569,6 +572,7 @@ namespace Search {
             if (score >= beta) {
                 ttFlag = TTFlag::BETA_CUT;
                 ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
+                ss->failHighs++;
                 // Butterfly History
                 // Continuation History
                 // Capture History
