@@ -235,6 +235,7 @@ namespace Search {
             alpha = eval;
 
         int bestScore = eval;
+        int futility = inCheck ? -INFINITE : eval + QS_FP_MARGIN();
         int moveCount = 0;
         Move qBestMove = Move::NO_MOVE;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
@@ -250,6 +251,11 @@ namespace Search {
             // SEE Pruning
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, 0))
                 continue;
+            // Futility Pruning
+            if (!inCheck && futility <= alpha && !SEE(thread.board, move, 1)) {
+                bestScore = std::max(bestScore, futility);
+                continue;
+            }
 
             MakeMove(thread.board, move, ss);
             thread.nodes.fetch_add(1, std::memory_order::relaxed);
@@ -573,9 +579,6 @@ namespace Search {
                 ttFlag = TTFlag::BETA_CUT;
                 ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
                 ss->failHighs++;
-                // Butterfly History
-                // Continuation History
-                // Capture History
                 int bonus = historyBonus(depth);
                 int malus = historyMalus(depth);
                 if (isQuiet) {
