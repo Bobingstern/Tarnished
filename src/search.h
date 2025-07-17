@@ -249,6 +249,11 @@ namespace Search {
                         (*(ss - 2)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()]);
             }
 
+            void updateQuietHistory(Stack* ss, Move m, int bonus) {
+                updateHistory(board.sideToMove(), m, bonus);
+                updateConthist(ss, board, m, int16_t(bonus));
+            }
+
             // Static eval correction history
             void updateCorrhist(Stack* ss, Board& board, int bonus) {
                 auto updateEntry = [&](int16_t& entry) {
