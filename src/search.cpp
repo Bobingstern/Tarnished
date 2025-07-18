@@ -489,8 +489,12 @@ namespace Search {
                         extension = 2; // Double extension
                     else
                         extension = 1; // Singular Extension
-                } else if (ttData.score >= beta)
+                } 
+                else if (ttData.score >= beta)
                     extension = -2 + isPV; // Negative Extension
+                else if (cutnode)
+                    extension = -2;
+
             }
 
             // Update Continuation History
