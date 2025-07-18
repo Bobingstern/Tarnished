@@ -229,8 +229,9 @@ namespace Search {
             eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
         }
 
-        if (eval >= beta)
-            return eval;
+        if (eval >= beta){
+            return (eval + beta) / 2;
+        }
         if (eval > alpha)
             alpha = eval;
 
@@ -271,6 +272,9 @@ namespace Search {
         }
         if (!moveCount && inCheck)
             return -MATE + ply;
+
+        if (bestScore >= beta && !isMateScore(bestScore))
+            bestScore = (bestScore + beta) / 2;
 
         thread.TT.store(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ply, ttPV);
 
