@@ -485,8 +485,9 @@ namespace Search {
                 ss->excluded = Move::NO_MOVE;
 
                 if (seScore < sBeta) {
-                    if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN())
-                        extension = 2; // Double extension
+                    if (!isPV && seScore < sBeta - SE_DOUBLE_EXT_MARGIN()){
+                        extension = 2 + (isQuiet && seScore < sBeta - SE_TRIPLE_EXT_MARGIN()); // Double and triple extension
+                    }
                     else
                         extension = 1; // Singular Extension
                 } 
@@ -577,9 +578,7 @@ namespace Search {
                 ttFlag = TTFlag::BETA_CUT;
                 ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
                 ss->failHighs++;
-                // Butterfly History
-                // Continuation History
-                // Capture History
+
                 int bonus = historyBonus(depth);
                 int malus = historyMalus(depth);
                 if (isQuiet) {
