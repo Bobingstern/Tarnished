@@ -403,13 +403,13 @@ namespace Search {
 
         // ProbCut
         int probcutBeta = beta + PROBCUT_BETA_MARGIN();
-        if (!isPV && depth >= 5 && !isMateScore(beta) && 
+        if (!ttPV && depth >= 5 && !isMateScore(beta) && 
             (!ttHit || ttData.depth < depth - 3 || ttData.score >= probcutBeta)) {
 
             MovePicker probcutMP(&thread, ss, ttData.move, true);
             Move move;
-            int probcutSEEMargin = (probcutBeta - ss->staticEval) * 10 / 16;
-            int probcutDepth = depth - 4;
+            int probcutSEEMargin = (probcutBeta - ss->staticEval);
+            int probcutDepth = std::max(depth - 3, 1);
 
             while (!moveIsNull(move = probcutMP.nextMove())) {
                 if (thread.stopped.load() || thread.exiting.load())
@@ -425,12 +425,12 @@ namespace Search {
 
                 int score = -qsearch<false>(ply + 1, -probcutBeta, -probcutBeta + 1, ss + 1, thread, limit);
                 if (score >= probcutBeta && probcutDepth >= 0)
-                    score = -search<false>(probcutDepth, ply + 1, -probcutBeta, -probcutBeta + 1, !cutnode, ss + 1, thread, limit);
+                    score = -search<false>(probcutDepth - 1, ply + 1, -probcutBeta, -probcutBeta + 1, !cutnode, ss + 1, thread, limit);
 
                 UnmakeMove(thread.board, move);
 
                 if (score >= probcutBeta) {
-                    thread.TT.store(thread.board.hash(), move, score, rawStaticEval, TTFlag::BETA_CUT, probcutDepth + 1, ply, ttPV);
+                    thread.TT.store(thread.board.hash(), move, score, rawStaticEval, TTFlag::BETA_CUT, probcutDepth, ply + 1, ttPV);
                     return score;
                 }
 
