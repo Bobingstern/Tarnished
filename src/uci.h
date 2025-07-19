@@ -22,7 +22,8 @@ enum InputCommands {
     EVAL = 26,
     PRINT = 112,
     DATAGEN = 124,
-    WAIT = 15
+    WAIT = 15,
+    CONFIG = 13
 };
 bool GetInput(char* str) {
     memset(str, 0, INPUT_SIZE);

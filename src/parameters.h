@@ -20,7 +20,7 @@ using u128 = std::_Unsigned128;
 using u128 = unsigned __int128;
 #endif
 
-// #define TUNE
+#define TUNE
 // #define LMR_TUNE
 
 // Struct for tunable parameters
@@ -47,8 +47,8 @@ constexpr int16_t NNUE_SCALE = 400;
 constexpr int OUTPUT_BUCKETS = 8;
 
 // Factorized LMR arrays
-// {isQuiet, !isPV, improving, cutnode, ttpv, tthit}
-const int LMR_ONE_COUNT = 6;
+// {isQuiet, !isPV, improving, cutnode, ttpv, tthit, failhigh > 2}
+const int LMR_ONE_COUNT = 7;
 const int LMR_TWO_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) / 2;
 const int LMR_THREE_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) * (LMR_ONE_COUNT - 2) / 6;
 extern std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR;
@@ -59,6 +59,7 @@ extern std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR;
 std::list<TunableParam>& tunables();
 TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
 int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features);
+void printOBConfig();
 void printWeatherFactoryConfig();
 
 #define TUNABLE_PARAM(name, val, min, max, step)                                                                       \
@@ -83,6 +84,20 @@ TUNABLE_PARAM(HIST_BONUS_OFFSET, 182, 64, 768, 64);
 TUNABLE_PARAM(HIST_MALUS_QUADRATIC, 5, 1, 10, 1)
 TUNABLE_PARAM(HIST_MALUS_LINEAR, 283, 64, 384, 32);
 TUNABLE_PARAM(HIST_MALUS_OFFSET, 169, 64, 768, 64);
+
+// Time Management
+TUNABLE_PARAM(NODE_TM_BASE, 150, 30, 200, 5)
+TUNABLE_PARAM(NODE_TM_SCALE, 135, 30, 200, 5)
+TUNABLE_PARAM(COMPLEXITY_TM_SCALE, 80, 30, 200, 5)
+TUNABLE_PARAM(COMPLEXITY_TM_BASE, 70, 30, 200, 5)
+TUNABLE_PARAM(COMPLEXITY_TM_DIVISOR, 400, 200, 800, 10)
+
+// SEE
+TUNABLE_PARAM(PAWN_VALUE, 100, 50, 200, 7)
+TUNABLE_PARAM(KNIGHT_VALUE, 316, 300, 700, 25)
+TUNABLE_PARAM(BISHOP_VALUE, 328, 300, 700, 25)
+TUNABLE_PARAM(ROOK_VALUE, 493, 400, 1000, 30)
+TUNABLE_PARAM(QUEEN_VALUE, 982, 800, 1600, 40)
 
 // Search Parameters
 TUNABLE_PARAM(RFP_SCALE, 76, 30, 100, 8);
@@ -118,7 +133,9 @@ TUNABLE_PARAM(LMR_BASE_SCALE, 979, 256, 2048, 64)
 TUNABLE_PARAM(LMR_DEEPER_BASE, 38, 16, 64, 4)
 TUNABLE_PARAM(LMR_DEEPER_SCALE, 4, 3, 12, 1)
 
-TUNABLE_PARAM(SEE_PRUNING_SCALAR, -90, -128, -16, 16)
+TUNABLE_PARAM(SEE_NOISY_SCALE, -90, -128, -16, 16)
+TUNABLE_PARAM(SEE_QUIET_SCALE, -90, -128, -16, 16)
+TUNABLE_PARAM(QS_SEE_MARGIN, 0, -2000, 200, 30)
 
 TUNABLE_PARAM(MIN_ASP_WINDOW_DEPTH, 4, 3, 8, 1);
 TUNABLE_PARAM(INITIAL_ASP_WINDOW, 37, 8, 64, 4);

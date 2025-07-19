@@ -248,7 +248,7 @@ namespace Search {
                 return bestScore;
 
             // SEE Pruning
-            if (bestScore > GETTING_MATED && !SEE(thread.board, move, 0))
+            if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
                 continue;
 
             MakeMove(thread.board, move, ss);
@@ -415,10 +415,6 @@ namespace Search {
 
         bool skipQuiets = false;
 
-        // Precomputed lmr reductions
-        int lmrConvolutionQuiet = lmrConvolution({true, !isPV, improving, cutnode, ttPV, ttHit});
-        int lmrConvolutionNoisy = lmrConvolution({false, !isPV, improving, cutnode, ttPV, ttHit});
-
         while (!moveIsNull(move = picker.nextMove())) {
             if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
@@ -463,7 +459,8 @@ namespace Search {
                     break;
                 }
 
-                if (!SEE(thread.board, move, SEE_PRUNING_SCALAR() * lmrDepth))
+                int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth : SEE_NOISY_SCALE() * lmrDepth;
+                if (!SEE(thread.board, move, seeMargin))
                     continue;
 
             }
@@ -524,16 +521,9 @@ namespace Search {
                 // | table of 6, two table of 6x5/2=15, and three way of         |
                 // | 6x5x3/3!=20. Thanks to AGE for this idea                    |
                 // ---------------------------------------------------------------
-
-                // This can be incrementally updated, since for the current feature set
-                // only the first feature changes over the moveloop (isQuiet)
-                // we simply precompute both scenarios and use those
-                reduction += isQuiet ? lmrConvolutionQuiet : lmrConvolutionNoisy;
-
+                reduction += lmrConvolution({isQuiet, !isPV, improving, cutnode, ttPV, ttHit, ((ss + 1)->failHighs > 2)});
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
-                // This will be factorized later
-                reduction += 1024 * ((ss + 1)->failHighs > 2);
                 
                 reduction /= 1024;
 
@@ -731,7 +721,7 @@ namespace Search {
             // Time control (soft)
             double complexity = 0;
             if (!isMateScore(score))
-                complexity = 0.8 * std::abs(eval - score) * std::log(static_cast<double>(depth));
+                complexity = (COMPLEXITY_TM_SCALE() / 100.0) * std::abs(eval - score) * std::log(static_cast<double>(depth));
             if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes, complexity))
                 break;
         }

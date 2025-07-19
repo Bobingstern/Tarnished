@@ -148,6 +148,11 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
         }
 
         Search::fillLmr();
+        PieceValue[0] = PAWN_VALUE();
+        PieceValue[1] = KNIGHT_VALUE();
+        PieceValue[2] = BISHOP_VALUE();
+        PieceValue[3] = ROOK_VALUE();
+        PieceValue[4] = QUEEN_VALUE();
     }
 }
 void UCIInfo() {
@@ -164,13 +169,15 @@ void UCIInfo() {
     }
 #endif
 
-#ifdef LMR_TUNE
+#if defined(LMR_TUNE) || defined(TUNE)
+    #ifndef TUNE
     for (auto& param : tunables()) {
         if (param.name.substr(0, 3) != "LMR")
             continue;
         std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min
                   << " max " << param.max << std::endl;
     }
+    #endif
     // For pair
     for (int i = 0; i < LMR_ONE_PAIR.size(); i++) {
         std::string s = "LMR_ONE_PAIR_" + std::to_string(i);
@@ -360,6 +367,7 @@ int main(int agrc, char* argv[]) {
             case BENCH      : bench(searcher);                            break;
             case DATAGEN    : BeginDatagen(str);                          break;
             case WAIT       : searcher.waitForSearchFinished();           break;
+            case CONFIG     : printOBConfig();                            break;
 
         }
     }

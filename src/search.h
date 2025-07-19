@@ -143,8 +143,8 @@ namespace Search {
                     return false;
 
                 double prop = static_cast<double>(nodeCounts[bestMove.move() & 4095]) / static_cast<double>(totalNodes);
-                double scale = (1.5 - prop) * 1.35;
-                double compScale = std::max(0.7 + std::clamp(complexity, 0.0, 200.0) / 400.0, 1.0);
+                double scale = (NODE_TM_BASE() / 100.0 - prop) * (NODE_TM_SCALE() / 100.0);
+                double compScale = std::max((COMPLEXITY_TM_BASE() / 100.0) + std::clamp(complexity, 0.0, 200.0) / static_cast<double>(COMPLEXITY_TM_DIVISOR()), 1.0);
                 return (static_cast<int64_t>(timer.elapsed()) >= softtime * scale * compScale);
             }
     };

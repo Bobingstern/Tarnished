@@ -2,6 +2,7 @@
 
 #include "external/chess.hpp"
 #include "nnue.h"
+#include "parameters.h"
 #include <bit>
 #include <cassert>
 #include <cstdint>
@@ -32,14 +33,8 @@ struct StateInfo {
             kingBlockers[1] = Bitboard(0);
         }
 };
-// Values taken from SF
-constexpr int PawnValue = 100;
-constexpr int KnightValue = 316;
-constexpr int BishopValue = 328;
-constexpr int RookValue = 493;
-constexpr int QueenValue = 982;
 
-inline std::array<int, 8> PieceValue = {PawnValue, KnightValue, BishopValue, RookValue, QueenValue, 0, 0};
+extern std::array<int, 8> PieceValue;
 
 // [stm][side]
 // kingside is 0, queenside 1
