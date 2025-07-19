@@ -401,6 +401,43 @@ namespace Search {
         if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;
 
+        // ProbCut
+        int probcutBeta = beta + PROBCUT_BETA_MARGIN();
+        if (!isPV && depth >= 5 && !isMateScore(beta) && 
+            (!ttHit || ttData.depth < depth - 3 || ttData.score >= probcutBeta)) {
+
+            MovePicker probcutMP(&thread, ss, ttData.move, true);
+            Move move;
+            int probcutSEEMargin = (probcutBeta - ss->staticEval) * 10 / 16;
+            int probcutDepth = depth - 4;
+
+            while (!moveIsNull(move = probcutMP.nextMove())) {
+                if (thread.stopped.load() || thread.exiting.load())
+                    return alpha;
+
+                if (!thread.board.isCapture(move))
+                    continue;
+
+                if (!SEE(thread.board, move, probcutSEEMargin))
+                    continue;
+
+                MakeMove(thread.board, move, ss);
+
+                int score = -qsearch<false>(ply + 1, -probcutBeta, -probcutBeta + 1, ss + 1, thread, limit);
+                if (score >= probcutBeta && probcutDepth >= 0)
+                    score = -search<false>(probcutDepth, ply + 1, -probcutBeta, -probcutBeta + 1, !cutnode, ss + 1, thread, limit);
+
+                UnmakeMove(thread.board, move);
+
+                if (score >= probcutBeta) {
+                    thread.TT.store(thread.board.hash(), move, score, rawStaticEval, TTFlag::BETA_CUT, probcutDepth + 1, ply, ttPV);
+                    return score;
+                }
+
+
+            }
+        }
+
         // Thought
         // What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
         // and use some sort of data generation method to create a pruning heuristic
