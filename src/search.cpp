@@ -349,6 +349,11 @@ namespace Search {
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
+        // Hindsight Reduction
+        if ((ss - 1)->reduction >= 1 && depth >= 2 && !inCheck && 
+            (ss - 1)->staticEval != EVAL_NONE && ss->staticEval + (ss - 1)->staticEval > HINDSIGHT_REDUCTION_MARGIN())
+            depth--;
+
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
@@ -529,7 +534,9 @@ namespace Search {
 
                 int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
 
+                ss->reduction = newDepth - lmrDepth;
                 score = -search<false>(lmrDepth, ply + 1, -alpha - 1, -alpha, true, ss + 1, thread, limit);
+                ss->reduction = 0;
                 // Re-search at normal depth
                 if (score > alpha && lmrDepth < newDepth) {
                     bool doDeeper = score > bestScore + LMR_DEEPER_BASE() + LMR_DEEPER_SCALE() * newDepth;
