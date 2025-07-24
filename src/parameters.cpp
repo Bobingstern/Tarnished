@@ -11,11 +11,13 @@
 using namespace chess;
 
 // LMR
-std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR = {6, 682, -1104, 1994, -928, -295};
-std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR = {-256, -14, 53,   178, -54, -188, 84, 74,
-                                               -111, 47,  -142, -79, -7,  -91,  334};
-std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR = {-205, 95,  -65,  -125, 58,  97,  96,   32, 155, -21,
-                                                   -101, -30, -139, -97,  -75, 117, -207, 68, 9,   36};
+std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR = {66, 978, -835, 1797, -818, -155, 851};
+std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR = {-84, -175, 88, 166, -53, 153, -234, 220, -24, -31,
+                                                128, -21, -198, 38, -103, 9, -160, 83, 353, -206, 76};
+std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR = {-181, -108, -143, -189, -219, 187, -180, 158, 10, -10,
+                                                    228, -84, 123, 76, -35, -47, 142, -116, 22, 162,
+                                                    -57, -145, 207, 22, -37, -286, 137, 233, -131, 39,
+                                                    2, 169, 19, 87, -85};
 // Code from Sirius
 // https://github.com/mcthouacbb/Sirius/blob/b80a3d18461d97e94ba3102bc3fb422db66f4e7d/Sirius/src/search_params.cpp#L17C1-L29C2
 std::list<TunableParam>& tunables() {
@@ -64,4 +66,28 @@ void printWeatherFactoryConfig() {
         std::cout << "\n";
     }
     std::cout << "}" << std::endl;
+}
+
+void printOBConfig() {
+    for (auto& param : tunables()) {
+        std::cout << param.name << ", ";
+        std::cout << "int, ";
+        std::cout << param.defaultValue << ", ";
+        std::cout << param.min << ", ";
+        std::cout << param.max << ", ";
+        std::cout << param.step << ", ";
+        std::cout << "0.002" << std::endl;
+    }
+    for (int i = 0; i < LMR_ONE_PAIR.size(); i++) {
+        std::cout << "LMR_ONE_PAIR_" + std::to_string(i) << ", int, " << LMR_ONE_PAIR[i];
+        std::cout << ", -2048, 2048, 200, 0.002" << std::endl;
+    }
+    for (int i = 0; i < LMR_TWO_PAIR.size(); i++) {
+        std::cout << "LMR_TWO_PAIR_" + std::to_string(i) << ", int, " << LMR_TWO_PAIR[i];
+        std::cout << ", -2048, 2048, 200, 0.002" << std::endl;
+    }
+    for (int i = 0; i < LMR_THREE_PAIR.size(); i++) {
+        std::cout << "LMR_THREE_PAIR_" + std::to_string(i) << ", int, " << LMR_THREE_PAIR[i];
+        std::cout << ", -2048, 2048, 200, 0.002" << std::endl;
+    }
 }

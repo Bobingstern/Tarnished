@@ -9,6 +9,7 @@
 
 Bitboard BetweenBB[64][64] = {};
 Bitboard Rays[64][8] = {};
+std::array<int, 8> PieceValue = {PAWN_VALUE(), KNIGHT_VALUE(), BISHOP_VALUE(), ROOK_VALUE(), QUEEN_VALUE(), 0, 0};
 
 // Pawn Hash reset
 uint64_t resetPawnHash(Board& board) {
@@ -283,32 +284,32 @@ bool SEE(Board& board, Move& move, int margin) {
         res ^= 1;
 
         if ((bb = stmAttackers & board.pieces(PieceType::PAWN))) {
-            if ((swap = PawnValue - swap) < res)
+            if ((swap = PAWN_VALUE() - swap) < res)
                 break;
             occupied ^= Bitboard::fromSquare(bb.lsb());
             attackers |= attacks::bishop(to, occupied) &
                          (board.pieces(PieceType::BISHOP) |
                           board.pieces(PieceType::QUEEN));
         } else if ((bb = stmAttackers & board.pieces(PieceType::KNIGHT))) {
-            if ((swap = KnightValue - swap) < res)
+            if ((swap = KNIGHT_VALUE() - swap) < res)
                 break;
             occupied ^= Bitboard::fromSquare(bb.lsb());
         } else if ((bb = stmAttackers & board.pieces(PieceType::BISHOP))) {
-            if ((swap = BishopValue - swap) < res)
+            if ((swap = BISHOP_VALUE() - swap) < res)
                 break;
             occupied ^= Bitboard::fromSquare(bb.lsb());
             attackers |= attacks::bishop(to, occupied) &
                          (board.pieces(PieceType::BISHOP) |
                           board.pieces(PieceType::QUEEN));
         } else if ((bb = stmAttackers & board.pieces(PieceType::ROOK))) {
-            if ((swap = RookValue - swap) < res)
+            if ((swap = ROOK_VALUE() - swap) < res)
                 break;
             occupied ^= Bitboard::fromSquare(bb.lsb());
             attackers |=
                 attacks::rook(to, occupied) & (board.pieces(PieceType::ROOK) |
                                                board.pieces(PieceType::QUEEN));
         } else if ((bb = stmAttackers & board.pieces(PieceType::QUEEN))) {
-            swap = QueenValue - swap;
+            swap = QUEEN_VALUE() - swap;
             occupied ^= Bitboard::fromSquare(bb.lsb());
             attackers |= attacks::bishop(to, occupied) &
                          (board.pieces(PieceType::BISHOP) |
