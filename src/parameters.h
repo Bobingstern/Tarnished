@@ -20,7 +20,7 @@ using u128 = std::_Unsigned128;
 using u128 = unsigned __int128;
 #endif
 
-#define TUNE
+//#define TUNE
 // #define LMR_TUNE
 
 // Struct for tunable parameters
