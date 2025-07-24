@@ -11,11 +11,13 @@
 using namespace chess;
 
 // LMR
-std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR = {6, 682, -1104, 1994, -928, -295, 1024};
-std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR = {-256, -14, 53, 178, -54, 0, -188, 84, 74,
-                                               -111, 0, 47,  -142, -79, 0, -7,  -91,  0, 334, 0, 0};
-std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR = {-205, 95,  -65,  -125, 0, 58,  97,  96,  0,  32, 155, 0, -21,
-                                                   0, 0, -101, -30, -139, 0, -97,  -75, 0, 117, 0, 0, -207, 68, 0, 9, 0, 0, 36, 0, 0, 0};
+std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR = {66, 978, -835, 1797, -818, -155, 851};
+std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR = {-84, -175, 88, 166, -53, 153, -234, 220, -24, -31,
+                                                128, -21, -198, 38, -103, 9, -160, 83, 353, -206, 76};
+std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR = {-181, -108, -143, -189, -219, 187, -180, 158, 10, -10,
+                                                    228, -84, 123, 76, -35, -47, 142, -116, 22, 162,
+                                                    -57, -145, 207, 22, -37, -286, 137, 233, -131, 39,
+                                                    2, 169, 19, 87, -85};
 // Code from Sirius
 // https://github.com/mcthouacbb/Sirius/blob/b80a3d18461d97e94ba3102bc3fb422db66f4e7d/Sirius/src/search_params.cpp#L17C1-L29C2
 std::list<TunableParam>& tunables() {
