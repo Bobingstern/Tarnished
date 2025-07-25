@@ -41,6 +41,7 @@ template <typename IntType> inline IntType readLittleEndian(std::istream& stream
 struct Accumulator {
         alignas(64) std::array<int16_t, HL_N> white;
         alignas(64) std::array<int16_t, HL_N> black;
+        std::array<uint64_t, 2> hash;
 
         void refresh(Board& board);
         void print();
@@ -48,6 +49,8 @@ struct Accumulator {
         void quiet(Color stm, Square add, PieceType addPT, Square sub, PieceType subPT);
         void capture(Color stm, Square add, PieceType addPT, Square sub1, PieceType subPT1, Square sub2,
                      PieceType subPT2);
+
+        void computeHash();
 };
 
 struct NNUE {

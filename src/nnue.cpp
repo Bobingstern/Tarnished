@@ -224,6 +224,9 @@ void Accumulator::refresh(Board& board) {
     white = network.H1Bias;
     black = network.H1Bias;
 
+    hash[0] = 0;
+    hash[1] = 0;
+
     while (whiteBB) {
         Square sq = whiteBB.pop();
 
@@ -252,9 +255,24 @@ void Accumulator::refresh(Board& board) {
         for (int i = 0; i < HL_N; i++) {
             // Do the matrix mutliply for the next layer
             white[i] += network.H1[wf * HL_N + i];
-            black[i] += network.H1[bf * HL_N + i];
+            black[i] += network.H1[bf * HL_N + i];            
         }
     }
+    computeHash();
+    
+}
+
+void Accumulator::computeHash() {
+    hash[0] = 0;
+    hash[1] = 0;
+
+    // Random Zobrist hashing
+    hash[0] ^= HL_CORRHIST_ZOBRIST[(white[0] % 16384 + 16383) / 256];
+    hash[0] ^= HL_CORRHIST_ZOBRIST[(white[1] % 16384 + 16383) / 256 + 64];
+
+    hash[1] ^= HL_CORRHIST_ZOBRIST[(black[0] % 16384 + 16383) / 256];
+    hash[1] ^= HL_CORRHIST_ZOBRIST[(black[1] % 16384 + 16383) / 256 + 64];
+    
 }
 
 void Accumulator::print() {
@@ -278,6 +296,7 @@ void Accumulator::quiet(Color stm, Square add, PieceType addPT, Square sub,
         white[i] += network.H1[addW * HL_N + i] - network.H1[subW * HL_N + i];
         black[i] += network.H1[addB * HL_N + i] - network.H1[subB * HL_N + i];
     }
+    computeHash();
 }
 // Capture Accumulation
 void Accumulator::capture(Color stm, Square add, PieceType addPT, Square sub1,
@@ -297,4 +316,5 @@ void Accumulator::capture(Color stm, Square add, PieceType addPT, Square sub1,
         black[i] += network.H1[addB * HL_N + i] - network.H1[subB1 * HL_N + i] -
                     network.H1[subB2 * HL_N + i];
     }
+    computeHash();
 }

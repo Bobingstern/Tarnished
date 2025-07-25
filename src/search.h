@@ -191,6 +191,7 @@ namespace Search {
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> minorCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
+            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteHLCorrhist;
 
             ThreadInfo(ThreadType t, TTable& tt, Searcher* s);
             ThreadInfo(int id, TTable& tt, Searcher* s);
@@ -208,6 +209,7 @@ namespace Search {
                 minorCorrhist = other.minorCorrhist;
                 whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
                 blackNonPawnCorrhist = other.blackNonPawnCorrhist;
+                whiteHLCorrhist = other.whiteHLCorrhist;
             }
             void exit();
             void startSearching();
@@ -278,6 +280,7 @@ namespace Search {
                 updateEntry(minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES]);
                 updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
                 updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
+                updateEntry(whiteHLCorrhist[board.sideToMove()][accumulator.hash[0] % CORR_HIST_ENTRIES]);
                 // Continuation Correction History
                 if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
                     auto &table = *(ss - 2)->contCorrhist;
@@ -331,6 +334,7 @@ namespace Search {
                               whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES];
                 correction += NON_PAWN_NSTM_CORR_WEIGHT() *
                               blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
+                correction += WHITE_HL_CORRHIST_WEIGHT() * whiteHLCorrhist[board.sideToMove()][accumulator.hash[0] % CORR_HIST_ENTRIES];
 
                 // Continuation Correction History
                 if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
@@ -355,6 +359,7 @@ namespace Search {
                 minorCorrhist.fill(DEFAULT_HISTORY);
                 whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
                 blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
+                whiteHLCorrhist.fill(DEFAULT_HISTORY);
                 bestRootScore = -INFINITE;
                 rootDepth = 0;
                 completed = 0;

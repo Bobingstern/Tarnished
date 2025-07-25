@@ -204,6 +204,7 @@ void UCIEvaluate(Board& board) {
     int eval = Search::evaluate(board, a);
     std::cout << "Raw: " << eval << std::endl;
     std::cout << "Normalized: " << scaleEval(eval, board) << std::endl;
+    std::cout << "Hash " << a.hash[0] << " " << a.hash[1] << std::endl;
 }
 
 void UCIGo(Searcher& searcher, Board& board, char* str) {
