@@ -488,7 +488,7 @@ namespace Search {
                         extension = 1; // Singular Extension
                 } 
                 else if (ttData.score >= beta)
-                    extension = -2 + isPV; // Negative Extension
+                    extension = -3; // Negative Extension
                 else if (cutnode)
                     extension = -2;
 
