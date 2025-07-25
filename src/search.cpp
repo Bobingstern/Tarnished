@@ -491,6 +491,8 @@ namespace Search {
                     extension = -2 + isPV; // Negative Extension
                 else if (cutnode)
                     extension = -2;
+                else if (ttData.score <= alpha)
+                    extension = -1;
 
             }
 
