@@ -347,12 +347,17 @@ namespace Search {
         // We are better than 2 plies ago
         bool improving =
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
+
+        bool opponentWorsening = !inCheck && ply > 0 && (ss - 1)->staticEval != EVAL_NONE && ss->staticEval > -(ss - 1)->staticEval;
+
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
-            int rfpMargin = RFP_SCALE() * (depth - improving);
+            int rfpMargin = RFP_SCALE() * depth 
+                            - RFP_SCALE() * improving
+                            - RFP_SCALE() * opponentWorsening / 3;
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
             if (depth <= 6 && ss->eval - rfpMargin >= beta)
