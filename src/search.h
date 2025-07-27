@@ -185,12 +185,12 @@ namespace Search {
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> contCorrhist;
             // indexed by [stm][moving pt][cap pt][to]
             MultiArray<int, 2, 6, 6, 64> capthist;
-            // indexed by [stm][hash % entries]
-            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> pawnCorrhist;
-            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> majorCorrhist;
-            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> minorCorrhist;
-            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
-            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
+            // indexed by [stm][output bucket][hash % entries]
+            MultiArray<int16_t, 2, OUTPUT_BUCKETS, CORR_HIST_ENTRIES> pawnCorrhist;
+            MultiArray<int16_t, 2, OUTPUT_BUCKETS, CORR_HIST_ENTRIES> majorCorrhist;
+            MultiArray<int16_t, 2, OUTPUT_BUCKETS, CORR_HIST_ENTRIES> minorCorrhist;
+            MultiArray<int16_t, 2, OUTPUT_BUCKETS, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
+            MultiArray<int16_t, 2, OUTPUT_BUCKETS, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
 
             ThreadInfo(ThreadType t, TTable& tt, Searcher* s);
             ThreadInfo(int id, TTable& tt, Searcher* s);
@@ -273,11 +273,12 @@ namespace Search {
                     int16_t clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
                     entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
                 };
-                updateEntry(pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES]);
-                updateEntry(majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES]);
-                updateEntry(minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES]);
-                updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
-                updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
+                int bucket = NNUE::getOutputBucket(board.occ().count());
+                updateEntry(pawnCorrhist[board.sideToMove()][bucket][ss->pawnKey % CORR_HIST_ENTRIES]);
+                updateEntry(majorCorrhist[board.sideToMove()][bucket][ss->majorKey % CORR_HIST_ENTRIES]);
+                updateEntry(minorCorrhist[board.sideToMove()][bucket][ss->minorKey % CORR_HIST_ENTRIES]);
+                updateEntry(whiteNonPawnCorrhist[board.sideToMove()][bucket][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
+                updateEntry(blackNonPawnCorrhist[board.sideToMove()][bucket][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
                 // Continuation Correction History
                 if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
                     auto &table = *(ss - 2)->contCorrhist;
@@ -324,13 +325,14 @@ namespace Search {
 
             int correctStaticEval(Stack* ss, Board& board, int eval) {
                 int correction = 0;
-                correction += PAWN_CORR_WEIGHT() * pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES];
-                correction += MAJOR_CORR_WEIGHT() * majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES];
-                correction += MINOR_CORR_WEIGHT() * minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES];
+                int bucket = NNUE::getOutputBucket(board.occ().count());
+                correction += PAWN_CORR_WEIGHT() * pawnCorrhist[board.sideToMove()][bucket][ss->pawnKey % CORR_HIST_ENTRIES];
+                correction += MAJOR_CORR_WEIGHT() * majorCorrhist[board.sideToMove()][bucket][ss->majorKey % CORR_HIST_ENTRIES];
+                correction += MINOR_CORR_WEIGHT() * minorCorrhist[board.sideToMove()][bucket][ss->minorKey % CORR_HIST_ENTRIES];
                 correction += NON_PAWN_STM_CORR_WEIGHT() *
-                              whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES];
+                              whiteNonPawnCorrhist[board.sideToMove()][bucket][ss->nonPawnKey[0] % CORR_HIST_ENTRIES];
                 correction += NON_PAWN_NSTM_CORR_WEIGHT() *
-                              blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
+                              blackNonPawnCorrhist[board.sideToMove()][bucket][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
 
                 // Continuation Correction History
                 if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {

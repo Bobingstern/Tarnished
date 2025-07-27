@@ -61,6 +61,7 @@ struct NNUE {
         int32_t SCReLU_(int16_t x);
 
         static int feature(Color persp, Color color, PieceType piece, Square square);
+        static int getOutputBucket(int material);
 
         void load(const std::string& file);
         void randomize();

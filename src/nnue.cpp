@@ -180,6 +180,10 @@ void NNUE::randomize() {
         outputBias[i] = distrib(gen);
 }
 
+int NNUE::getOutputBucket(int material) {
+    return (material - 2) / (32 / OUTPUT_BUCKETS);
+}
+
 int NNUE::inference(Board& board, Accumulator& accumulator) {
 
     Color stm = board.sideToMove();
@@ -191,8 +195,7 @@ int NNUE::inference(Board& board, Accumulator& accumulator) {
 
     // Output buckets are calculated using piececount. Each bucket corresponds
     // to (cnt-2)/(32/N)
-    const size_t outputBucket =
-        (board.occ().count() - 2) / (32 / OUTPUT_BUCKETS);
+    const size_t outputBucket = getOutputBucket(board.occ().count());
 
     int64_t eval = 0;
 
