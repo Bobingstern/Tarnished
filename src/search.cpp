@@ -460,6 +460,9 @@ namespace Search {
                 }
 
                 int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth : SEE_NOISY_SCALE() * lmrDepth;
+                if (!isQuiet) {
+                    seeMargin -= std::clamp(ss->historyScore / SEE_NOISY_HIST_DIVISOR(), -SEE_NOISY_MAX_SCALE() * depth, SEE_NOISY_MAX_SCALE() * depth);
+                }
                 if (!SEE(thread.board, move, seeMargin))
                     continue;
 
