@@ -247,6 +247,10 @@ namespace Search {
             if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
 
+            // Late History Pruning
+            if (bestScore > GETTING_MATED && !inCheck && moveCount >= 2 && thread.getCapthist(thread.board, move) < QS_HIST_MARGIN())
+                break;
+
             // SEE Pruning
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
                 continue;
