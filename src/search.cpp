@@ -487,6 +487,8 @@ namespace Search {
                     else
                         extension = 1; // Singular Extension
                 } 
+                else if (sBeta >= beta && !isMateScore(sBeta))
+                    return sBeta;
                 else if (ttData.score >= beta)
                     extension = -3; // Negative Extension
                 else if (cutnode)
