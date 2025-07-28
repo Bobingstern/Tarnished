@@ -333,6 +333,7 @@ int main(int agrc, char* argv[]) {
 #endif
 
     Search::fillLmr();
+    Cuckoo::init();
     Searcher searcher = Searcher();
     searcher.toggleWDL(true); // Default display wdl
     searcher.initialize(1);   // Default one thread
@@ -348,6 +349,7 @@ int main(int agrc, char* argv[]) {
 
     // Print Ascii
     tarnishedAscii();
+
 
     char str[INPUT_SIZE];
     while (GetInput(str)) {

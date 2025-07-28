@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cuckoo.h"
 #include "eval.h"
 #include "external/chess.hpp"
 #include "nnue.h"
@@ -67,8 +68,11 @@ namespace Search {
             int eval;
             int historyScore;
             int ply;
+            int pliesFromNull;
+            int repetitions;
             int failHighs;
 
+            uint64_t zobrist;
             uint64_t pawnKey;
             uint64_t majorKey;
             uint64_t minorKey;
@@ -216,7 +220,8 @@ namespace Search {
             size_t loadNodes() {
                 return nodes.load(std::memory_order::relaxed);
             }
-
+            // Upcoming Repetition Detection
+            bool hasCycle(Stack* ss, Board& board, int ply);
             // --------------- History updaters ---------------------
             // Make use of the history gravity formula:
             // v += bonus - v * abs(bonus) / max_hist

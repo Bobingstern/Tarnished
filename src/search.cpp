@@ -1,4 +1,5 @@
 #include "search.h"
+#include "cuckoo.h"
 #include "eval.h"
 #include "movepicker.h"
 #include "parameters.h"
@@ -34,9 +35,12 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
     // Accumulator copy
     (ss + 1)->accumulator = ss->accumulator;
     if (move == Move::NULL_MOVE) {
+        (ss + 1)->pliesFromNull = 0;
+        (ss + 1)->repetitions = 0;
         board.makeNullMove();
         return;
     }
+    (ss + 1)->pliesFromNull = ss->pliesFromNull + 1;
 
     if (from == PieceType::PAWN) {
         // Update pawn zobrist key
@@ -97,6 +101,7 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
     }
 
     board.makeMove(move);
+    (ss + 1)->zobrist = board.hash();
 
     if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION) {
         // For now just recalculate on special moves like these
@@ -133,6 +138,17 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
         (ss + 1)->accumulator.capture(stm, move.to(), from, move.from(), from, move.to(), to);
     } else
         (ss + 1)->accumulator.quiet(stm, move.to(), from, move.from(), from);
+
+
+    // Repetition
+    int reversible = std::min((int)board.halfMoveClock(), ss->pliesFromNull);
+    for (int i = 4; i <= reversible; i += 2) {
+        if ((ss - i + 1)->zobrist == board.hash()) {
+            (ss + 1)->repetitions = (ss - i + 1)->repetitions + 1;
+            return;
+        }
+    }
+    (ss + 1)->repetitions = 0;
 }
 
 void UnmakeMove(Board& board, Move move) {
@@ -190,6 +206,43 @@ namespace Search {
             }
         }
     }
+
+    bool hasCycle(Stack* ss, Board& board, int ply) {
+        int reversible = std::min((int)board.halfMoveClock(), ss->pliesFromNull);
+        if (reversible < 3)
+            return false;
+
+        uint64_t currKey = ss->zobrist;
+        uint64_t other = ~(currKey ^ (ss - 1)->zobrist);
+
+        for (int i = 3; i <= reversible; i += 2) {
+            uint64_t prevKey = (ss - i)->zobrist;
+            other ^= ~(prevKey ^ (ss - i - 1)->prevKey);
+            if (other != 0)
+                continue;
+
+            uint64_t keyDiff = currKey ^ prevKey;
+
+            uint32_t slot = Cuckoo::h1(keyDiff);
+            if (keyDiff != Cuckoo::keyDiffs[slot])
+                slot = Cuckoo::h2(keyDiff);
+
+            if (keyDiff != Cuckoo::keyDiffs[slot])
+                continue;
+
+            Move move = Cuckoo::moves[slot];
+
+            if (!(board.occ() & BetweenBB[move.from().index()][move.to().index()]).empty())
+                continue;
+            if (ply > i)
+                return true;
+            if ((ss - i)->repetitions > 0)
+                return true;
+
+        }
+        return false;
+    }
+
     template <bool isPV> int qsearch(int ply, int alpha, const int beta, Stack* ss, ThreadInfo& thread, Limit& limit) {
         if (thread.type == ThreadType::MAIN &&
             ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes()))) {
@@ -290,7 +343,7 @@ namespace Search {
 
         // Terminal Conditions (and checkmate)
         if (!root) {
-            if (thread.board.isRepetition(1) || thread.board.isHalfMoveDraw())
+            if ((thread.board.halfMoveClock() >= 3 && hashCycle(ss, thread.board, ply)) || thread.board.isHalfMoveDraw())
                 return 0;
 
             if (thread.type == ThreadType::MAIN &&
@@ -644,6 +697,8 @@ namespace Search {
                     return limit.softNodes(threadInfo.nodes);
             };
             threadInfo.rootDepth = depth;
+            ss->pliesFromNull = 0;
+            ss->zobrist = threadInfo.board.hash();
             ss->pawnKey = resetPawnHash(threadInfo.board);
             ss->majorKey = resetMajorHash(threadInfo.board);
             ss->minorKey = resetMinorHash(threadInfo.board);

@@ -35,6 +35,8 @@ struct StateInfo {
 };
 
 extern std::array<int, 8> PieceValue;
+extern Bitboard BetweenBB[64][64];
+extern Bitboard Rays[64][8];
 
 // [stm][side]
 // kingside is 0, queenside 1
