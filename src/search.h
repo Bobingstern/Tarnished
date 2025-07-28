@@ -185,12 +185,15 @@ namespace Search {
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> contCorrhist;
             // indexed by [stm][moving pt][cap pt][to]
             MultiArray<int, 2, 6, 6, 64> capthist;
-            // indexed by [stm][output bucket][hash % entries]
-            MultiArray<int16_t, 2, OUTPUT_BUCKETS, CORR_HIST_ENTRIES> pawnCorrhist;
-            MultiArray<int16_t, 2, OUTPUT_BUCKETS, CORR_HIST_ENTRIES> majorCorrhist;
-            MultiArray<int16_t, 2, OUTPUT_BUCKETS, CORR_HIST_ENTRIES> minorCorrhist;
-            MultiArray<int16_t, 2, OUTPUT_BUCKETS, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
-            MultiArray<int16_t, 2, OUTPUT_BUCKETS, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
+            // indexed by [stm][hash % entries]
+            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> pawnCorrhist;
+            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> majorCorrhist;
+            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> minorCorrhist;
+            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
+            MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
+
+            // index by [stm][bucket][hash % entries]
+            MultiArray<int16_t, 2, OUTPUT_BUCKETS, CORR_HIST_ENTRIES> bucketPawnCorrhist;
 
             ThreadInfo(ThreadType t, TTable& tt, Searcher* s);
             ThreadInfo(int id, TTable& tt, Searcher* s);
@@ -208,6 +211,7 @@ namespace Search {
                 minorCorrhist = other.minorCorrhist;
                 whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
                 blackNonPawnCorrhist = other.blackNonPawnCorrhist;
+                bucketPawnCorrhist = other.bucketPawnCorrhist;
             }
             void exit();
             void startSearching();
@@ -273,12 +277,13 @@ namespace Search {
                     int16_t clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
                     entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
                 };
-                int bucket = NNUE::getOutputBucket(board.occ().count());
-                updateEntry(pawnCorrhist[board.sideToMove()][bucket][ss->pawnKey % CORR_HIST_ENTRIES]);
-                updateEntry(majorCorrhist[board.sideToMove()][bucket][ss->majorKey % CORR_HIST_ENTRIES]);
-                updateEntry(minorCorrhist[board.sideToMove()][bucket][ss->minorKey % CORR_HIST_ENTRIES]);
-                updateEntry(whiteNonPawnCorrhist[board.sideToMove()][bucket][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
-                updateEntry(blackNonPawnCorrhist[board.sideToMove()][bucket][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
+                updateEntry(pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES]);
+                updateEntry(majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES]);
+                updateEntry(minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES]);
+                updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
+                updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
+
+                
                 // Continuation Correction History
                 if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
                     auto &table = *(ss - 2)->contCorrhist;
@@ -286,6 +291,10 @@ namespace Search {
                         table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()]
                     );
                 }
+
+                // Bucket based corrhist
+                bonus /= OUTPUT_BUCKETS / 2;
+                updateEntry(bucketPawnCorrhist[board.sideToMove()][NNUE::getOutputBucket(board.occ().count())][ss->pawnKey % CORR_HIST_ENTRIES]);
             }
             // ----------------- History getters
             int getHistory(Color c, Move m) {
@@ -325,14 +334,16 @@ namespace Search {
 
             int correctStaticEval(Stack* ss, Board& board, int eval) {
                 int correction = 0;
-                int bucket = NNUE::getOutputBucket(board.occ().count());
-                correction += PAWN_CORR_WEIGHT() * pawnCorrhist[board.sideToMove()][bucket][ss->pawnKey % CORR_HIST_ENTRIES];
-                correction += MAJOR_CORR_WEIGHT() * majorCorrhist[board.sideToMove()][bucket][ss->majorKey % CORR_HIST_ENTRIES];
-                correction += MINOR_CORR_WEIGHT() * minorCorrhist[board.sideToMove()][bucket][ss->minorKey % CORR_HIST_ENTRIES];
+                correction += PAWN_CORR_WEIGHT() * pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES];
+                correction += MAJOR_CORR_WEIGHT() * majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES];
+                correction += MINOR_CORR_WEIGHT() * minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES];
                 correction += NON_PAWN_STM_CORR_WEIGHT() *
-                              whiteNonPawnCorrhist[board.sideToMove()][bucket][ss->nonPawnKey[0] % CORR_HIST_ENTRIES];
+                              whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES];
                 correction += NON_PAWN_NSTM_CORR_WEIGHT() *
-                              blackNonPawnCorrhist[board.sideToMove()][bucket][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
+                              blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
+
+                correction += BUCKET_PAWN_CORR_WEIGHT() *
+                              bucketPawnCorrhist[board.sideToMove()][NNUE::getOutputBucket(board.occ().count())][ss->pawnKey % CORR_HIST_ENTRIES];
 
                 // Continuation Correction History
                 if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
@@ -357,6 +368,7 @@ namespace Search {
                 minorCorrhist.fill(DEFAULT_HISTORY);
                 whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
                 blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
+                bucketPawnCorrhist.fill(DEFAULT_HISTORY);
                 bestRootScore = -INFINITE;
                 rootDepth = 0;
                 completed = 0;
