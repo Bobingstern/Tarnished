@@ -216,7 +216,7 @@ void UCIGo(Searcher& searcher, Board& board, char* str) {
     // searcher.stop();
 }
 
-void BeginDatagen(char* str) {
+void BeginDatagen(char* str, bool isDFRC) {
     // Same way as setoption
     // datagen name Threads value 16
     int threadc = DATAGEN_THREADS; // 8 default
@@ -224,7 +224,9 @@ void BeginDatagen(char* str) {
         threadc = atoi(OptionValue(str));
     }
     std::cout << "Launching Data Generation with " << threadc << " threads" << std::endl;
-    startDatagen(threadc);
+    if (isDFRC)
+        std::cout << "DFRC Enabled" << std::endl;
+    startDatagen(threadc, isDFRC);
 }
 // Benchmark for OpenBench
 void bench(Searcher& searcher) {
@@ -365,7 +367,7 @@ int main(int agrc, char* argv[]) {
             case PRINT      : std::cout << board << std::endl;            break;
             case EVAL       : UCIEvaluate(board);                         break;
             case BENCH      : bench(searcher);                            break;
-            case DATAGEN    : BeginDatagen(str);                          break;
+            case DATAGEN    : BeginDatagen(str, board.chess960());        break;
             case WAIT       : searcher.waitForSearchFinished();           break;
             case CONFIG     : printOBConfig();                            break;
 

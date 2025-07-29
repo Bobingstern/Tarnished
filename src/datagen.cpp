@@ -129,7 +129,7 @@ std::string randomDFRC() {
     return fen;
 }
 
-void runThread(int ti) {
+void runThread(int ti, bool isDFRC) {
     std::string filePath = "data/nnue_thread" + std::to_string(ti) + ".vf";
 
     if (!std::filesystem::is_directory("data/"))
@@ -150,17 +150,18 @@ void runThread(int ti) {
     int64_t poses = 0;
     TimeLimit timer;
     timer.start();
-    for (int G = 1; G < 1'000'000; G++) {
+    for (int G = 1; G < 100'000'000; G++) {
         Board board;
         thread->reset();
         TT.clear();
         moveScoreBuffer.clear();
 
-#ifdef DFRC_DATAGEN
-        std::string fen = randomDFRC();
-        board.set960(true);
-        board.setFen(fen);
-#endif
+        if (isDFRC) {
+            std::string fen = randomDFRC();
+            board.set960(true);
+            board.setFen(fen);
+        }
+
         for (size_t i = 0; i < DATAGEN_RANDOM_MOVES; i++) {
             makeRandomMove(board);
             if (board.isGameOver().second != GameResult::NONE)
@@ -217,11 +218,11 @@ void runThread(int ti) {
     }
 }
 
-void startDatagen(size_t tcount) {
+void startDatagen(size_t tcount, bool isDFRC) {
     std::vector<std::thread> threads;
 
     for (size_t i = 0; i < tcount - 1; i++) {
-        threads.emplace_back(runThread, i);
+        threads.emplace_back(runThread, i, isDFRC);
     }
-    runThread(tcount - 1);
+    runThread(tcount - 1, isDFRC);
 }
