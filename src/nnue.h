@@ -48,6 +48,8 @@ struct Accumulator {
         void quiet(Color stm, Square add, PieceType addPT, Square sub, PieceType subPT);
         void capture(Color stm, Square add, PieceType addPT, Square sub1, PieceType subPT1, Square sub2,
                      PieceType subPT2);
+
+        uint64_t getHash();
 };
 
 struct NNUE {

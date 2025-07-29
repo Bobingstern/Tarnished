@@ -264,6 +264,15 @@ void Accumulator::print() {
     }
 }
 
+uint64_t Accumulator::getHash() {
+    uint64_t key = 0;
+    // this is what alcohol gets you
+    for (int i = 0; i < 16; i++) {
+        key ^= ((white[i] >> 15) & 1) * Zobrist::piece(Piece::WHITEPAWN, i);
+    }
+    return key;
+}
+
 // Quiet Accumulation
 void Accumulator::quiet(Color stm, Square add, PieceType addPT, Square sub,
                         PieceType subPT) {

@@ -180,6 +180,7 @@ namespace Search {
             MultiArray<int, 2, 64, 64> history;
             // indexed by [stm][hash % entries][pt][to]
             MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> pawnHistory;
+            MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> nnHLHistory;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> contCorrhist;
@@ -201,6 +202,7 @@ namespace Search {
                 nodes.store(other.nodes.load());
                 conthist = other.conthist;
                 pawnHistory = other.pawnHistory;
+                nnHLHistory = other.nnHLHistory;
                 contCorrhist = other.contCorrhist;
                 capthist = other.capthist;
                 pawnCorrhist = other.pawnCorrhist;
@@ -252,19 +254,21 @@ namespace Search {
                         (*(ss - 2)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()]);
             }
 
-            // Pawn History
-            void updatePawnhist(Stack* ss, Board& board, Move m, int16_t bonus) {
-                int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
-                int16_t& entry = 
-                    pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
-                entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
-                entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
+            // Hash Indexed History
+            void updateHashHistory(Stack* ss, Board& board, Move m, int16_t bonus) {
+                auto updateEntry = [&](int16_t& entry) {
+                    int16_t clamped = std::clamp<int16_t>(bonus, -MAX_HISTORY, MAX_HISTORY);
+                    entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+                    entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
+                };
+                updateEntry(pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()]);
+                updateEntry(nnHLHistory[board.sideToMove()][ss->accumulator.getHash() % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()]);
             }
 
             void updateQuietHistory(Stack* ss, Move m, int bonus) {
                 updateHistory(board.sideToMove(), m, bonus);
                 updateConthist(ss, board, m, int16_t(bonus));
-                updatePawnhist(ss, board, m, int16_t(bonus));
+                updateHashHistory(ss, board, m, int16_t(bonus));
             }
 
             // Static eval correction history
@@ -308,13 +312,16 @@ namespace Search {
                 return (*c)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()];
             }
 
-            int16_t getPawnhist(Board& board, Move m, Stack* ss) {
-                return pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+            int getHashHistory(Board& board, Move m, Stack* ss) {
+                int hist = 0;
+                hist += pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+                hist += nnHLHistory[board.sideToMove()][ss->accumulator.getHash() % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+                return hist;
             }
 
             int getQuietHistory(Board& board, Move m, Stack* ss) {
                 int hist = getHistory(board.sideToMove(), m);
-                hist += getPawnhist(board, m, ss);
+                hist += getHashHistory(board, m, ss);
                 if (ss != nullptr && ss->ply > 0 && (ss - 1)->conthist != nullptr)
                     hist += getConthist((ss - 1)->conthist, board, m);
                 if (ss != nullptr && ss->ply > 1 && (ss - 2)->conthist != nullptr)
@@ -348,6 +355,7 @@ namespace Search {
                 history.fill((int)DEFAULT_HISTORY);
                 conthist.fill(DEFAULT_HISTORY);
                 pawnHistory.fill(DEFAULT_HISTORY);
+                nnHLHistory.fill(DEFAULT_HISTORY);
                 contCorrhist.fill(DEFAULT_HISTORY);
                 capthist.fill((int)DEFAULT_HISTORY);
                 pawnCorrhist.fill(DEFAULT_HISTORY);
