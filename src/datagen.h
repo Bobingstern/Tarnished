@@ -72,7 +72,7 @@ struct ViriEntry {
             scores = s;
         }
 };
-void startDatagen(size_t tc);
+void startDatagen(size_t tc, bool isDFRC);
 uint16_t packMove(Move m);
 void writeViriformat(std::ofstream& outFile, ViriEntry& game);
 std::string randomDFRC();
