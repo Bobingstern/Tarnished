@@ -524,7 +524,9 @@ namespace Search {
                 reduction += lmrConvolution({isQuiet, !isPV, improving, cutnode, ttPV, ttHit, ((ss + 1)->failHighs > 2)});
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
-                
+                // Reduce high complexity moves less
+                reduction -= 1024 * corrplexity / LMR_CORRPLEXITY_DIVISOR();
+
                 reduction /= 1024;
 
                 int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
