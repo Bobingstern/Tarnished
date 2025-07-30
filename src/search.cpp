@@ -539,6 +539,10 @@ namespace Search {
                     newDepth -= doShallower;
 
                     score = -search<false>(newDepth, ply + 1, -alpha - 1, -alpha, !cutnode, ss + 1, thread, limit);
+
+                    if (isQuiet && (score <= alpha || score >= beta)) {
+                        thread.updateConthist(ss, thread.board, move, score >= beta ? historyBonus(depth) : historyMalus(depth));
+                    }
                 }
             } else if (!isPV || moveCount > 1) {
                 score = -search<false>(newDepth, ply + 1, -alpha - 1, -alpha, !cutnode, ss + 1, thread, limit);
