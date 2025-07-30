@@ -238,7 +238,7 @@ namespace Search {
             }
 
             // Continuation History
-            void updateConthist(Stack* ss, Board& board, Move m, int16_t bonus) {
+            void updateConthist(Stack* ss, Board& board, Move m, PieceType movingPt, int16_t bonus) {
                 auto updateEntry = [&](int16_t& entry) {
                     int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
                     entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
@@ -246,10 +246,10 @@ namespace Search {
                 };
                 if (ss->ply > 0 && (ss - 1)->conthist != nullptr)
                     updateEntry(
-                        (*(ss - 1)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()]);
+                        (*(ss - 1)->conthist)[board.sideToMove()][movingPt][m.to().index()]);
                 if (ss->ply > 1 && (ss - 2)->conthist != nullptr)
                     updateEntry(
-                        (*(ss - 2)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()]);
+                        (*(ss - 2)->conthist)[board.sideToMove()][movingPt][m.to().index()]);
             }
 
             // Pawn History
@@ -262,8 +262,10 @@ namespace Search {
             }
 
             void updateQuietHistory(Stack* ss, Move m, int bonus) {
+                PieceType movingPt = board.at<PieceType>(m.from());
+                
                 updateHistory(board.sideToMove(), m, bonus);
-                updateConthist(ss, board, m, int16_t(bonus));
+                updateConthist(ss, board, m, movingPt, int16_t(bonus));
                 updatePawnhist(ss, board, m, int16_t(bonus));
             }
 

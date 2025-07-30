@@ -541,8 +541,9 @@ namespace Search {
                     score = -search<false>(newDepth, ply + 1, -alpha - 1, -alpha, !cutnode, ss + 1, thread, limit);
 
                     if (isQuiet && (score <= alpha || score >= beta)) {
-                        thread.updateConthist(ss, thread.board, move, score >= beta ? historyBonus(depth) : historyMalus(depth));
+                        thread.updateConthist(ss, thread.board, move, ss->movedPiece, score >= beta ? historyBonus(depth) : historyMalus(depth));
                     }
+
                 }
             } else if (!isPV || moveCount > 1) {
                 score = -search<false>(newDepth, ply + 1, -alpha - 1, -alpha, !cutnode, ss + 1, thread, limit);
@@ -550,7 +551,9 @@ namespace Search {
             if (isPV && (moveCount == 1 || score > alpha)) {
                 score = -search<isPV>(newDepth, ply + 1, -beta, -alpha, false, ss + 1, thread, limit);
             }
+
             UnmakeMove(thread.board, move);
+            
 
             if (root && thread.type == ThreadType::MAIN)
                 limit.updateNodes(move, thread.loadNodes() - previousNodes);
