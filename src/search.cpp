@@ -250,7 +250,7 @@ namespace Search {
             // SEE Pruning
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
                 continue;
-
+            
             MakeMove(thread.board, move, ss);
             thread.nodes.fetch_add(1, std::memory_order::relaxed);
             moveCount++;
@@ -268,6 +268,10 @@ namespace Search {
                 ttFlag = TTFlag::BETA_CUT;
                 break;
             }
+
+            // Evasion pruning
+            if (inCheck && !thread.board.isCapture(move) && !isMateScore(bestScore))
+                break;
         }
         if (!moveCount && inCheck)
             return -MATE + ply;
