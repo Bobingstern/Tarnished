@@ -74,6 +74,8 @@ namespace Search {
             uint64_t minorKey;
             std::array<uint64_t, 2> nonPawnKey;
 
+            std::array<Bitboard, 7> threats;
+
             Move excluded{};
             Move bestMove{};
 
@@ -176,8 +178,8 @@ namespace Search {
             Searcher* searcher;
             int threadId;
 
-            // indexed by [stm][from][to]
-            MultiArray<int, 2, 64, 64> history;
+            // indexed by [stm][from][to][threat]
+            MultiArray<int, 2, 64, 64, 4> history;
             // indexed by [stm][hash % entries][pt][to]
             MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> pawnHistory;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
@@ -217,16 +219,20 @@ namespace Search {
                 return nodes.load(std::memory_order::relaxed);
             }
 
+            int threatIndex(Move move, Bitboard threats){
+                return 2 * threats.check(move.from().index()) + threats.check(move.to().index());
+            }
+
             // --------------- History updaters ---------------------
             // Make use of the history gravity formula:
             // v += bonus - v * abs(bonus) / max_hist
             // bonus is clamped with max_hist and max_hist/4 for correction history
 
             // Butterfly history
-            void updateHistory(Color c, Move m, int bonus) {
+            void updateHistory(Stack* ss, Board& board, Move m, int bonus) {
                 int clamped = std::clamp(int(bonus), int(-MAX_HISTORY), int(MAX_HISTORY));
-                history[(int)c][m.from().index()][m.to().index()] +=
-                    clamped - history[(int)c][m.from().index()][m.to().index()] * std::abs(clamped) / MAX_HISTORY;
+                int& entry = history[(int)board.sideToMove()][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
+                entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
             }
 
             // Capture History
@@ -262,7 +268,7 @@ namespace Search {
             }
 
             void updateQuietHistory(Stack* ss, Move m, int bonus) {
-                updateHistory(board.sideToMove(), m, bonus);
+                updateHistory(ss, board, m, bonus);
                 updateConthist(ss, board, m, int16_t(bonus));
                 updatePawnhist(ss, board, m, int16_t(bonus));
             }
@@ -287,8 +293,8 @@ namespace Search {
                 }
             }
             // ----------------- History getters
-            int getHistory(Color c, Move m) {
-                return history[(int)c][m.from().index()][m.to().index()];
+            int getHistory(Color c, Move m, Stack* ss) {
+                return history[(int)c][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
             }
 
             int getCapthist(Board& board, Move m) {
@@ -313,7 +319,7 @@ namespace Search {
             }
 
             int getQuietHistory(Board& board, Move m, Stack* ss) {
-                int hist = getHistory(board.sideToMove(), m);
+                int hist = getHistory(board.sideToMove(), m, ss);
                 hist += getPawnhist(board, m, ss);
                 if (ss != nullptr && ss->ply > 0 && (ss - 1)->conthist != nullptr)
                     hist += getConthist((ss - 1)->conthist, board, m);

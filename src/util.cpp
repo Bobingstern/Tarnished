@@ -90,6 +90,48 @@ bool isLegal(Board& board, Move move) {
     return true;
 }
 
+// Threats
+std::array<Bitboard, 7> calculateThreats(Board& board) {
+    Color color = ~board.sideToMove();
+    Bitboard occ = board.occ();
+    Bitboard pawns = board.pieces(PieceType::PAWN, color);
+    Bitboard knights = board.pieces(PieceType::KNIGHT, color);
+    Bitboard bishops = board.pieces(PieceType::BISHOP, color);
+    Bitboard rooks = board.pieces(PieceType::ROOK, color);
+    Bitboard queens = board.pieces(PieceType::QUEEN, color);
+
+    std::array<Bitboard, 7> threats;
+    if (color == Color::WHITE)
+        threats[0] = attacks::pawnLeftAttacks<Color::WHITE>(pawns) | attacks::pawnRightAttacks<Color::WHITE>(pawns);
+    else
+        threats[0] = attacks::pawnLeftAttacks<Color::BLACK>(pawns) | attacks::pawnRightAttacks<Color::BLACK>(pawns);
+
+    while (knights) {
+        Square sq = knights.pop();
+        threats[1] |= attacks::knight(sq);
+    }
+    while (bishops) {
+        Square sq = bishops.pop();
+        threats[2] |= attacks::bishop(sq, occ);
+    }
+    while (rooks) {
+        Square sq = rooks.pop();
+        threats[3] |= attacks::rook(sq, occ);
+    }
+    while (queens) {
+        Square sq = queens.pop();
+        threats[4] |= attacks::queen(sq, occ);
+    }
+    threats[5] = attacks::king(board.kingSq(color));
+    threats[6] = threats[0] | 
+                threats[1] | 
+                threats[2] | 
+                threats[3] | 
+                threats[4] | 
+                threats[5];
+    return threats;
+}
+
 // Utility attackers
 Bitboard attackersTo(Board& board, Square s, Bitboard occ) {
     return (attacks::pawn(Color::WHITE, s) &

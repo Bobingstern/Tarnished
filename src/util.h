@@ -65,6 +65,9 @@ bool isMinor(PieceType pt);
 // Legality
 bool isLegal(Board& board, Move move);
 
+// Threats
+std::array<Bitboard, 7> calculateThreats(Board& board);
+
 // Accumulator wrapper
 void MakeMove(Board& board, Move move, Search::Stack* ss);
 void UnmakeMove(Board& board, Move move);
