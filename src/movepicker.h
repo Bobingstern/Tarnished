@@ -36,10 +36,13 @@ struct MovePicker {
             isQS = qs;
             stage = MPStage::TTMOVE;
             currMove = 0;
+            pawnThreats = ss->threats[0];
+            knightThreats = ss->threats[1];
+            bishopThreats = ss->threats[2];
+            rookThreats = ss->threats[3];
         }
 
         Move nextMove();
         void scoreMoves(Movelist& moves);
         Move selectHighest(Movelist& moves);
-        void generateThreats();
 };

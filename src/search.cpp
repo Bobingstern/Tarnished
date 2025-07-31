@@ -239,6 +239,9 @@ namespace Search {
         Move qBestMove = Move::NO_MOVE;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
+        // Calculuate Threats
+        ss->threats = calculateThreats(thread.board);
+        
         // This will do evasions as well
         Move move;
         MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
@@ -405,6 +408,9 @@ namespace Search {
         // What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
         // and use some sort of data generation method to create a pruning heuristic
         // with something like sigmoid(C dot I) >= 0.75 ?
+
+        // Calculuate Threats
+        ss->threats = calculateThreats(thread.board);
 
         Move bestMove = Move::NO_MOVE;
         Move move;
