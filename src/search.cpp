@@ -488,7 +488,8 @@ namespace Search {
                 ss->excluded = Move::NO_MOVE;
 
                 if (seScore < sBeta) {
-                    if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN())
+                    int doubleMargin = SE_DOUBLE_BASE() + SE_DOUBLE_PV() * isPV;
+                    if (seScore < sBeta - doubleMargin)
                         extension = 2; // Double extension
                     else
                         extension = 1; // Singular Extension
