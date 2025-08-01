@@ -529,7 +529,7 @@ namespace Search {
                 // ---------------------------------------------------------------
                 reduction += lmrConvolution({isQuiet, !isPV, improving, cutnode, ttPV, ttHit, ((ss + 1)->failHighs > 2)});
                 // Reduce less if good history
-                reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
+                reduction -= 1024 * ss->historyScore / (isQuiet ? LMR_HIST_DIVISOR_QUIET() : LMR_HIST_DIVISOR_NOISY());
                 
                 reduction /= 1024;
 
