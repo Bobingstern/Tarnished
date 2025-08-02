@@ -151,12 +151,11 @@ namespace Search {
             }
     };
 
-    struct ThreadInfo {
+    struct alignas(128) ThreadInfo {
             std::thread thread;
             ThreadType type;
             TTable& TT;
 
-            std::atomic<bool> searching;;
             std::atomic<bool> stopped = false;
             std::atomic<bool> exiting = false;
 
@@ -215,6 +214,9 @@ namespace Search {
             void startSearching();
             void waitForSearchFinished();
             void idle();
+            void setStopped() {
+                stopped = true;
+            }
             size_t loadNodes() {
                 return nodes.load(std::memory_order::relaxed);
             }

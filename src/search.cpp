@@ -193,7 +193,8 @@ namespace Search {
     template <bool isPV> int qsearch(int ply, int alpha, const int beta, Stack* ss, ThreadInfo& thread, Limit& limit) {
         if (thread.type == ThreadType::MAIN &&
             ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes()))) {
-            thread.searcher->stopSearching();
+            thread.stopped = true;
+            //thread.searcher->stopSearching();
         }
         if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
             return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(thread.board, ss->accumulator)
@@ -306,7 +307,8 @@ namespace Search {
             if (thread.type == ThreadType::MAIN &&
                 ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes())) &&
                 thread.rootDepth != 1) {
-                thread.searcher->stopSearching();
+                thread.stopped = true;
+                //thread.searcher->stopSearching();
             }
             if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
                 return (ply >= MAX_PLY - 1 && !thread.board.inCheck())

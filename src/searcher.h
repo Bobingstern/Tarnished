@@ -64,20 +64,6 @@ struct Searcher {
             }
             idleBarrier->arrive_and_wait();
             startedBarrier->arrive_and_wait();
-
-            // stopSearching();
-            // waitForSearchFinished();
-            // this->board = board;
-            // this->limit = limit;
-            // for (auto& thread : threads) {
-            //     thread.get()->stopped.store(false);
-            //     std::lock_guard<std::mutex> lock(thread.get()->mutex);
-            //     thread.get()->searching.store(true);
-            // }
-
-            // for (auto& thread : threads) {
-            //     thread.get()->cv.notify_all();
-            // }
         }
 
         void exit() {
@@ -87,21 +73,11 @@ struct Searcher {
         }
         void stopSearching() {
             for (auto& thread : threads) {
-                thread.get()->stopped.store(true);
+                thread.get()->setStopped();
             }
         }
         void wait() {
             std::unique_lock lock_guard{mutex};
-        }
-        void waitForSearchFinished() {
-            for (auto& thread : threads) {
-                thread.get()->waitForSearchFinished();
-            }
-        }
-        void waitForWorkersFinished() {
-            for (int i = 1; i < threads.size(); i++) {
-                threads[i].get()->waitForSearchFinished();
-            }
         }
         void resizeTT(uint64_t size) {
             TT.resize(size);
