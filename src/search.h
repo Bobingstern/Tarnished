@@ -156,10 +156,6 @@ namespace Search {
             ThreadType type;
             TTable& TT;
 
-            std::mutex mutex;
-            std::condition_variable cv;
-
-
             std::atomic<bool> searching;;
             std::atomic<bool> stopped = false;
             std::atomic<bool> exiting = false;
@@ -195,6 +191,7 @@ namespace Search {
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
 
             ThreadInfo(ThreadType t, TTable& tt, Searcher* s);
+
             ThreadInfo(int id, TTable& tt, Searcher* s);
             ThreadInfo(const ThreadInfo& other)
                 : type(other.type), TT(other.TT), history(other.history), bestMove(other.bestMove),
@@ -210,6 +207,9 @@ namespace Search {
                 minorCorrhist = other.minorCorrhist;
                 whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
                 blackNonPawnCorrhist = other.blackNonPawnCorrhist;
+            }
+            ~ThreadInfo() {
+                thread.join();
             }
             void exit();
             void startSearching();

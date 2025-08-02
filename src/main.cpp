@@ -288,7 +288,7 @@ void bench(Searcher& searcher) {
 
     TimeLimit timer = TimeLimit();
     searcher.printInfo = false;
-    searcher.waitForSearchFinished();
+    searcher.wait();
     searcher.reset();
     for (auto fen : fens) {
         timer.start();
@@ -300,7 +300,7 @@ void bench(Searcher& searcher) {
         limit.start();
 
         searcher.startSearching(board, limit);
-        searcher.waitForSearchFinished();
+        searcher.wait();
         int ms = timer.elapsed();
         totalMS += ms;
         totalNodes += searcher.nodeCount();
@@ -318,6 +318,7 @@ void bench(Searcher& searcher) {
     std::cout << "Average NPS: " << nps << std::endl;
     std::cout << totalNodes << " nodes " << nps << " nps" << std::endl;
 
+    searcher.stopSearching();
     searcher.printInfo = true;
 }
 
@@ -344,7 +345,7 @@ int main(int agrc, char* argv[]) {
         std::string arg = argv[1];
         if (arg == "bench")
             bench(searcher);
-        searcher.exit();
+        std::exit(0);
         return 0;
     }
 
@@ -361,14 +362,14 @@ int main(int agrc, char* argv[]) {
             case SETOPTION  : UCISetOption(searcher, board, str);         break;
             case UCINEWGAME : searcher.reset();                           break;
             case STOP       : searcher.stopSearching();                   break;
-            case QUIT       : searcher.stopSearching(); searcher.exit();  return 0;
+            case QUIT       : std::exit(0);                            return 0;
 
             // Non Standard
             case PRINT      : std::cout << board << std::endl;            break;
             case EVAL       : UCIEvaluate(board);                         break;
             case BENCH      : bench(searcher);                            break;
             case DATAGEN    : BeginDatagen(str, board.chess960());        break;
-            case WAIT       : searcher.waitForSearchFinished();           break;
+            case WAIT       : searcher.wait();                            break;
             case CONFIG     : printOBConfig();                            break;
 
         }
