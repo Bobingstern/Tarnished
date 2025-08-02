@@ -288,7 +288,7 @@ void bench(Searcher& searcher) {
 
     TimeLimit timer = TimeLimit();
     searcher.printInfo = false;
-    searcher.waitForSearchFinished();
+    searcher.wait();
     searcher.reset();
     for (auto fen : fens) {
         timer.start();
@@ -300,7 +300,7 @@ void bench(Searcher& searcher) {
         limit.start();
 
         searcher.startSearching(board, limit);
-        searcher.waitForSearchFinished();
+        searcher.wait();
         int ms = timer.elapsed();
         totalMS += ms;
         totalNodes += searcher.nodeCount();
@@ -368,9 +368,8 @@ int main(int agrc, char* argv[]) {
             case EVAL       : UCIEvaluate(board);                         break;
             case BENCH      : bench(searcher);                            break;
             case DATAGEN    : BeginDatagen(str, board.chess960());        break;
-            case WAIT       : searcher.waitForSearchFinished();           break;
+            case WAIT       : searcher.wait();                            break;
             case CONFIG     : printOBConfig();                            break;
-
         }
     }
 

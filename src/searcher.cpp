@@ -3,33 +3,28 @@
 #include "tt.h"
 #include "util.h"
 #include <atomic>
-#include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <vector>
 
-Search::ThreadInfo::ThreadInfo(ThreadType t, TTable& tt, Searcher* s)
-    : type(t), TT(tt), searcher(s) {
+Search::ThreadInfo::ThreadInfo(ThreadType t, TTable& tt, Searcher* s) : type(t), TT(tt), searcher(s) {
     board = Board();
     thread = std::thread(&Search::ThreadInfo::idle, this);
     reset();
 };
 
-Search::ThreadInfo::ThreadInfo(int id, TTable& tt, Searcher* s)
-    : threadId(id), TT(tt), searcher(s) {
+Search::ThreadInfo::ThreadInfo(int id, TTable& tt, Searcher* s) : threadId(id), TT(tt), searcher(s) {
     type = id == 0 ? ThreadType::MAIN : ThreadType::SECONDARY;
     board = Board();
     thread = std::thread(&Search::ThreadInfo::idle, this);
     reset();
 };
 
-void Search::ThreadInfo::exit() {
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        searching.store(true);
-        exiting.store(true);
-    }
-    cv.notify_all();
+void Search::ThreadInfo::startExit() {
+    exiting.store(true);
+}
+
+void Search::ThreadInfo::finishExit() {
     if (thread.joinable())
         thread.join();
 }
@@ -38,13 +33,13 @@ void Search::ThreadInfo::startSearching() {
     nodes = 0;
     bestMove = Move::NO_MOVE;
     bestRootScore = -INFINITE;
-    
-    Search::iterativeDeepening(searcher->board, *this, searcher->limit,
-                               searcher);
+
+    Search::iterativeDeepening(searcher->board, *this, searcher->limit, searcher);
 
     if (type == ThreadType::MAIN) {
         searcher->stopSearching();
-        searcher->waitForWorkersFinished();
+        searcher->stop_barrier->arrive_and_wait();
+
         ThreadInfo* bestSearcher = this;
         for (auto& thread : searcher->threads) {
             if (thread.get()->type == ThreadType::MAIN)
@@ -61,34 +56,26 @@ void Search::ThreadInfo::startSearching() {
             if ((bestDepth == currentDepth && currentScore > bestScore) ||
                 (Search::isWin(currentScore) && currentScore > bestScore))
                 bestSearcher = thread.get();
-            if (currentDepth > bestDepth &&
-                (currentScore > bestScore || !Search::isWin(bestScore)))
+            if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isWin(bestScore)))
                 bestSearcher = thread.get();
         }
         searcher->TT.incAge();
-        std::cout << "\nbestmove "
-                  << uci::moveToUci(bestSearcher->bestMove,
-                                    searcher->board.chess960())
-                  << std::endl;
+        std::cout << "\nbestmove " << uci::moveToUci(bestSearcher->bestMove, searcher->board.chess960()) << std::endl;
+    } else {
+        searcher->stop_barrier->arrive_and_wait();
     }
 }
 
-void Search::ThreadInfo::waitForSearchFinished() {
-    std::unique_lock<std::mutex> lock(mutex);
-    cv.wait(lock, [&] { return !searching.load(); });
-}
-
 void Search::ThreadInfo::idle() {
-    while (!exiting.load()) {
-        std::unique_lock<std::mutex> lock(mutex);
-        cv.wait(lock, [&] { return searching.load(); });
+    while (true) {
+        searcher->idle_barrier->arrive_and_wait(); // wait to be released by uci thread
 
         if (exiting.load())
             return;
 
-        startSearching();
-        searching.store(false);
+        std::shared_lock guard{searcher->mutex};
+        (void)searcher->start_barrier->arrive(); // notify we have arrived but don't wait
 
-        cv.notify_all();
+        startSearching();
     }
 }

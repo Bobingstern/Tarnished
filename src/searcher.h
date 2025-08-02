@@ -4,8 +4,10 @@
 #include "search.h"
 #include "tt.h"
 #include <atomic>
-#include <condition_variable>
+#include <barrier>
+#include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <thread>
 #include <vector>
 
@@ -15,60 +17,74 @@ struct Searcher {
         Search::Limit limit;
         Board board;
 
+        std::shared_mutex mutex;
+        std::unique_ptr<std::barrier<>> idle_barrier;
+        std::unique_ptr<std::barrier<>> start_barrier;
+        std::unique_ptr<std::barrier<>> stop_barrier;
+
         bool showWDL;
         bool printInfo = true;
 
         void initialize(int num) {
             if (threads.size() == num)
                 return;
-            this->exit();
-            threads.clear();
-            threads.push_back(std::make_unique<Search::ThreadInfo>(0, TT, this));
-            for (size_t i = 1; i < num; i++) {
+
+            {
+                std::unique_lock guard{mutex};
+                this->exit();
+            }
+
+            idle_barrier = std::make_unique<std::barrier<>>(num + 1);  // uci + search threads
+            start_barrier = std::make_unique<std::barrier<>>(num + 1); // uci + search threads
+            stop_barrier = std::make_unique<std::barrier<>>(num);      // search threads only
+
+            for (size_t i = 0; i < num; i++) {
                 threads.push_back(std::make_unique<Search::ThreadInfo>(i, TT, this));
             }
         }
 
         void startSearching(Board board, Search::Limit limit) {
             stopSearching();
-            waitForSearchFinished();
-            this->board = board;
-            this->limit = limit;
-            for (auto& thread : threads) {
-                thread.get()->stopped.store(false);
-                std::lock_guard<std::mutex> lock(thread.get()->mutex);
-                thread.get()->searching.store(true);
+            {
+                std::unique_lock guard{mutex};
+                this->board = board;
+                this->limit = limit;
+                for (auto& thread : threads) {
+                    thread.get()->stopped.store(false);
+                }
             }
-
-            for (auto& thread : threads) {
-                thread.get()->cv.notify_all();
-            }
+            idle_barrier->arrive_and_wait();  // release search threads
+            start_barrier->arrive_and_wait(); // halt uci thread until all search threads started
         }
 
         void exit() {
             for (auto& thread : threads)
-                thread.get()->exit();
+                thread.get()->startExit();
+            if (idle_barrier)
+                idle_barrier->arrive_and_wait();
+            for (auto& thread : threads)
+                thread.get()->finishExit();
+            idle_barrier.reset();
+            start_barrier.reset();
+            stop_barrier.reset();
+            threads.clear();
         }
         void stopSearching() {
             for (auto& thread : threads) {
                 thread.get()->stopped.store(true);
             }
         }
-        void waitForSearchFinished() {
-            for (auto& thread : threads) {
-                thread.get()->waitForSearchFinished();
-            }
-        }
-        void waitForWorkersFinished() {
-            for (int i = 1; i < threads.size(); i++) {
-                threads[i].get()->waitForSearchFinished();
-            }
+        void wait() {
+            // Wait to acquire exclusive access
+            std::unique_lock guard{mutex};
         }
         void resizeTT(uint64_t size) {
+            std::unique_lock guard{mutex};
             TT.resize(size);
             TT.clear(threads.size());
         }
         void reset() {
+            std::unique_lock guard{mutex};
             for (auto& thread : threads)
                 thread.get()->reset();
             TT.clear(threads.size());
