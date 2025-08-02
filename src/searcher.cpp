@@ -20,15 +20,6 @@ Search::ThreadInfo::ThreadInfo(int id, TTable& tt, Searcher* s) : threadId(id), 
     reset();
 };
 
-void Search::ThreadInfo::startExit() {
-    exiting.store(true);
-}
-
-void Search::ThreadInfo::finishExit() {
-    if (thread.joinable())
-        thread.join();
-}
-
 void Search::ThreadInfo::startSearching() {
     nodes = 0;
     bestMove = Move::NO_MOVE;

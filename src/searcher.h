@@ -58,12 +58,17 @@ struct Searcher {
         }
 
         void exit() {
-            for (auto& thread : threads)
-                thread.get()->startExit();
-            if (idle_barrier)
+            stopSearching();
+            for (auto& thread : threads) {
+                thread->exiting.store(true);
+            }
+            if (idle_barrier) {
                 idle_barrier->arrive_and_wait();
-            for (auto& thread : threads)
-                thread.get()->finishExit();
+            }
+            for (auto& thread : threads) {
+                if (thread->thread.joinable())
+                    thread->thread.join();
+            }
             idle_barrier.reset();
             start_barrier.reset();
             stop_barrier.reset();

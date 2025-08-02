@@ -204,8 +204,6 @@ namespace Search {
                 whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
                 blackNonPawnCorrhist = other.blackNonPawnCorrhist;
             }
-            void startExit();
-            void finishExit();
             void startSearching();
             void waitForSearchFinished();
             void idle();

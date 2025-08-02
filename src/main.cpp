@@ -361,7 +361,7 @@ int main(int agrc, char* argv[]) {
             case SETOPTION  : UCISetOption(searcher, board, str);         break;
             case UCINEWGAME : searcher.reset();                           break;
             case STOP       : searcher.stopSearching();                   break;
-            case QUIT       : searcher.stopSearching(); searcher.exit();  return 0;
+            case QUIT       : searcher.exit();                            return 0;
 
             // Non Standard
             case PRINT      : std::cout << board << std::endl;            break;
@@ -373,5 +373,6 @@ int main(int agrc, char* argv[]) {
         }
     }
 
+    searcher.exit();
     return 0;
 }
