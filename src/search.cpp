@@ -196,7 +196,7 @@ namespace Search {
             thread.stopped = true;
             //thread.searcher->stopSearching();
         }
-        if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
+        if (thread.stopped || ply >= MAX_PLY - 1) {
             return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(thread.board, ss->accumulator)
                                                                    : 0;
         }
@@ -255,7 +255,7 @@ namespace Search {
         MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped.load() || thread.exiting.load())
+            if (thread.stopped)
                 return bestScore;
 
             // SEE Pruning
@@ -310,7 +310,7 @@ namespace Search {
                 thread.stopped = true;
                 //thread.searcher->stopSearching();
             }
-            if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
+            if (thread.stopped || ply >= MAX_PLY - 1) {
                 return (ply >= MAX_PLY - 1 && !thread.board.inCheck())
                            ? network.inference(thread.board, ss->accumulator)
                            : 0;
@@ -439,7 +439,7 @@ namespace Search {
         bool skipQuiets = false;
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped.load() || thread.exiting.load())
+            if (thread.stopped)
                 return bestScore;
 
             bool isQuiet = !thread.board.isCapture(move);

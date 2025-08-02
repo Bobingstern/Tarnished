@@ -84,6 +84,8 @@ struct Searcher {
             TT.clear(threads.size());
         }
         void reset() {
+            std::unique_lock lock_guard{mutex};
+            
             for (auto& thread : threads)
                 thread.get()->reset();
             TT.clear(threads.size());
