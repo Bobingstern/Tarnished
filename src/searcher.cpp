@@ -3,7 +3,6 @@
 #include "tt.h"
 #include "util.h"
 #include <atomic>
-#include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -23,28 +22,17 @@ Search::ThreadInfo::ThreadInfo(int id, TTable& tt, Searcher* s)
     reset();
 };
 
-void Search::ThreadInfo::exit() {
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        searching.store(true);
-        exiting.store(true);
-    }
-    cv.notify_all();
-    if (thread.joinable())
-        thread.join();
-}
-
 void Search::ThreadInfo::startSearching() {
     nodes = 0;
     bestMove = Move::NO_MOVE;
     bestRootScore = -INFINITE;
-    
-    Search::iterativeDeepening(searcher->board, *this, searcher->limit,
-                               searcher);
+
+    Search::iterativeDeepening(searcher->board, *this, searcher->limit, searcher);
 
     if (type == ThreadType::MAIN) {
         searcher->stopSearching();
-        searcher->waitForWorkersFinished();
+        searcher->stop_barrier->arrive_and_wait();
+
         ThreadInfo* bestSearcher = this;
         for (auto& thread : searcher->threads) {
             if (thread.get()->type == ThreadType::MAIN)
@@ -70,25 +58,21 @@ void Search::ThreadInfo::startSearching() {
                   << uci::moveToUci(bestSearcher->bestMove,
                                     searcher->board.chess960())
                   << std::endl;
+    } else {
+        searcher->stop_barrier->arrive_and_wait();
     }
 }
 
-void Search::ThreadInfo::waitForSearchFinished() {
-    std::unique_lock<std::mutex> lock(mutex);
-    cv.wait(lock, [&] { return !searching.load(); });
-}
-
 void Search::ThreadInfo::idle() {
-    while (!exiting.load()) {
-        std::unique_lock<std::mutex> lock(mutex);
-        cv.wait(lock, [&] { return searching.load(); });
+    while (true) {
+        searcher->idle_barrier->arrive_and_wait(); // wait to be released by uci thread
 
         if (exiting.load())
             return;
 
-        startSearching();
-        searching.store(false);
+        std::shared_lock guard{searcher->mutex};
+        (void)searcher->start_barrier->arrive(); // notify we have arrived but don't wait
 
-        cv.notify_all();
+        startSearching();
     }
 }
