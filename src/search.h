@@ -151,7 +151,7 @@ namespace Search {
             }
     };
 
-    struct ThreadInfo {
+    struct alignas(128) ThreadInfo {
             std::thread thread;
             ThreadType type;
             TTable& TT;
