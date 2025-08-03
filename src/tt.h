@@ -37,7 +37,7 @@ inline void* alignedAlloc(size_t alignment, size_t requiredBytes) {
 
 using namespace chess;
 
-enum TTFlag { NO_BOUND = 0, EXACT = 1, BETA_CUT = 2, FAIL_LOW = 3 };
+enum TTFlag : uint8_t { NO_BOUND = 0, EXACT = 1, BETA_CUT = 2, FAIL_LOW = 3 };
 
 // Heavily based off Stormphrax and Sirius
 

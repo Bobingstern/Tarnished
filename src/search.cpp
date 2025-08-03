@@ -227,13 +227,6 @@ namespace Search {
                                 ? ttData.staticEval
                                 : evaluate(thread.board, ss->accumulator);
             eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
-            // If conditions met, use TT score as eval
-            if (ttHit && 
-                (ttData.bound == TTFlag::EXACT ||
-                    (ttData.bound == TTFlag::BETA_CUT && ttData.score >= eval) ||
-                    (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= eval))) {
-                eval = ttData.score;
-            }
         }
 
         if (eval >= beta)
@@ -352,14 +345,6 @@ namespace Search {
                                 : evaluate(thread.board, ss->accumulator);
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
             corrplexity = rawStaticEval - ss->staticEval;
-
-            // If conditions met, use TT score as eval
-            if (ttHit && 
-                (ttData.bound == TTFlag::EXACT ||
-                    (ttData.bound == TTFlag::BETA_CUT && ttData.score >= ss->eval) ||
-                    (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= ss->eval))) {
-                ss->eval = ttData.score;
-            }
         }
         // Improving heurstic
         // We are better than 2 plies ago
