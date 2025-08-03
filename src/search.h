@@ -178,8 +178,8 @@ namespace Search {
             Searcher* searcher;
             int threadId;
 
-            // indexed by [stm][from][to][threat]
-            MultiArray<int, 2, 64, 64, 4> history;
+            // indexed by [stm][from][to][threat][pinned by]
+            MultiArray<int, 2, 64, 64, 4, 4> history;
             // indexed by [stm][hash % entries][pt][to]
             MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> pawnHistory;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
@@ -220,7 +220,26 @@ namespace Search {
             }
 
             int threatIndex(Move move, Bitboard threats){
+                // 0 - not in and not moving into threat
+                // 1 - not in but moving into threat
+                // 2 - in threat but moving out of threat
+                // 3 - in threat and moving into threat
                 return 2 * threats.check(move.from().index()) + threats.check(move.to().index());
+            }
+            int pinIndex(Board& board, Move move, std::array<Bitboard, 7> threats) {
+                // Moving into pin (blocking with)
+                // We're moving into a pin if in check and not moving our king
+                if (board.inCheck() && board.at<PieceType>(move.from()) != PieceType::KING) {
+                    Square king = board.kingSq(board.sideToMove());
+                    // Either a bishop or rook type pin
+                    // Double checks cant be blocked by moving a piece other than the king
+                    for (PieceType pt : {PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN}) {
+                        if (threats[int(pt)].check(king.index())){
+                            return int(pt) - 1;
+                        }
+                    }
+                }
+                return 0;
             }
 
             // --------------- History updaters ---------------------
@@ -231,7 +250,8 @@ namespace Search {
             // Butterfly history
             void updateHistory(Stack* ss, Board& board, Move m, int bonus) {
                 int clamped = std::clamp(int(bonus), int(-MAX_HISTORY), int(MAX_HISTORY));
-                int& entry = history[(int)board.sideToMove()][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
+                int& entry = history[(int)board.sideToMove()][m.from().index()][m.to().index()]
+                                    [threatIndex(m, ss->threats[6])][pinIndex(board, m, ss->threats)];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
             }
 
@@ -294,7 +314,7 @@ namespace Search {
             }
             // ----------------- History getters
             int getHistory(Color c, Move m, Stack* ss) {
-                return history[(int)c][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
+                return history[(int)c][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])][pinIndex(board, m, ss->threats)];
             }
 
             int getCapthist(Board& board, Move m) {
