@@ -178,8 +178,8 @@ namespace Search {
             Searcher* searcher;
             int threadId;
 
-            // indexed by [stm][from][to][threat]
-            MultiArray<int, 2, 64, 64, 4> history;
+            // indexed by [stm][from][to][threat][check]
+            MultiArray<int, 2, 64, 64, 4, 4> history;
             // indexed by [stm][hash % entries][pt][to]
             MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> pawnHistory;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
@@ -222,6 +222,9 @@ namespace Search {
             int threatIndex(Move move, Bitboard threats){
                 return 2 * threats.check(move.from().index()) + threats.check(move.to().index());
             }
+            int checkIndex(Board& board, Move move, Bitboard threats){
+                return 2 * threats.check(board.kingSq(board.sideToMove()).index()) + (board.givesCheck(move) != CheckType::NO_CHECK);
+            }
 
             // --------------- History updaters ---------------------
             // Make use of the history gravity formula:
@@ -231,7 +234,8 @@ namespace Search {
             // Butterfly history
             void updateHistory(Stack* ss, Board& board, Move m, int bonus) {
                 int clamped = std::clamp(int(bonus), int(-MAX_HISTORY), int(MAX_HISTORY));
-                int& entry = history[(int)board.sideToMove()][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
+                int& entry = history[(int)board.sideToMove()][m.from().index()][m.to().index()]
+                                    [threatIndex(m, ss->threats[6])][checkIndex(board, m, ss->threats[6])];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
             }
 
@@ -294,7 +298,7 @@ namespace Search {
             }
             // ----------------- History getters
             int getHistory(Color c, Move m, Stack* ss) {
-                return history[(int)c][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
+                return history[(int)c][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])][checkIndex(board, m, ss->threats[6])];
             }
 
             int getCapthist(Board& board, Move m) {
