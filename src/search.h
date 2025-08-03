@@ -180,8 +180,8 @@ namespace Search {
 
             // indexed by [stm][from][to][threat]
             MultiArray<int, 2, 64, 64, 4> history;
-            // indexed by [stm][hash % entries][pt][to]
-            MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> pawnHistory;
+            // indexed by [stm][hash % entries][pt][to][threat]
+            MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64, 2> pawnHistory;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> contCorrhist;
@@ -262,7 +262,7 @@ namespace Search {
             void updatePawnhist(Stack* ss, Board& board, Move m, int16_t bonus) {
                 int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
                 int16_t& entry = 
-                    pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+                    pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()][threatIndex(m, ss->threats[6])];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
                 entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
             }
@@ -315,7 +315,7 @@ namespace Search {
             }
 
             int16_t getPawnhist(Board& board, Move m, Stack* ss) {
-                return pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+                return pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()][threatIndex(m, ss->threats[6])];
             }
 
             int getQuietHistory(Board& board, Move m, Stack* ss) {
