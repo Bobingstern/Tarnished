@@ -250,6 +250,8 @@ namespace Search {
             if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
 
+            if (!inCheck && moveCount >= 2)
+                break;
             // SEE Pruning
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
                 continue;
