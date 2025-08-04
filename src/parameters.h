@@ -45,6 +45,7 @@ constexpr int16_t QA = 255;
 constexpr int16_t QB = 64;
 constexpr int16_t NNUE_SCALE = 400;
 constexpr int OUTPUT_BUCKETS = 8;
+const bool HORIZONTAL_MIRROR = true;
 
 // Factorized LMR arrays
 // {isQuiet, !isPV, improving, cutnode, ttpv, tthit, failhigh > 2}

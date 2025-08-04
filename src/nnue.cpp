@@ -139,9 +139,11 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
 
 #endif
 
-int NNUE::feature(Color persp, Color color, PieceType p, Square sq) {
+int NNUE::feature(Color persp, Color color, PieceType p, Square sq, Square king) {
     int ci = persp == color ? 0 : 1;
     int sqi = persp == Color::BLACK ? (sq).flip().index() : (sq).index();
+    if (king.file() >= File::FILE_E && HORIZONTAL_MIRROR)
+        sqi ^= 7;
     return ci * 64 * 6 + (int)p * 64 + sqi; // Index of the feature
 }
 
@@ -216,6 +218,12 @@ int NNUE::inference(Board& board, Accumulator& accumulator) {
 
 // ------ Accumulator -------
 
+bool Accumulator::needRefresh(Move kingMove) {
+    if (!HORIZONTAL_MIRROR)
+        return false;
+    return (kingMove.from().file() >= File::FILE_E) != (kingMove.to().file() >= File::FILE_E);
+}
+
 void Accumulator::refresh(Board& board) {
     Bitboard whiteBB = board.us(Color::WHITE);
     Bitboard blackBB = board.us(Color::BLACK);
@@ -224,14 +232,17 @@ void Accumulator::refresh(Board& board) {
     white = network.H1Bias;
     black = network.H1Bias;
 
+    Square whiteKing = board.kingSq(Color::WHITE);
+    Square blackKing = board.kingSq(Color::BLACK);
+
     while (whiteBB) {
         Square sq = whiteBB.pop();
 
         // White features for both perspectives
         int wf = NNUE::feature(Color::WHITE, Color::WHITE,
-                               board.at<PieceType>(sq), sq);
+                               board.at<PieceType>(sq), sq, whiteKing);
         int bf = NNUE::feature(Color::BLACK, Color::WHITE,
-                               board.at<PieceType>(sq), sq);
+                               board.at<PieceType>(sq), sq, blackKing);
 
         for (int i = 0; i < HL_N; i++) {
             // Do the matrix mutliply for the next layer
@@ -245,9 +256,9 @@ void Accumulator::refresh(Board& board) {
 
         // Black features for both perspectives
         int wf = NNUE::feature(Color::WHITE, Color::BLACK,
-                               board.at<PieceType>(sq), sq);
+                               board.at<PieceType>(sq), sq, whiteKing);
         int bf = NNUE::feature(Color::BLACK, Color::BLACK,
-                               board.at<PieceType>(sq), sq);
+                               board.at<PieceType>(sq), sq, blackKing);
 
         for (int i = 0; i < HL_N; i++) {
             // Do the matrix mutliply for the next layer
@@ -265,14 +276,17 @@ void Accumulator::print() {
 }
 
 // Quiet Accumulation
-void Accumulator::quiet(Color stm, Square add, PieceType addPT, Square sub,
+void Accumulator::quiet(Board& board, Color stm, Square add, PieceType addPT, Square sub,
                         PieceType subPT) {
 
-    const int addW = NNUE::feature(Color::WHITE, stm, addPT, add);
-    const int addB = NNUE::feature(Color::BLACK, stm, addPT, add);
+    Square whiteKing = board.kingSq(Color::WHITE);
+    Square blackKing = board.kingSq(Color::BLACK);
 
-    const int subW = NNUE::feature(Color::WHITE, stm, subPT, sub);
-    const int subB = NNUE::feature(Color::BLACK, stm, subPT, sub);
+    const int addW = NNUE::feature(Color::WHITE, stm, addPT, add, whiteKing);
+    const int addB = NNUE::feature(Color::BLACK, stm, addPT, add, blackKing);
+
+    const int subW = NNUE::feature(Color::WHITE, stm, subPT, sub, whiteKing);
+    const int subB = NNUE::feature(Color::BLACK, stm, subPT, sub, blackKing);
 
     for (int i = 0; i < HL_N; i++) {
         white[i] += network.H1[addW * HL_N + i] - network.H1[subW * HL_N + i];
@@ -280,16 +294,20 @@ void Accumulator::quiet(Color stm, Square add, PieceType addPT, Square sub,
     }
 }
 // Capture Accumulation
-void Accumulator::capture(Color stm, Square add, PieceType addPT, Square sub1,
+void Accumulator::capture(Board& board, Color stm, Square add, PieceType addPT, Square sub1,
                           PieceType subPT1, Square sub2, PieceType subPT2) {
-    const int addW = NNUE::feature(Color::WHITE, stm, addPT, add);
-    const int addB = NNUE::feature(Color::BLACK, stm, addPT, add);
 
-    const int subW1 = NNUE::feature(Color::WHITE, stm, subPT1, sub1);
-    const int subB1 = NNUE::feature(Color::BLACK, stm, subPT1, sub1);
+    Square whiteKing = board.kingSq(Color::WHITE);
+    Square blackKing = board.kingSq(Color::BLACK);
 
-    const int subW2 = NNUE::feature(Color::WHITE, ~stm, subPT2, sub2);
-    const int subB2 = NNUE::feature(Color::BLACK, ~stm, subPT2, sub2);
+    const int addW = NNUE::feature(Color::WHITE, stm, addPT, add, whiteKing);
+    const int addB = NNUE::feature(Color::BLACK, stm, addPT, add, blackKing);
+
+    const int subW1 = NNUE::feature(Color::WHITE, stm, subPT1, sub1, whiteKing);
+    const int subB1 = NNUE::feature(Color::BLACK, stm, subPT1, sub1, blackKing);
+
+    const int subW2 = NNUE::feature(Color::WHITE, ~stm, subPT2, sub2, whiteKing);
+    const int subB2 = NNUE::feature(Color::BLACK, ~stm, subPT2, sub2, blackKing);
 
     for (int i = 0; i < HL_N; i++) {
         white[i] += network.H1[addW * HL_N + i] - network.H1[subW1 * HL_N + i] -

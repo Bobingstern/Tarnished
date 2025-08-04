@@ -43,10 +43,11 @@ struct Accumulator {
         alignas(64) std::array<int16_t, HL_N> black;
 
         void refresh(Board& board);
+        static bool needRefresh(Move kingMove);
         void print();
         // addsub, addsubsub, addaddsubsub
-        void quiet(Color stm, Square add, PieceType addPT, Square sub, PieceType subPT);
-        void capture(Color stm, Square add, PieceType addPT, Square sub1, PieceType subPT1, Square sub2,
+        void quiet(Board& board, Color stm, Square add, PieceType addPT, Square sub, PieceType subPT);
+        void capture(Board& board, Color stm, Square add, PieceType addPT, Square sub1, PieceType subPT1, Square sub2,
                      PieceType subPT2);
 };
 
@@ -60,7 +61,7 @@ struct NNUE {
         int16_t CReLU_(int16_t x);
         int32_t SCReLU_(int16_t x);
 
-        static int feature(Color persp, Color color, PieceType piece, Square square);
+        static int feature(Color persp, Color color, PieceType piece, Square square, Square king);
 
         void load(const std::string& file);
         void randomize();
