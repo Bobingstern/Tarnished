@@ -436,7 +436,7 @@ namespace Search {
                 seenCaptures.add(move);
 
             ss->historyScore =
-                isQuiet ? thread.getQuietHistory(thread.board, move, ss) : thread.getCapthist(thread.board, move);
+                isQuiet ? thread.getQuietHistory(thread.board, move, ss) : thread.getCapthist(thread.board, move, ss);
 
             int baseLMR = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
 
@@ -586,13 +586,13 @@ namespace Search {
                         thread.updateQuietHistory(ss, quietMove, malus);
                     }
                 } else {
-                    thread.updateCapthist(thread.board, move, bonus);
+                    thread.updateCapthist(ss, thread.board, move, bonus);
                 }
                 // Always malus captures
                 for (const Move noisyMove : seenCaptures) {
                     if (noisyMove == move)
                         continue;
-                    thread.updateCapthist(thread.board, noisyMove, malus);
+                    thread.updateCapthist(ss, thread.board, noisyMove, malus);
                 }
                 break;
             }
