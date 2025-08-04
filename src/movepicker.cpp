@@ -14,7 +14,7 @@ void MovePicker::scoreMoves(Movelist& moves) {
             if (move.typeOf() == Move::ENPASSANT)
                 to = PieceType::PAWN;
             int score =
-                thread->getCapthist(thread->board, move) + MVV_VALUES[to];
+                thread->getCapthist(thread->board, move, ss) + MVV_VALUES[to];
             move.setScore(score);
         } else {
             PieceType pt = thread->board.at<PieceType>(move.from());

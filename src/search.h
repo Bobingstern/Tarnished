@@ -185,8 +185,8 @@ namespace Search {
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> contCorrhist;
-            // indexed by [stm][moving pt][cap pt][to]
-            MultiArray<int, 2, 6, 6, 64> capthist;
+            // indexed by [stm][moving pt][cap pt][to][threat]
+            MultiArray<int, 2, 6, 6, 64, 4> capthist;
             // indexed by [stm][hash % entries]
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> pawnCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> majorCorrhist;
@@ -236,10 +236,10 @@ namespace Search {
             }
 
             // Capture History
-            void updateCapthist(Board& board, Move m, int bonus) {
+            void updateCapthist(Stack* ss, Board& board, Move m, int bonus) {
                 int clamped = std::clamp(int(bonus), int(-MAX_HISTORY), int(MAX_HISTORY));
                 int& entry = capthist[board.sideToMove()][board.at<PieceType>(m.from())][board.at<PieceType>(m.to())]
-                                     [m.to().index()];
+                                     [m.to().index()][threatIndex(m, ss->threats[6])];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
             }
 
@@ -297,9 +297,9 @@ namespace Search {
                 return history[(int)c][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
             }
 
-            int getCapthist(Board& board, Move m) {
+            int getCapthist(Board& board, Move m, Stack* ss) {
                 return capthist[board.sideToMove()][board.at<PieceType>(m.from())][board.at<PieceType>(m.to())]
-                               [m.to().index()];
+                               [m.to().index()][threatIndex(m, ss->threats[6])];
             }
 
             MultiArray<int16_t, 2, 6, 64>* getConthistSegment(Board& board, Move m) {
