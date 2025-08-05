@@ -257,9 +257,15 @@ namespace Search {
             if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
 
-            // SEE Pruning
-            if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
-                continue;
+            int hist = thread.getCapthist(thread.board, move, ss);
+            if (bestScore > GETTING_MATED) {
+                if (!inCheck && move.typeOf() != Move::PROMOTION && moveCount >= 3 && hist < -QS_HIST_LMP()){
+                    continue;
+                }
+                // SEE Pruning
+                if (!SEE(thread.board, move, QS_SEE_MARGIN()))
+                    continue;
+            }
 
             MakeMove(thread.board, move, ss);
             thread.nodes.fetch_add(1, std::memory_order::relaxed);
