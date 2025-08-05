@@ -42,6 +42,23 @@ namespace Search {
                          1024);
     }
 
+    inline uint64_t prefetchKey(Board& board, Move move) {
+        Piece movingPiece = board.at(move.from());
+        Piece captured = board.at(move.to());
+        uint64_t key = board.hash();
+
+        // Update Zobrist
+        key ^= Zobrist::piece(movingPiece, move.from());
+        key ^= Zobrist::piece(movingPiece, move.to());
+
+        if (captured != Piece::NONE)
+            key ^= Zobrist::piece(captured, move.to());
+
+        key ^= Zobrist::sideToMove();
+        return key;
+
+    }
+
     struct PVList {
             std::array<chess::Move, MAX_PLY> moves;
             uint32_t length;

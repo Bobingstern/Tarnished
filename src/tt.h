@@ -112,6 +112,10 @@ public:
         currAge = 0;
     }
 
+    void prefetch(uint64_t key) {
+        __builtin_prefetch(&clusters[index(key)]);
+    }
+
     bool probe(uint64_t key, int ply, ProbedTTEntry& ttData) {
         size_t idx = index(key);
         TTCluster& cluster = clusters[idx];

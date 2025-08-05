@@ -261,10 +261,14 @@ namespace Search {
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
                 continue;
 
+            thread.TT.prefetch(prefetchKey(thread.board, move));
+
             MakeMove(thread.board, move, ss);
+
             thread.nodes.fetch_add(1, std::memory_order::relaxed);
             moveCount++;
             int score = -qsearch<isPV>(ply + 1, -beta, -alpha, ss + 1, thread, limit);
+
             UnmakeMove(thread.board, move);
 
             if (score > bestScore) {
@@ -384,6 +388,9 @@ namespace Search {
 
                 ss->conthist = nullptr;
                 ss->contCorrhist = nullptr;
+
+                // Null move prefetch is just flip color
+                thread.TT.prefetch(thread.board.hash() ^ Zobrist::sideToMove());
 
                 MakeMove(thread.board, Move(Move::NULL_MOVE), ss);
                 int nmpScore =
@@ -514,6 +521,8 @@ namespace Search {
             ss->contCorrhist = thread.getContCorrhistSegment(thread.board, move);
 
             uint64_t previousNodes = thread.loadNodes();
+
+            thread.TT.prefetch(prefetchKey(thread.board, move));
 
             MakeMove(thread.board, move, ss);
             moveCount++;
