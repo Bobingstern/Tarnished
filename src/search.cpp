@@ -98,6 +98,12 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
 
     board.makeMove(move);
 
+    if (from == PieceType::KING)
+        if (Accumulator::needRefresh(move)){
+            (ss + 1)->accumulator.refresh(board);
+            return;
+        }
+
     if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION) {
         // For now just recalculate on special moves like these
         (ss + 1)->accumulator.refresh(board);
@@ -127,12 +133,13 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
         // There are basically just 2 quiet moves now for the accumulator
         // Move king and move rook
         // Since moves are encoded as king takes rook, its very easy
-        (ss + 1)->accumulator.quiet(stm, kingTo, PieceType::KING, move.from(), PieceType::KING);
-        (ss + 1)->accumulator.quiet(stm, rookTo, PieceType::ROOK, move.to(), PieceType::ROOK);
+        (ss + 1)->accumulator.quiet(board, stm, kingTo, PieceType::KING, move.from(), PieceType::KING);
+        (ss + 1)->accumulator.quiet(board, stm, rookTo, PieceType::ROOK, move.to(), PieceType::ROOK);
     } else if (to != PieceType::NONE) {
-        (ss + 1)->accumulator.capture(stm, move.to(), from, move.from(), from, move.to(), to);
+        (ss + 1)->accumulator.capture(board, stm, move.to(), from, move.from(), from, move.to(), to);
     } else
-        (ss + 1)->accumulator.quiet(stm, move.to(), from, move.from(), from);
+        (ss + 1)->accumulator.quiet(board, stm, move.to(), from, move.from(), from);
+
 }
 
 void UnmakeMove(Board& board, Move move) {
