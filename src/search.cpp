@@ -428,6 +428,8 @@ namespace Search {
 
         Move bestMove = Move::NO_MOVE;
         Move move;
+        Move seSecondaryMove;
+
         MovePicker picker = MovePicker(&thread, ss, ttData.move, false);
 
         Movelist seenQuiets;
@@ -507,10 +509,14 @@ namespace Search {
                     else
                         extension = 1; // Singular Extension
                 } 
-                else if (ttData.score >= beta)
-                    extension = -3; // Negative Extension
-                else if (cutnode)
-                    extension = -2;
+                else {
+                    if (ttData.score >= beta)
+                        extension = -3; // Negative Extension
+                    else if (cutnode)
+                        extension = -2;
+
+                    seSecondaryMove = ss->bestMove;
+                }
 
             }
 
@@ -546,7 +552,10 @@ namespace Search {
                 reduction += lmrConvolution({isQuiet, !isPV, improving, cutnode, ttPV, ttHit, ((ss + 1)->failHighs > 2)});
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
-                
+                // Reduce less if move is the move from singular search that beats sBeta
+                reduction -= LMR_SE_MOVE() * (move == seSecondaryMove);
+
+
                 reduction /= 1024;
 
                 int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
