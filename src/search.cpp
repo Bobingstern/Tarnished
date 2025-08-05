@@ -427,8 +427,8 @@ namespace Search {
         ss->threats = calculateThreats(thread.board);
 
         Move bestMove = Move::NO_MOVE;
-        Move move;
-        Move seSecondaryMove;
+        Move move = Move::NO_MOVE;
+        Move seSecondaryMove = Move::NO_MOVE;
 
         MovePicker picker = MovePicker(&thread, ss, ttData.move, false);
 
