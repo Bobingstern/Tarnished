@@ -22,6 +22,7 @@ using u128 = unsigned __int128;
 
 //#define TUNE
 // #define LMR_TUNE
+#define RFP_TUNE
 
 // Struct for tunable parameters
 struct TunableParam {
@@ -56,9 +57,15 @@ extern std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR;
 extern std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR;
 extern std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR;
 
+// RFP NN weights
+const int RFP_INPUTS = 3;
+const int RFP_HL_N = 4;
+extern std::array<int, RFP_HL_N * RFP_INPUTS + RFP_HL_N> RFP_HL;
+extern std::array<int, RFP_HL_N + 1> RFP_OUTPUT;
 
 std::list<TunableParam>& tunables();
 TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
+int rfpInference(std::array<int, RFP_INPUTS> inputs);
 int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features);
 void printOBConfig();
 void printWeatherFactoryConfig();

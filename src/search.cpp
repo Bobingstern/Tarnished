@@ -366,8 +366,9 @@ namespace Search {
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
-            int rfpMargin = RFP_SCALE() * (depth - improving);
-            rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
+            // int rfpMargin = RFP_SCALE() * (depth - improving);
+            // rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
+            int rfpMargin = rfpInference({depth, improving, corrplexity});
 
             if (depth <= 6 && ss->eval - rfpMargin >= beta)
                 return ss->eval;

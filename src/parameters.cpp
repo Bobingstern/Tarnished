@@ -18,6 +18,13 @@ std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR = {-181, -108, -143, -189, -219,
                                                     228, -84, 123, 76, -35, -47, 142, -116, 22, 162,
                                                     -57, -145, 207, 22, -37, -286, 137, 233, -131, 39,
                                                     2, 169, 19, 87, -85};
+
+// RFP
+
+std::array<int, RFP_HL_N * RFP_INPUTS + RFP_HL_N> RFP_HL = {7, 473, -283, 223, -510, -555, 6406, -8189, 170, 8449, -7750, -2, 
+                                                                14, 161, -1764, 953};
+std::array<int, RFP_HL_N + 1> RFP_OUTPUT = {-421, 423, 2913, 7345, -1811};
+
 // Code from Sirius
 // https://github.com/mcthouacbb/Sirius/blob/b80a3d18461d97e94ba3102bc3fb422db66f4e7d/Sirius/src/search_params.cpp#L17C1-L29C2
 std::list<TunableParam>& tunables() {
@@ -29,6 +36,20 @@ TunableParam& addTunableParam(std::string name, int value, int min, int max, int
     tunables().push_back({name, value, value, min, max, step});
     TunableParam& param = tunables().back();
     return param;
+}
+
+int rfpInference(std::array<int, RFP_INPUTS> inputs) {
+    std::array<int, RFP_HL_N> HL = {0};
+    int output = RFP_OUTPUT[4];
+    for (int i = 0; i < RFP_HL_N; i++) {
+        HL[i] += RFP_HL[3 * i] * inputs[0] + RFP_HL[3 * i + 1] * inputs[1] + RFP_HL[3 * i + 2] * inputs[2];
+        HL[i] += RFP_HL[12 + i];
+        HL[i] = std::max(0, HL[i]) >> 10;
+    }
+    for (int i = 0; i < RFP_HL_N; i++) {
+        output += HL[i] * RFP_OUTPUT[i];
+    }
+    return output >> 10;
 }
 
 int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features) {

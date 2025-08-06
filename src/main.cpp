@@ -146,6 +146,18 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
                 LMR_THREE_PAIR[i] = atoi(OptionValue(str));
             }
         }
+        for (int i = 0; i < 16; i++) {
+            std::string a = "RFP_HL_" + std::to_string(i);
+            std::string b = "RFP_OUTPUT_" + std::to_string(i);
+            const char* ac = a.c_str();
+            const char* bc = b.c_str();
+            if (OptionName(str, ac)) {
+                RFP_HL[i] = atoi(OptionValue(str));
+            }
+            if (OptionName(str, bc)) {
+                RFP_OUTPUT[i] = atoi(OptionValue(str));
+            }
+        }
 
         Search::fillLmr();
         PieceValue[0] = PAWN_VALUE();
@@ -167,6 +179,21 @@ void UCIInfo() {
         std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min
                   << " max " << param.max << std::endl;
     }
+#endif
+
+
+#ifdef RFP_TUNE
+    for (int i = 0; i < 16; i++) {
+        std::string s = "RFP_HL_" + std::to_string(i);
+        std::cout << "option name " << s << " type spin default " << RFP_HL[i] << " min -16384 max 16384"
+                  << std::endl;
+    }
+    for (int i = 0; i < 5; i++) {
+        std::string s = "RFP_OUTPUT_" + std::to_string(i);
+        std::cout << "option name " << s << " type spin default " << RFP_OUTPUT[i] << " min -16384 max 16384"
+                  << std::endl;
+    }
+
 #endif
 
 #if defined(LMR_TUNE) || defined(TUNE)
