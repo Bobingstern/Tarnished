@@ -34,6 +34,8 @@ struct StateInfo {
         }
 };
 
+extern Bitboard BetweenBB[64][64];
+extern Bitboard Rays[64][8];
 extern std::array<int, 8> PieceValue;
 
 // [stm][side]

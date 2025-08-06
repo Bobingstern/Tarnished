@@ -17,6 +17,7 @@ void MovePicker::scoreMoves(Movelist& moves) {
                 thread->getCapthist(thread->board, move, ss) + MVV_VALUES[to];
             move.setScore(score);
         } else {
+            Color stm = thread->board.sideToMove();
             PieceType pt = thread->board.at<PieceType>(move.from());
             Bitboard fromBB = Bitboard::fromSquare(move.from());
             Bitboard toBB = Bitboard::fromSquare(move.to());
@@ -40,6 +41,25 @@ void MovePicker::scoreMoves(Movelist& moves) {
                 Bitboard threats = pawnThreats;
                 score += (threats & fromBB).empty() ? 0 : 8192;
                 score -= (threats & toBB).empty() ? 0 : 7168;
+            }
+
+            // Bonus for pinning a piece to the king
+            if (pt == PieceType::BISHOP) {
+                // Bishop pinning a rook
+
+                Square oppKing = thread->board.kingSq(~stm);
+                Bitboard xray = attacks::bishop(oppKing, thread->board.pieces(PieceType::BISHOP, ~stm) | thread->board.pieces(PieceType::QUEEN, ~stm));
+                
+                if (xray.check(move.to().index())) {
+                    // Xray from opp king hits the moving bishop, it can potentially pin a piece
+                    Bitboard pinRegion = BetweenBB[oppKing.index()][move.to().index()];
+
+                    // Not a true pin calculation, but potentially may be pinned
+                    if (!(pinRegion & thread->board.pieces(PieceType::KNIGHT, ~stm)).empty())
+                        score += 5000;
+                    if (!(pinRegion & thread->board.pieces(PieceType::ROOK, ~stm)).empty())
+                        score += 6000;
+                }
             }
 
             move.setScore(score);
