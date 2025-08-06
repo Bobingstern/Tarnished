@@ -197,8 +197,8 @@ namespace Search {
 
             // indexed by [stm][from][to][threat]
             MultiArray<int, 2, 64, 64, 4> history;
-            // indexed by [stm][hash % entries][pt][to]
-            MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> pawnHistory;
+            // indexed by [stm][hash % entries][pt][to][bishop colors]
+            MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64, 4> pawnHistory;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> contCorrhist;
@@ -238,6 +238,13 @@ namespace Search {
 
             int threatIndex(Move move, Bitboard threats){
                 return 2 * threats.check(move.from().index()) + threats.check(move.to().index());
+            }
+            int bishopIndex(Board& board) {
+                const Bitboard dark = Bitboard(0xAA55AA55AA55AA55ULL);
+                const Bitboard light = Bitboard(0x55AA55AA55AA55AAULL);
+                const Bitboard bishops = board.pieces(PieceType::BISHOP, board.sideToMove());
+
+                return 2 * (bishops & light).empty() + (bishops & dark).empty();
             }
 
             // --------------- History updaters ---------------------
@@ -279,7 +286,8 @@ namespace Search {
             void updatePawnhist(Stack* ss, Board& board, Move m, int16_t bonus) {
                 int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
                 int16_t& entry = 
-                    pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+                    pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES]
+                                [(int)board.at<PieceType>(m.from())][m.to().index()][bishopIndex(board)];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
                 entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
             }
@@ -332,7 +340,8 @@ namespace Search {
             }
 
             int16_t getPawnhist(Board& board, Move m, Stack* ss) {
-                return pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+                return pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES]
+                                    [(int)board.at<PieceType>(m.from())][m.to().index()][bishopIndex(board)];
             }
 
             int getQuietHistory(Board& board, Move m, Stack* ss) {
