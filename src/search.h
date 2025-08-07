@@ -199,6 +199,8 @@ namespace Search {
             MultiArray<int, 2, 64, 64, 4> history;
             // indexed by [stm][hash % entries][pt][to]
             MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> pawnHistory;
+            // index by [stm][open file index][pt][to]
+            MultiArray<int16_t, 2, FILE_HIST_ENTRIES, 6, 64> fileHistory;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> contCorrhist;
@@ -238,6 +240,17 @@ namespace Search {
 
             int threatIndex(Move move, Bitboard threats){
                 return 2 * threats.check(move.from().index()) + threats.check(move.to().index());
+            }
+            int fileIndex(Board& board) {
+                uint16_t fileKey = 0;
+                uint16_t mul = 1;
+                for (int f = 0; f < 8; f++) {
+                    int hasW = !(File(f) & board.pieces(PieceType::PAWN, Color::WHITE)).empty();
+                    int hasB = !(File(f) & board.pieces(PieceType::PAWN, Color::BLACK)).empty();
+                    fileKey += (hasW + hasB) * mul;
+                    mul *= 3;
+                }
+                return fileKey;
             }
 
             // --------------- History updaters ---------------------
@@ -283,11 +296,20 @@ namespace Search {
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
                 entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
             }
+            // File History
+            void updateFilehist(Board& board, Move m, int16_t bonus) {
+                int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+                int16_t& entry = 
+                    fileHistory[board.sideToMove()][fileIndex(board)][(int)board.at<PieceType>(m.from())][m.to().index()];
+                entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+                entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
+            }
 
             void updateQuietHistory(Stack* ss, Move m, int bonus) {
                 updateHistory(ss, board, m, bonus);
                 updateConthist(ss, board, m, int16_t(bonus));
                 updatePawnhist(ss, board, m, int16_t(bonus));
+                updateFilehist(board, m, int16_t(bonus));
             }
 
             // Static eval correction history
@@ -335,9 +357,14 @@ namespace Search {
                 return pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
             }
 
+            int16_t getFilehist(Board& board, Move m) {
+                return fileHistory[board.sideToMove()][fileIndex(board)][(int)board.at<PieceType>(m.from())][m.to().index()];
+            }
+
             int getQuietHistory(Board& board, Move m, Stack* ss) {
                 int hist = getHistory(board.sideToMove(), m, ss);
                 hist += getPawnhist(board, m, ss);
+                hist += getFilehist(board, m);
                 if (ss != nullptr && ss->ply > 0 && (ss - 1)->conthist != nullptr)
                     hist += getConthist((ss - 1)->conthist, board, m);
                 if (ss != nullptr && ss->ply > 1 && (ss - 2)->conthist != nullptr)
