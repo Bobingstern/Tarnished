@@ -363,19 +363,23 @@ namespace Search {
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
+        int failHeight = 0;
+
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
             int rfpMargin = RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
-            if (depth <= 6 && ss->eval - rfpMargin >= beta)
-                return ss->eval;
+            if (depth <= 6){
+                if (ss->eval - rfpMargin >= beta)
+                    return ss->eval;
+                else
+                    failHeight += beta - (ss->eval - rfpMargin);
+            }
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
-                if (score <= alpha)
-                    return score;
             }
 
             // Null Move Pruning
@@ -411,6 +415,8 @@ namespace Search {
                     if (verification >= beta)
                         return verification;
                 }
+                else
+                    failHeight += beta - nmpScore;
             }
         }
 
@@ -546,6 +552,8 @@ namespace Search {
                 reduction += lmrConvolution({isQuiet, !isPV, improving, cutnode, ttPV, ttHit, ((ss + 1)->failHighs > 2)});
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
+                // Reduce more if fail height is small
+                reduction += 1024 * (failHeight != 0 && failHeight < 10);
                 
                 reduction /= 1024;
 
