@@ -199,6 +199,8 @@ namespace Search {
             MultiArray<int, 2, 64, 64, 4> history;
             // indexed by [stm][hash % entries][pt][to]
             MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> pawnHistory;
+            // indexed by [stm][king sq][pt][to]
+            MultiArray<int16_t, 2, 64, 6, 64> kingHistory;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> conthist;
             MultiArray<int16_t, 2, 6, 64, 2, 6, 64> contCorrhist;
@@ -284,10 +286,21 @@ namespace Search {
                 entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
             }
 
+            // King History
+            void updateKinghist(Board& board, Move m, int16_t bonus) {
+                int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+                int16_t& entry = 
+                    kingHistory[board.sideToMove()][board.kingSq(board.sideToMove()).index()]
+                                                    [(int)board.at<PieceType>(m.from())][m.to().index()];
+                entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+                entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
+            }
+
             void updateQuietHistory(Stack* ss, Move m, int bonus) {
                 updateHistory(ss, board, m, bonus);
                 updateConthist(ss, board, m, int16_t(bonus));
                 updatePawnhist(ss, board, m, int16_t(bonus));
+                updateKinghist(board, m, int16_t(bonus));
             }
 
             // Static eval correction history
@@ -334,10 +347,15 @@ namespace Search {
             int16_t getPawnhist(Board& board, Move m, Stack* ss) {
                 return pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
             }
+            int16_t getKinghist(Board& board, Move m) {
+                return kingHistory[board.sideToMove()][board.kingSq(board.sideToMove()).index()]
+                                                    [(int)board.at<PieceType>(m.from())][m.to().index()];
+            }
 
             int getQuietHistory(Board& board, Move m, Stack* ss) {
                 int hist = getHistory(board.sideToMove(), m, ss);
                 hist += getPawnhist(board, m, ss);
+                hist += getKinghist(board, m);
                 if (ss != nullptr && ss->ply > 0 && (ss - 1)->conthist != nullptr)
                     hist += getConthist((ss - 1)->conthist, board, m);
                 if (ss != nullptr && ss->ply > 1 && (ss - 2)->conthist != nullptr)
