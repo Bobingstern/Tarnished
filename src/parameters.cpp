@@ -21,9 +21,9 @@ std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR = {-181, -108, -143, -189, -219,
 
 // RFP
 
-std::array<int, RFP_HL_N * RFP_INPUTS + RFP_HL_N> RFP_HL = {7, 473, -283, 223, -510, -555, 6406, -8189, 170, 8449, -7750, -2, 
-                                                                14, 161, -1764, 953};
-std::array<int, RFP_HL_N + 1> RFP_OUTPUT = {-421, 423, 2913, 7345, -1811};
+std::array<int, RFP_HL_N * RFP_INPUTS + RFP_HL_N> RFP_HL = {167, 171, 1068, 1416, -1791, -1257, 5282, -7679, 548, 8710, -7805, 403, 
+                                                                -23, -28, -2696, 313};
+std::array<int, RFP_HL_N + 1> RFP_OUTPUT = {1427, 1338, 2762, 6234, -2494};
 
 // Code from Sirius
 // https://github.com/mcthouacbb/Sirius/blob/b80a3d18461d97e94ba3102bc3fb422db66f4e7d/Sirius/src/search_params.cpp#L17C1-L29C2
