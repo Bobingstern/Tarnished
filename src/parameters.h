@@ -22,7 +22,7 @@ using u128 = unsigned __int128;
 
 //#define TUNE
 // #define LMR_TUNE
-#define RFP_TUNE
+// #define RFP_TUNE
 
 // Struct for tunable parameters
 struct TunableParam {
