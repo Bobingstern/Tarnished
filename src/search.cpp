@@ -364,13 +364,16 @@ namespace Search {
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
         // Pruning
+        int rfpMargin = 0;
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
-            int rfpMargin = RFP_SCALE() * (depth - improving);
+            rfpMargin += RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
+            rfpMargin += (ss - 1)->rfpCorrection;
 
-            if (depth <= 8 && ss->eval - rfpMargin >= beta)
+            if (depth <= 8 && ss->eval - rfpMargin >= beta){
                 return ss->eval;
+            }
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
@@ -519,6 +522,7 @@ namespace Search {
             ss->movedPiece = thread.board.at<PieceType>(move.from());
             ss->conthist = thread.getConthistSegment(thread.board, move);
             ss->contCorrhist = thread.getContCorrhistSegment(thread.board, move);
+            ss->rfpCorrection = thread.getRfpCorrection(thread.board, move);
 
             uint64_t previousNodes = thread.loadNodes();
 
@@ -594,12 +598,16 @@ namespace Search {
                 // Capture History
                 int bonus = historyBonus(depth);
                 int malus = historyMalus(depth);
+
+                int rfpBonus = rfpMargin == 0 || inCheck || isMateScore(beta) ? 0 : (rfpMargin - (ss->eval - beta)) * depth / 32;
                 if (isQuiet) {
                     thread.updateQuietHistory(ss, move, bonus);
+                    thread.updateRfpCorrection(move, rfpBonus);
                     for (const Move quietMove : seenQuiets) {
                         if (quietMove == move)
                             continue;
                         thread.updateQuietHistory(ss, quietMove, malus);
+                        thread.updateRfpCorrection(quietMove, -rfpBonus);
                     }
                 } else {
                     thread.updateCapthist(ss, thread.board, move, bonus);

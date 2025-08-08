@@ -85,6 +85,7 @@ namespace Search {
             int historyScore;
             int ply;
             int failHighs;
+            int rfpCorrection;
 
             uint64_t pawnKey;
             uint64_t majorKey;
@@ -197,6 +198,8 @@ namespace Search {
 
             // indexed by [stm][from][to][threat]
             MultiArray<int, 2, 64, 64, 4> history;
+            // indexed by [stm][from][to]
+            MultiArray<int16_t, 2, 64, 64> rfpCorrection;
             // indexed by [stm][hash % entries][pt][to]
             MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> pawnHistory;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
@@ -290,6 +293,15 @@ namespace Search {
                 updatePawnhist(ss, board, m, int16_t(bonus));
             }
 
+            // Update RFP Correction
+            void updateRfpCorrection(Move m, int bonus) {
+                auto updateEntry = [&](int16_t& entry) {
+                    int16_t clamped = std::clamp(bonus, -MAX_CORR_HIST / 6, MAX_CORR_HIST / 6);
+                    entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
+                };
+                updateEntry(rfpCorrection[board.sideToMove()][m.from().index()][m.to().index()]);
+            }
+
             // Static eval correction history
             void updateCorrhist(Stack* ss, Board& board, int bonus) {
                 auto updateEntry = [&](int16_t& entry) {
@@ -343,6 +355,10 @@ namespace Search {
                 if (ss != nullptr && ss->ply > 1 && (ss - 2)->conthist != nullptr)
                     hist += getConthist((ss - 2)->conthist, board, m);
                 return hist;
+            }
+
+            int getRfpCorrection(Board& board, Move m) {
+                return rfpCorrection[board.sideToMove()][m.from().index()][m.to().index()] / 16;
             }
 
             int correctStaticEval(Stack* ss, Board& board, int eval) {
