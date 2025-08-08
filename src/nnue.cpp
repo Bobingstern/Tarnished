@@ -151,7 +151,8 @@ void NNUE::load(const std::string& file) {
     std::ifstream stream(file, std::ios::binary);
 
     for (int i = 0; i < H1.size(); ++i) {
-        H1[i] = readLittleEndian<int16_t>(stream);
+        for (int j = 0; j < H1[i].size(); j++)
+            H1[i][j] = readLittleEndian<int16_t>(stream);
     }
     for (int i = 0; i < H1Bias.size(); ++i) {
         H1Bias[i] = readLittleEndian<int16_t>(stream);
@@ -164,23 +165,6 @@ void NNUE::load(const std::string& file) {
         outputBias[i] = readLittleEndian<int16_t>(stream);
 }
 
-void NNUE::randomize() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(-500, 500);
-    for (int i = 0; i < H1.size(); ++i) {
-        H1[i] = distrib(gen);
-    }
-    for (int i = 0; i < H1Bias.size(); ++i) {
-        H1Bias[i] = distrib(gen);
-    }
-    for (int i = 0; i < OW.size(); ++i) {
-        for (int j = 0; j < OW[i].size(); j++)
-            OW[i][j] = distrib(gen);
-    }
-    for (int i = 0; i < OUTPUT_BUCKETS; i++)
-        outputBias[i] = distrib(gen);
-}
 
 int NNUE::inference(Board& board, Accumulator& accumulator) {
 
@@ -218,10 +202,22 @@ int NNUE::inference(Board& board, Accumulator& accumulator) {
 
 // ------ Accumulator -------
 
-bool Accumulator::needRefresh(Move kingMove) {
+bool Accumulator::needRefresh(Move kingMove, Color stm) {
     if (!HORIZONTAL_MIRROR)
         return false;
-    return (kingMove.from().file() >= File::FILE_E) != (kingMove.to().file() >= File::FILE_E);
+    if ((kingMove.from().file() >= File::FILE_E) != (kingMove.to().file() >= File::FILE_E))
+        return true;
+
+    Square from = kingMove.from() ^ ((int)stm * 56);
+    Square to = kingMove.to() ^ ((int)stm * 56);
+
+    if (BUCKET_LAYOUT[from.index()] != BUCKET_LAYOUT[to.index()])
+        return true;
+    return false;
+}
+
+int Accumulator::kingBucket(Board& board, Color color) {
+    return BUCKET_LAYOUT[(board.kingSq(color) ^ ((int)color * 56)).index()];
 }
 
 void Accumulator::refresh(Board& board) {
@@ -235,6 +231,9 @@ void Accumulator::refresh(Board& board) {
     Square whiteKing = board.kingSq(Color::WHITE);
     Square blackKing = board.kingSq(Color::BLACK);
 
+    int whiteBucket = kingBucket(board, Color::WHITE);
+    int blackBucket = kingBucket(board, Color::BLACK);
+
     while (whiteBB) {
         Square sq = whiteBB.pop();
 
@@ -246,8 +245,8 @@ void Accumulator::refresh(Board& board) {
 
         for (int i = 0; i < HL_N; i++) {
             // Do the matrix mutliply for the next layer
-            white[i] += network.H1[wf * HL_N + i];
-            black[i] += network.H1[bf * HL_N + i];
+            white[i] += network.H1[whiteBucket][wf * HL_N + i];
+            black[i] += network.H1[blackBucket][bf * HL_N + i];
         }
     }
 
@@ -262,8 +261,8 @@ void Accumulator::refresh(Board& board) {
 
         for (int i = 0; i < HL_N; i++) {
             // Do the matrix mutliply for the next layer
-            white[i] += network.H1[wf * HL_N + i];
-            black[i] += network.H1[bf * HL_N + i];
+            white[i] += network.H1[whiteBucket][wf * HL_N + i];
+            black[i] += network.H1[blackBucket][bf * HL_N + i];
         }
     }
 }
@@ -288,9 +287,12 @@ void Accumulator::quiet(Board& board, Color stm, Square add, PieceType addPT, Sq
     const int subW = NNUE::feature(Color::WHITE, stm, subPT, sub, whiteKing);
     const int subB = NNUE::feature(Color::BLACK, stm, subPT, sub, blackKing);
 
+    int whiteBucket = kingBucket(board, Color::WHITE);
+    int blackBucket = kingBucket(board, Color::BLACK);
+
     for (int i = 0; i < HL_N; i++) {
-        white[i] += network.H1[addW * HL_N + i] - network.H1[subW * HL_N + i];
-        black[i] += network.H1[addB * HL_N + i] - network.H1[subB * HL_N + i];
+        white[i] += network.H1[whiteBucket][addW * HL_N + i] - network.H1[whiteBucket][subW * HL_N + i];
+        black[i] += network.H1[blackBucket][addB * HL_N + i] - network.H1[blackBucket][subB * HL_N + i];
     }
 }
 // Capture Accumulation
@@ -309,10 +311,13 @@ void Accumulator::capture(Board& board, Color stm, Square add, PieceType addPT, 
     const int subW2 = NNUE::feature(Color::WHITE, ~stm, subPT2, sub2, whiteKing);
     const int subB2 = NNUE::feature(Color::BLACK, ~stm, subPT2, sub2, blackKing);
 
+    int whiteBucket = kingBucket(board, Color::WHITE);
+    int blackBucket = kingBucket(board, Color::BLACK);
+
     for (int i = 0; i < HL_N; i++) {
-        white[i] += network.H1[addW * HL_N + i] - network.H1[subW1 * HL_N + i] -
-                    network.H1[subW2 * HL_N + i];
-        black[i] += network.H1[addB * HL_N + i] - network.H1[subB1 * HL_N + i] -
-                    network.H1[subB2 * HL_N + i];
+        white[i] += network.H1[whiteBucket][addW * HL_N + i] - network.H1[whiteBucket][subW1 * HL_N + i] -
+                    network.H1[whiteBucket][subW2 * HL_N + i];
+        black[i] += network.H1[blackBucket][addB * HL_N + i] - network.H1[blackBucket][subB1 * HL_N + i] -
+                    network.H1[blackBucket][subB2 * HL_N + i];
     }
 }
