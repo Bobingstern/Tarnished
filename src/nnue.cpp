@@ -204,11 +204,21 @@ int NNUE::inference(Board& board, Accumulator& accumulator) {
 bool Accumulator::needRefresh(Move kingMove, Color stm) {
     if (!HORIZONTAL_MIRROR)
         return false;
-    if ((kingMove.from().file() >= File::FILE_E) != (kingMove.to().file() >= File::FILE_E))
+
+    Square from = kingMove.from();
+    Square to = kingMove.to();
+
+    if (kingMove.typeOf() == Move::CASTLING) {
+        Square king = kingMove.from();
+        Square standardKing = stm == Color::WHITE ? Square::SQ_E1 : Square::SQ_E8; // For chess960
+        to = (king > kingMove.to()) ? standardKing - 2 : standardKing + 2;
+    }
+
+    if ((from.file() >= File::FILE_E) != (to.file() >= File::FILE_E))
+        return true;
+    if (kingBucket(from, stm) != kingBucket(to, stm))
         return true;
 
-    if (kingBucket(kingMove.from(), stm) != kingBucket(kingMove.to(), stm))
-        return true;
     return false;
 }
 
