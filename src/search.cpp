@@ -530,7 +530,7 @@ namespace Search {
 
             int newDepth = depth - 1 + extension;
             // Late Move Reduction
-            if (depth >= 3 && moveCount > 2 + root) {
+            if (depth >= 3 && moveCount > 1 + root) {
                 int reduction = baseLMR;
 
                 // Factorized "inference"
