@@ -141,18 +141,17 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
 
 int NNUE::feature(Color persp, Color color, PieceType p, Square sq, Square king) {
     int ci = persp == color ? 0 : 1;
-    int sqi = persp == Color::BLACK ? (sq).flip().index() : (sq).index();
+    int sqi = persp == Color::BLACK ? sq.flip().index() : sq.index();
     if (king.file() >= File::FILE_E && HORIZONTAL_MIRROR)
         sqi ^= 7;
-    return ci * 64 * 6 + (int)p * 64 + sqi; // Index of the feature
+    return Accumulator::kingBucket(king, persp) * 768 + ci * 64 * 6 + int(p) * 64 + sqi; // Index of the feature
 }
 
 void NNUE::load(const std::string& file) {
     std::ifstream stream(file, std::ios::binary);
 
     for (int i = 0; i < H1.size(); ++i) {
-        for (int j = 0; j < H1[i].size(); j++)
-            H1[i][j] = readLittleEndian<int16_t>(stream);
+        H1[i] = readLittleEndian<int16_t>(stream);
     }
     for (int i = 0; i < H1Bias.size(); ++i) {
         H1Bias[i] = readLittleEndian<int16_t>(stream);
@@ -208,16 +207,13 @@ bool Accumulator::needRefresh(Move kingMove, Color stm) {
     if ((kingMove.from().file() >= File::FILE_E) != (kingMove.to().file() >= File::FILE_E))
         return true;
 
-    Square from = kingMove.from() ^ ((int)stm * 56);
-    Square to = kingMove.to() ^ ((int)stm * 56);
-
-    if (BUCKET_LAYOUT[from.index()] != BUCKET_LAYOUT[to.index()])
+    if (kingBucket(kingMove.from(), stm) != kingBucket(kingMove.to(), stm))
         return true;
     return false;
 }
 
-int Accumulator::kingBucket(Board& board, Color color) {
-    return BUCKET_LAYOUT[(board.kingSq(color) ^ ((int)color * 56)).index()];
+int Accumulator::kingBucket(Square kingSq, Color color) {
+    return BUCKET_LAYOUT[(kingSq ^ (int(color) * 56)).index()];
 }
 
 void Accumulator::refresh(Board& board) {
@@ -231,9 +227,6 @@ void Accumulator::refresh(Board& board) {
     Square whiteKing = board.kingSq(Color::WHITE);
     Square blackKing = board.kingSq(Color::BLACK);
 
-    int whiteBucket = kingBucket(board, Color::WHITE);
-    int blackBucket = kingBucket(board, Color::BLACK);
-
     while (whiteBB) {
         Square sq = whiteBB.pop();
 
@@ -245,8 +238,8 @@ void Accumulator::refresh(Board& board) {
 
         for (int i = 0; i < HL_N; i++) {
             // Do the matrix mutliply for the next layer
-            white[i] += network.H1[whiteBucket][wf * HL_N + i];
-            black[i] += network.H1[blackBucket][bf * HL_N + i];
+            white[i] += network.H1[wf * HL_N + i];
+            black[i] += network.H1[bf * HL_N + i];
         }
     }
 
@@ -261,8 +254,8 @@ void Accumulator::refresh(Board& board) {
 
         for (int i = 0; i < HL_N; i++) {
             // Do the matrix mutliply for the next layer
-            white[i] += network.H1[whiteBucket][wf * HL_N + i];
-            black[i] += network.H1[blackBucket][bf * HL_N + i];
+            white[i] += network.H1[wf * HL_N + i];
+            black[i] += network.H1[bf * HL_N + i];
         }
     }
 }
@@ -287,12 +280,9 @@ void Accumulator::quiet(Board& board, Color stm, Square add, PieceType addPT, Sq
     const int subW = NNUE::feature(Color::WHITE, stm, subPT, sub, whiteKing);
     const int subB = NNUE::feature(Color::BLACK, stm, subPT, sub, blackKing);
 
-    int whiteBucket = kingBucket(board, Color::WHITE);
-    int blackBucket = kingBucket(board, Color::BLACK);
-
     for (int i = 0; i < HL_N; i++) {
-        white[i] += network.H1[whiteBucket][addW * HL_N + i] - network.H1[whiteBucket][subW * HL_N + i];
-        black[i] += network.H1[blackBucket][addB * HL_N + i] - network.H1[blackBucket][subB * HL_N + i];
+        white[i] += network.H1[addW * HL_N + i] - network.H1[subW * HL_N + i];
+        black[i] += network.H1[addB * HL_N + i] - network.H1[subB * HL_N + i];
     }
 }
 // Capture Accumulation
@@ -311,13 +301,10 @@ void Accumulator::capture(Board& board, Color stm, Square add, PieceType addPT, 
     const int subW2 = NNUE::feature(Color::WHITE, ~stm, subPT2, sub2, whiteKing);
     const int subB2 = NNUE::feature(Color::BLACK, ~stm, subPT2, sub2, blackKing);
 
-    int whiteBucket = kingBucket(board, Color::WHITE);
-    int blackBucket = kingBucket(board, Color::BLACK);
-
     for (int i = 0; i < HL_N; i++) {
-        white[i] += network.H1[whiteBucket][addW * HL_N + i] - network.H1[whiteBucket][subW1 * HL_N + i] -
-                    network.H1[whiteBucket][subW2 * HL_N + i];
-        black[i] += network.H1[blackBucket][addB * HL_N + i] - network.H1[blackBucket][subB1 * HL_N + i] -
-                    network.H1[blackBucket][subB2 * HL_N + i];
+        white[i] += network.H1[addW * HL_N + i] - network.H1[subW1 * HL_N + i] -
+                    network.H1[subW2 * HL_N + i];
+        black[i] += network.H1[addB * HL_N + i] - network.H1[subB1 * HL_N + i] -
+                    network.H1[subB2 * HL_N + i];
     }
 }

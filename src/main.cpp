@@ -201,7 +201,7 @@ void UCIInfo() {
 void UCIEvaluate(Board& board) {
     Accumulator a;
     a.refresh(board);
-    int eval = Search::evaluate(board, a);
+    int eval = network.inference(board, a);
     std::cout << "Raw: " << eval << std::endl;
     std::cout << "Normalized: " << scaleEval(eval, board) << std::endl;
 }
@@ -327,7 +327,7 @@ int main(int agrc, char* argv[]) {
     Board board = Board();
 // network.randomize();
 #if defined(_MSC_VER) && !defined(__clang__)
-    network.loadNetwork(EVALFILE);
+    network.load(EVALFILE);
     std::cerr << "WARNING: This file was compiled with MSVC, this means that an nnue was NOT embedded into the exe."
               << std::endl;
 #else
