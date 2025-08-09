@@ -9,9 +9,7 @@
 #include "util.h"
 #include <algorithm>
 #include <atomic>
-#include <condition_variable>
 #include <cstring>
-#include <mutex>
 #include <thread>
 
 using namespace chess;
@@ -173,11 +171,6 @@ namespace Search {
             ThreadType type;
             TTable& TT;
 
-            std::mutex mutex;
-            std::condition_variable cv;
-
-
-            std::atomic<bool> searching;;
             std::atomic<bool> stopped = false;
             std::atomic<bool> exiting = false;
 
@@ -228,7 +221,6 @@ namespace Search {
                 whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
                 blackNonPawnCorrhist = other.blackNonPawnCorrhist;
             }
-            void exit();
             void startSearching();
             void waitForSearchFinished();
             void idle();
