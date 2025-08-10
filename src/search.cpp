@@ -286,6 +286,7 @@ namespace Search {
         if (!moveCount && inCheck)
             return -MATE + ply;
 
+        if (!(ss - 1)->didRfp)
         thread.TT.store(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ply, ttPV);
 
         return bestScore;
@@ -363,16 +364,24 @@ namespace Search {
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
+        bool opponentWorsening = !inCheck && ply > 0 && (ss - 1)->staticEval != EVAL_NONE && ss->staticEval > -(ss - 1)->staticEval;
         // Pruning
+        ss->didRfp = false;
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
-            int rfpMargin = RFP_SCALE() * (depth - improving);
+            int rfpMargin = RFP_SCALE() * depth 
+                            - RFP_SCALE() * improving
+                            - 8 * (cutnode && !ttHit);
+
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
-            if (depth <= 8 && ss->eval - rfpMargin >= beta)
-                return ss->eval;
+            if (depth <= 8 && ss->eval - rfpMargin >= beta){
+                ss->didRfp = true;
+                thread.searcher->totalRfps++;
+                //return ss->eval;
+            }
 
-            if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
+            if (!ss->didRfp && depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
                 if (score <= alpha)
                     return score;
@@ -381,7 +390,7 @@ namespace Search {
             // Null Move Pruning
             Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^
                                 thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
-            if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()) {
+            if (!ss->didRfp && depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()) {
                 // Sirius formula
                 const int reduction = NMP_BASE_REDUCTION() + depth / NMP_REDUCTION_SCALE() +
                                       std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE());
@@ -415,7 +424,7 @@ namespace Search {
         }
 
         // Internal Iterative Reduction
-        if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
+        if (!ss->didRfp && depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;
 
         // Thought
@@ -589,6 +598,9 @@ namespace Search {
                 ttFlag = TTFlag::BETA_CUT;
                 ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
                 ss->failHighs++;
+
+                if (!(ss - 1)->didRfp)
+                    thread.searcher->totalBetaCuts++;
                 // Butterfly History
                 // Continuation History
                 // Capture History
@@ -622,7 +634,12 @@ namespace Search {
         if (bestScore >= beta && !isMateScore(bestScore) && !isMateScore(alpha))
             bestScore = (bestScore * depth + beta) / (depth + 1);
 
-        if (moveIsNull(ss->excluded)) {
+        if (ss->didRfp && !(ss - 1)->didRfp) {
+            if (ttFlag == TTFlag::BETA_CUT)
+                thread.searcher->correctRfps++;
+        }
+
+        if (moveIsNull(ss->excluded) && !ss->didRfp && !(ss - 1)->didRfp) {
             // Update correction history
             bool isBestQuiet = !thread.board.isCapture(bestMove);
             if (!inCheck && (isBestQuiet || moveIsNull(bestMove)) &&

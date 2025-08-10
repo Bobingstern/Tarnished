@@ -76,4 +76,5 @@ void startDatagen(size_t tc, bool isDFRC);
 uint16_t packMove(Move m);
 void writeViriformat(std::ofstream& outFile, ViriEntry& game);
 std::string randomDFRC();
+double rfpStats(Searcher& searcher);
 

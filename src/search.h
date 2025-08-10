@@ -85,6 +85,7 @@ namespace Search {
             int historyScore;
             int ply;
             int failHighs;
+            bool didRfp;
 
             uint64_t pawnKey;
             uint64_t majorKey;

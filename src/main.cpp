@@ -316,7 +316,7 @@ void bench(Searcher& searcher) {
     std::cout << "Elapsed Time: " << totalMS << "ms" << std::endl;
     int nps = static_cast<int64_t>((totalNodes / totalMS) * 1000);
     std::cout << "Average NPS: " << nps << std::endl;
-    std::cout << totalNodes << " nodes " << nps << " nps" << std::endl;
+    std::cout << totalNodes << " nodes " << nps << " nps" << std::endl;    
 
     searcher.printInfo = true;
 }
@@ -344,6 +344,8 @@ int main(int agrc, char* argv[]) {
         std::string arg = argv[1];
         if (arg == "bench")
             bench(searcher);
+        if (arg == "rfp")
+            rfpStats(searcher);
         searcher.exit();
         return 0;
     }

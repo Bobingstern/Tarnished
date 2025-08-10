@@ -12,6 +12,8 @@
 #include <random>
 #include <thread>
 #include <vector>
+#include <iostream>
+#include <string>
 
 using namespace chess;
 
@@ -225,4 +227,62 @@ void startDatagen(size_t tcount, bool isDFRC) {
         threads.emplace_back(runThread, i, isDFRC);
     }
     runThread(tcount - 1, isDFRC);
+}
+
+double rfpStats(Searcher& searcher) {
+    std::ifstream file("data/lichess.book");
+    std::string line;
+
+    if (!file) {
+        std::cerr << "Error: Could not open file\n";
+        return 0 ;
+    }
+    int poses = 0;
+    int maxPoses = 1000;
+
+    TimeLimit timer = TimeLimit();
+    searcher.printInfo = false;
+    searcher.waitForSearchFinished();
+    searcher.reset();
+
+    searcher.correctRfps = 0;
+    searcher.totalRfps = 0;
+
+    while (std::getline(file, line) && poses < maxPoses) {
+        size_t pos = line.find(" [");
+        if (pos != std::string::npos) {
+            line = line.substr(0, pos);
+        }
+
+        Board board(line);
+        Search::Limit limit = Search::Limit();
+        limit.depth = (int64_t)BENCH_DEPTH;
+        limit.movetime = 0;
+        limit.ctime = 0;
+        limit.start();
+
+        searcher.startSearching(board, limit);
+        searcher.waitForSearchFinished();
+        searcher.reset();
+
+        poses++;
+
+        std::cout << "Position " << poses << "/" << maxPoses << std::endl;
+        std::cout << "RFP Accuracy (Correctly triggered rfp / total rfps triggered): " << 100 * searcher.correctRfps / (double)searcher.totalRfps << "%" << " or " << searcher.correctRfps << "/" << searcher.totalRfps << std::endl;
+        std::cout << "RFP Impact (Correctly triggered rfp / total beta cuts): " << 100 * searcher.correctRfps / (double)searcher.totalBetaCuts << "%" << " or " << searcher.correctRfps << "/" << searcher.totalBetaCuts << std::endl;
+
+        /*
+        Standard
+        RFP Accuracy (Correctly triggered rfp / total rfps triggered): 94.7041% or 41134388/43434661
+        RFP Impact (Correctly triggered rfp / total beta cuts): 82.7217% or 41134388/49726225
+
+        RFP Accuracy (Correctly triggered rfp / total rfps triggered): 94.7856% or 41067927/43327159
+        RFP Impact (Correctly triggered rfp / total beta cuts): 83.1536% or 41067927/49388045
+
+        Z-scores = -17, -57
+
+        */
+    }
+    return searcher.correctRfps / (double)searcher.totalRfps;
+
 }
