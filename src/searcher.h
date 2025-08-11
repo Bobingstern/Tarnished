@@ -18,8 +18,18 @@ struct Searcher {
         bool showWDL;
         bool printInfo = true;
         uint64_t totalRfps = 0;
-        uint64_t correctRfps = 0;
-        uint64_t totalBetaCuts = 0;
+
+        uint64_t tp = 0;
+        uint64_t fn = 0;
+
+        uint64_t tn = 0;
+        uint64_t fp = 0;
+
+        uint64_t predictedPositives = 0;
+        uint64_t predictedNegatives = 0;
+
+        uint64_t actualPositives = 0;
+        uint64_t actualNegatives = 0;
 
         void initialize(int num) {
             if (threads.size() == num)

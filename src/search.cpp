@@ -286,7 +286,6 @@ namespace Search {
         if (!moveCount && inCheck)
             return -MATE + ply;
 
-        if (!(ss - 1)->didRfp)
         thread.TT.store(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ply, ttPV);
 
         return bestScore;
@@ -367,21 +366,19 @@ namespace Search {
         bool opponentWorsening = !inCheck && ply > 0 && (ss - 1)->staticEval != EVAL_NONE && ss->staticEval > -(ss - 1)->staticEval;
         // Pruning
         ss->didRfp = false;
+        bool canRfp = !root && !isPV && !inCheck && moveIsNull(ss->excluded) && depth <= 8;
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
             int rfpMargin = RFP_SCALE() * depth 
                             - RFP_SCALE() * improving
                             - 8 * (cutnode && !ttHit);
-
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
             if (depth <= 8 && ss->eval - rfpMargin >= beta){
                 ss->didRfp = true;
-                thread.searcher->totalRfps++;
-                //return ss->eval;
             }
 
-            if (!ss->didRfp && depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
+            if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
                 if (score <= alpha)
                     return score;
@@ -390,7 +387,7 @@ namespace Search {
             // Null Move Pruning
             Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^
                                 thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
-            if (!ss->didRfp && depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()) {
+            if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()) {
                 // Sirius formula
                 const int reduction = NMP_BASE_REDUCTION() + depth / NMP_REDUCTION_SCALE() +
                                       std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE());
@@ -424,7 +421,7 @@ namespace Search {
         }
 
         // Internal Iterative Reduction
-        if (!ss->didRfp && depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
+        if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;
 
         // Thought
@@ -599,8 +596,6 @@ namespace Search {
                 ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
                 ss->failHighs++;
 
-                if (!(ss - 1)->didRfp)
-                    thread.searcher->totalBetaCuts++;
                 // Butterfly History
                 // Continuation History
                 // Capture History
@@ -634,12 +629,29 @@ namespace Search {
         if (bestScore >= beta && !isMateScore(bestScore) && !isMateScore(alpha))
             bestScore = (bestScore * depth + beta) / (depth + 1);
 
-        if (ss->didRfp && !(ss - 1)->didRfp) {
-            if (ttFlag == TTFlag::BETA_CUT)
-                thread.searcher->correctRfps++;
+        if (canRfp) {
+            if (ttFlag == TTFlag::BETA_CUT) {
+                thread.searcher->actualPositives++;
+                if (ss->didRfp)
+                    thread.searcher->tp++;
+                else
+                    thread.searcher->fn++;
+            }
+            else {
+                thread.searcher->actualNegatives++;
+                if (!ss->didRfp)
+                    thread.searcher->tn++;
+                else
+                    thread.searcher->fp++;
+            }
+            if (ss->didRfp)
+                thread.searcher->predictedPositives++;
+            else
+                thread.searcher->predictedNegatives++;
         }
 
-        if (moveIsNull(ss->excluded) && !ss->didRfp && !(ss - 1)->didRfp) {
+
+        if (moveIsNull(ss->excluded)) {
             // Update correction history
             bool isBestQuiet = !thread.board.isCapture(bestMove);
             if (!inCheck && (isBestQuiet || moveIsNull(bestMove)) &&

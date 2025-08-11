@@ -245,8 +245,6 @@ double rfpStats(Searcher& searcher) {
     searcher.waitForSearchFinished();
     searcher.reset();
 
-    searcher.correctRfps = 0;
-    searcher.totalRfps = 0;
 
     while (std::getline(file, line) && poses < maxPoses) {
         size_t pos = line.find(" [");
@@ -268,8 +266,18 @@ double rfpStats(Searcher& searcher) {
         poses++;
 
         std::cout << "Position " << poses << "/" << maxPoses << std::endl;
-        std::cout << "RFP Accuracy (Correctly triggered rfp / total rfps triggered): " << 100 * searcher.correctRfps / (double)searcher.totalRfps << "%" << " or " << searcher.correctRfps << "/" << searcher.totalRfps << std::endl;
-        std::cout << "RFP Impact (Correctly triggered rfp / total beta cuts): " << 100 * searcher.correctRfps / (double)searcher.totalBetaCuts << "%" << " or " << searcher.correctRfps << "/" << searcher.totalBetaCuts << std::endl;
+        //std::cout << "RFP Accuracy (Correctly triggered rfp / total rfps triggered): " << 100 * searcher.correctRfps / (double)searcher.totalRfps << "%" << " or " << searcher.correctRfps << "/" << searcher.totalRfps << std::endl;
+        //std::cout << "RFP Impact (Correctly triggered rfp / total beta cuts): " << 100 * searcher.correctRfps / (double)searcher.totalBetaCuts << "%" << " or " << searcher.correctRfps << "/" << searcher.totalBetaCuts << std::endl;
+
+        // std::cout << "Actual Positives: " << searcher.actualPositives << std::endl;
+        // std::cout << "Actual Negatives: " << searcher.actualNegatives << std::endl;
+        // std::cout << "Predicted Positives: " << searcher.predictedPositives << std::endl;
+        // std::cout << "Predicted Negatives: " << searcher.predictedNegatives << std::endl;
+        // std::cout << "\n";
+        std::cout << "True Positives: " << searcher.tp << std::endl;
+        std::cout << "True Negatives: " << searcher.tn << std::endl;
+        std::cout << "False Positives: " << searcher.fp << std::endl;
+        std::cout << "False Negatives: " << searcher.fn << std::endl;
 
         /*
         Standard
@@ -283,6 +291,6 @@ double rfpStats(Searcher& searcher) {
 
         */
     }
-    return searcher.correctRfps / (double)searcher.totalRfps;
+    return 1;
 
 }
