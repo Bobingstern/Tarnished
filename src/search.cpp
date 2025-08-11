@@ -657,13 +657,14 @@ namespace Search {
 
         int64_t avgnps = 0;
         for (int depth = 1; depth <= limit.depth; depth++) {
-            auto aborted = [&]() {
+            auto aborted = [&](bool canSoft) {
                 if (threadInfo.stopped.load())
                     return true;
+                // Only check soft node limit outside of aspiration
                 if (isMain)
-                    return limit.outOfTime() || limit.outOfNodes(threadInfo.nodes) || limit.softNodes(threadInfo.nodes);
+                    return limit.outOfTime() || limit.outOfNodes(threadInfo.nodes) || (limit.softNodes(threadInfo.nodes) && canSoft);
                 else
-                    return limit.softNodes(threadInfo.nodes);
+                    return limit.softNodes(threadInfo.nodes) && canSoft;
             };
             threadInfo.rootDepth = depth;
             ss->pawnKey = resetPawnHash(threadInfo.board);
@@ -674,14 +675,16 @@ namespace Search {
             ss->accumulator = baseAcc;
             int eval = evaluate(threadInfo.board, ss->accumulator);
 
-            
+            if (limit.softNodes(threadInfo.nodes)){
+                break;
+            }
             // Aspiration Windows
             if (depth >= MIN_ASP_WINDOW_DEPTH()) {
                 int delta = INITIAL_ASP_WINDOW();
                 int alpha = std::max(lastScore - delta, -INFINITE);
                 int beta = std::min(lastScore + delta, INFINITE);
                 int aspDepth = depth;
-                while (!aborted()) {
+                while (!aborted(false)) {
                     score = search<true>(std::max(aspDepth, 1), 0, alpha, beta, false, ss, threadInfo, limit);
                     if (score <= alpha) {
                         beta = (alpha + beta) / 2;
@@ -699,7 +702,7 @@ namespace Search {
             } else
                 score = search<true>(depth, 0, -INFINITE, INFINITE, false, ss, threadInfo, limit);
             // ---------------------
-            if (depth != 1 && aborted()) {
+            if (depth != 1 && aborted(false)) {
                 break;
             }
 
@@ -730,7 +733,8 @@ namespace Search {
                 if (score >= FOUND_MATE || score <= GETTING_MATED) {
                     std::cout << "mate " << ((score < 0) ? "-" : "") << (MATE - std::abs(score)) / 2 + 1;
                 } else {
-                    std::cout << "cp " << scaleEval(score, pvBoard);
+                    int s = searcher->showWDL ? scaleEval(score, pvBoard) : score; // Only scale if WDL enabled
+                    std::cout << "cp " << s;
                     if (searcher->showWDL) {
                         WDL wdl = computeWDL(score, pvBoard);
                         std::cout << " wdl " << wdl.w << " " << wdl.d << " " << wdl.l;

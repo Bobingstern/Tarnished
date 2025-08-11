@@ -6,6 +6,7 @@
 #include <bit>
 #include <cassert>
 #include <cstring>
+#include <random>
 #include <sstream>
 #include <vector>
 
@@ -72,8 +73,16 @@ struct ViriEntry {
             scores = s;
         }
 };
+void makeRandomMove(Board& board);
+void makeRandomMove(Board& board, std::mt19937_64& engine);
 void startDatagen(size_t tc, bool isDFRC);
 uint16_t packMove(Move m);
 void writeViriformat(std::ofstream& outFile, ViriEntry& game);
 std::string randomDFRC();
+
+static bool matchesToken(std::string line, std::string token) {
+    return line.rfind(token, 0) == 0;
+}
+bool nextToken(std::string* line, std::string* token);
+void handleGenfens(Searcher& searcher, std::string params);
 

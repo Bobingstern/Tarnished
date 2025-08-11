@@ -66,10 +66,12 @@ void Search::ThreadInfo::startSearching() {
                 bestSearcher = thread.get();
         }
         searcher->TT.incAge();
-        std::cout << "\nbestmove "
-                  << uci::moveToUci(bestSearcher->bestMove,
-                                    searcher->board.chess960())
-                  << std::endl;
+        searcher->bestScore = bestSearcher->bestRootScore;
+        if (searcher->printInfo)
+            std::cout << "\nbestmove "
+                      << uci::moveToUci(bestSearcher->bestMove,
+                                        searcher->board.chess960())
+                      << std::endl;
     }
 }
 
