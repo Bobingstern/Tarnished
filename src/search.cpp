@@ -372,6 +372,10 @@ namespace Search {
             if (depth <= 8 && ss->eval - rfpMargin >= beta)
                 return ss->eval;
 
+            if (depth <= 8 && (ss - 1)->reduction >= 3 && !improving 
+                && (ttHit && ttData.depth >= depth - 2 && ttData.score + 180 * depth < alpha))
+                return ttData.score;
+
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
                 if (score <= alpha)
@@ -551,7 +555,9 @@ namespace Search {
 
                 int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
 
+                ss->reduction = newDepth - lmrDepth;
                 score = -search<false>(lmrDepth, ply + 1, -alpha - 1, -alpha, true, ss + 1, thread, limit);
+                ss->reduction = 0;
                 // Re-search at normal depth
                 if (score > alpha && lmrDepth < newDepth) {
                     bool doDeeper = score > bestScore + LMR_DEEPER_BASE() + LMR_DEEPER_SCALE() * newDepth;
