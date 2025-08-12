@@ -15,8 +15,11 @@ struct Searcher {
         Search::Limit limit;
         Board board;
 
+        int bestScore = 0;
+
         bool showWDL;
         bool printInfo = true;
+        bool useSoft = false;
 
         void initialize(int num) {
             if (threads.size() == num)
@@ -84,5 +87,8 @@ struct Searcher {
 
         void toggleWDL(bool x) {
             showWDL = x;
+        }
+        void toggleSoft(bool x) {
+            useSoft = x;
         }
 };

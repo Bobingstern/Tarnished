@@ -79,6 +79,15 @@ void makeRandomMove(Board& board) {
     board.makeMove(moves[dist(engine)]);
 }
 
+void makeRandomMove(Board& board, std::mt19937_64& engine) {
+    Movelist moves;
+    movegen::legalmoves(moves, board);
+
+    std::uniform_int_distribution<int> dist(0, moves.size() - 1);
+
+    board.makeMove(moves[dist(engine)]);
+}
+
 void writeBuffer(std::ofstream& outFile, GameEntry& game) {
     Board test = Board(game.fen);
     for (int i = 0; i < game.moves.size(); i++) {
@@ -128,6 +137,76 @@ std::string randomDFRC() {
     std::string fen = black + "/pppppppp/8/8/8/8/PPPPPPPP/" + white + " w KQkq - 0 1";
     return fen;
 }
+
+// PlentyChess yoink
+bool nextToken(std::string* line, std::string* token) {
+    if (line->length() == 0) return false;
+    std::string::size_type tokenEnd = line->find(' ');
+    if (tokenEnd != std::string::npos) {
+        *token = line->substr(0, tokenEnd);
+        *line = line->substr(1 + tokenEnd);
+        return true;
+    }
+    *token = line->substr(0);
+    *line = line->substr(1);
+    return true;
+}
+
+void handleGenfens(Searcher& searcher, std::string params) {
+    std::string token;
+    int N = 0;
+    int seed = 0;
+    while (nextToken(&params, &token)) {
+        if (matchesToken(token, "genfens")){
+            nextToken(&params, &token);
+            N = std::stoi(token);
+        }
+        if (matchesToken(token, "seed")){
+            nextToken(&params, &token);
+            seed = std::stoi(token);
+        }
+    }
+
+    std::mt19937_64 engine(seed);
+    Search::Limit limit = Search::Limit();
+    
+    searcher.printInfo = false;
+    searcher.waitForSearchFinished();
+
+    for (int i = 0; i < N; i++) {
+        std::string fen;
+        while (true) {
+            Board board;
+            for (int m = 0; m < 8; m++) {
+                makeRandomMove(board, engine);
+                if (board.isGameOver().second != GameResult::NONE)
+                    break;
+            }
+            if (board.isGameOver().second != GameResult::NONE)
+                continue;
+
+            fen = board.getFen();
+            // See if this is too unbalanced
+            limit.depth = (int64_t)BENCH_DEPTH;
+            limit.movetime = 0;
+            limit.ctime = 0;
+            limit.start();
+
+            
+            searcher.reset();
+            searcher.startSearching(board, limit);
+            searcher.waitForSearchFinished();
+
+            if (std::abs(searcher.bestScore) < 1200){
+                break;
+            }
+        }
+
+        std::cout << "info string genfens " << fen << std::endl;
+    }
+    searcher.printInfo = true;
+}
+
 
 void runThread(int ti, bool isDFRC) {
     std::string filePath = "data/nnue_thread" + std::to_string(ti) + ".vf";

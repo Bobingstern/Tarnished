@@ -39,7 +39,7 @@ NNUE network;
 // Thanks Weiss
 // I will eventaully C++ify the UCI code
 // For now it's a weird mix of C and C++ xd
-void ParseTimeControl(char* str, Color color, Search::Limit& limit) {
+void ParseTimeControl(char* str, Color color, Search::Limit& limit, bool onlySoft) {
 
     // Read in relevant search constraints
     int64_t mtime = 0;
@@ -69,8 +69,14 @@ void ParseTimeControl(char* str, Color color, Search::Limit& limit) {
     limit.movetime = mtime;
     limit.inc = inc;
     limit.depth = depth;
+
     limit.maxnodes = nodes;
     limit.softnodes = softnodes;
+
+    if (onlySoft) {
+        limit.maxnodes = -1;
+        limit.softnodes = std::max(nodes, softnodes);
+    }
     limit.start();
 }
 
@@ -122,6 +128,9 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
     } else if (OptionName(str, "UCI_Chess960")) {
         std::string opt = OptionValue(str);
         board.set960(opt == "true");
+    } else if (OptionName(str, "UseSoftNodes")) {
+        std::string opt = OptionValue(str);
+        searcher.toggleSoft(opt == "true");
     } else {
         for (auto& param : tunables()) {
             const char* p = param.name.c_str();
@@ -162,6 +171,7 @@ void UCIInfo() {
     std::cout << "option name Threads type spin default 1 min 1 max 1024\n";
     std::cout << "option name UCI_ShowWDL type check default true\n";
     std::cout << "option name UCI_Chess960 type check default false\n";
+    std::cout << "option name UseSoftNodes type check default false\n";
 #ifdef TUNE
     for (auto& param : tunables()) {
         std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min
@@ -210,7 +220,7 @@ void UCIGo(Searcher& searcher, Board& board, char* str) {
     // searcher.stop();
 
     Search::Limit limit = Search::Limit();
-    ParseTimeControl(str, board.sideToMove(), limit);
+    ParseTimeControl(str, board.sideToMove(), limit, searcher.useSoft);
 
     searcher.startSearching(board, limit);
     // searcher.stop();
@@ -342,10 +352,22 @@ int main(int agrc, char* argv[]) {
 
     if (agrc > 1) {
         std::string arg = argv[1];
-        if (arg == "bench")
+        if (arg == "bench"){
             bench(searcher);
-        searcher.exit();
-        return 0;
+            searcher.exit();
+            return 0;
+        }
+        if (arg.substr(0, 7) == "genfens"){
+            handleGenfens(searcher, arg);
+            if (agrc > 2) {
+                arg = argv[2];
+                if (arg == "quit"){
+                    searcher.exit();
+                    return 0;
+                }
+            }
+            searcher.reset();
+        }
     }
 
     // Print Ascii
