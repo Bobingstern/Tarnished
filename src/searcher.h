@@ -20,6 +20,7 @@ struct Searcher {
         bool showWDL;
         bool printInfo = true;
         bool useSoft = false;
+        bool normalizeEval = true;
 
         void initialize(int num) {
             if (threads.size() == num)
@@ -90,5 +91,8 @@ struct Searcher {
         }
         void toggleSoft(bool x) {
             useSoft = x;
+        }
+        void toggleNorm(bool x) {
+            normalizeEval = x;
         }
 };

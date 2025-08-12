@@ -131,6 +131,9 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
     } else if (OptionName(str, "UseSoftNodes")) {
         std::string opt = OptionValue(str);
         searcher.toggleSoft(opt == "true");
+    } else if (OptionName(str, "NormalizeEval")) {
+        std::string opt = OptionValue(str);
+        searcher.toggleNorm(opt == "true");
     } else {
         for (auto& param : tunables()) {
             const char* p = param.name.c_str();
@@ -172,6 +175,7 @@ void UCIInfo() {
     std::cout << "option name UCI_ShowWDL type check default true\n";
     std::cout << "option name UCI_Chess960 type check default false\n";
     std::cout << "option name UseSoftNodes type check default false\n";
+    std::cout << "option name NormalizeEval type check default true\n";
 #ifdef TUNE
     for (auto& param : tunables()) {
         std::cout << "option name " << param.name << " type spin default " << param.defaultValue << " min " << param.min

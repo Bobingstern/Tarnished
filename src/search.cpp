@@ -733,7 +733,7 @@ namespace Search {
                 if (score >= FOUND_MATE || score <= GETTING_MATED) {
                     std::cout << "mate " << ((score < 0) ? "-" : "") << (MATE - std::abs(score)) / 2 + 1;
                 } else {
-                    int s = searcher->showWDL ? scaleEval(score, pvBoard) : score; // Only scale if WDL enabled
+                    int s = searcher->normalizeEval ? scaleEval(score, pvBoard) : score; // Only scale if WDL enabled
                     std::cout << "cp " << s;
                     if (searcher->showWDL) {
                         WDL wdl = computeWDL(score, pvBoard);
