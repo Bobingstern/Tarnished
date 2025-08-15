@@ -93,6 +93,7 @@ struct alignas(32) TTCluster {
 class TTable {
 
 public:
+    int mbSize = 16;
     TTable() {
         resize(16);
     }
@@ -101,6 +102,7 @@ public:
     }
 
     void resize(int mb = 16) {
+        mbSize = mb;
         size_t clusterCount = static_cast<uint64_t>(mb) * 1024 * 1024 / sizeof(TTCluster);
         if (clusterCount == size)
             return;

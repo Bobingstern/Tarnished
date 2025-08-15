@@ -4,7 +4,9 @@
 #include "parameters.h"
 #include "searcher.h"
 #include "tt.h"
+#include "uci.h"
 #include "util.h"
+
 
 #include <algorithm>
 #include <array>
@@ -729,20 +731,71 @@ namespace Search {
                 pvBoard.makeMove(lastPV.moves[i]);
             }
             if (searcher->printInfo) {
-                std::cout << "info depth " << depth << " score ";
-                if (score >= FOUND_MATE || score <= GETTING_MATED) {
-                    std::cout << "mate " << ((score < 0) ? "-" : "") << (MATE - std::abs(score)) / 2 + 1;
-                } else {
-                    int s = searcher->normalizeEval ? scaleEval(score, pvBoard) : score; // Only scale if WDL enabled
-                    std::cout << "cp " << s;
-                    if (searcher->showWDL) {
-                        WDL wdl = computeWDL(score, pvBoard);
-                        std::cout << " wdl " << wdl.w << " " << wdl.d << " " << wdl.l;
+                if (!PRETTY_PRINT) {
+                    std::cout << "info depth " << depth << " score ";
+                    if (score >= FOUND_MATE || score <= GETTING_MATED) {
+                        std::cout << "mate " << ((score < 0) ? "-" : "") << (MATE - std::abs(score)) / 2 + 1;
+                    } else {
+                        int s = searcher->normalizeEval ? scaleEval(score, threadInfo.board) : score; // Only scale if WDL enabled
+                        std::cout << "cp " << s;
+                        if (searcher->showWDL) {
+                            WDL wdl = computeWDL(score, threadInfo.board);
+                            std::cout << " wdl " << wdl.w << " " << wdl.d << " " << wdl.l;
+                        }
                     }
+                    std::cout << " hashfull " << searcher->TT.hashfull();
+                    std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " time " << limit.timer.elapsed() << " pv ";
+                    std::cout << pvss.str() << std::endl;
                 }
-                std::cout << " hashfull " << searcher->TT.hashfull();
-                std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " time " << limit.timer.elapsed() << " pv ";
-                std::cout << pvss.str() << std::endl;
+                else {
+                    CURSOR::clearAll();
+                    std::cout << "\n";
+                    std::vector<Move> moves;
+                    for (int i = 0; i < std::min((int)lastPV.length, getTerminalWidth() / 23 - 1); i++) {
+                        moves.push_back(lastPV.moves[i]);
+                    }
+                    printBoard(threadInfo.board, moves);
+
+                    int normEval = scaleEval(score, threadInfo.board);
+                    WDL wdl = computeWDL(score, threadInfo.board);
+                    Color stm = threadInfo.board.sideToMove();
+
+                    std::cout << COLORS::GREY << "Hash size:  " << COLORS::WHITE << searcher->TT.mbSize << "MB" << std::endl;
+                    std::cout << COLORS::GREY << "Hash usage: " << COLORS::WHITE << searcher->TT.hashfull() / 10.0 << "%\n" << std::endl;
+
+                    std::cout << COLORS::GREY << "Nodes:            " << COLORS::WHITE << nodecnt << std::endl;
+                    std::cout << COLORS::GREY << "Nodes per second: " << COLORS::WHITE << nodecnt / (limit.timer.elapsed() + 1) * 1000 << std::endl;
+                    std::cout << COLORS::GREY << "Time:             " << COLORS::WHITE << (limit.timer.elapsed() / 1000.0) << "s " << std::endl;
+                    std::cout << COLORS::GREY << "Depth:            " << COLORS::WHITE << depth << "\n" << std::endl;
+
+                    if (score >= FOUND_MATE || score <= GETTING_MATED) {
+                        std::cout << COLORS::GREY << "Score:     ";
+                        std::cout << (score < 0 ? COLORS::RED : COLORS::GREEN);
+                        std::cout << ((score < 0) ? "#-" : "#") << (MATE - std::abs(score)) / 2 + 1 << std::endl;
+                    }
+                    else {
+                        std::cout << COLORS::GREY << "Score:     ";
+                        heatColor((normEval + 200) / 400.0, normEval / 100.0);
+
+                        RGB wRGB = wdlRGB(wdl.w, wdl.d, wdl.l);
+                        RGB dRGB = wdlRGB(wdl.d, wdl.w, wdl.l);
+                        RGB lRGB = wdlRGB(wdl.l, wdl.d, wdl.w);
+
+                        std::cout << COLORS::GREY << " [" ;
+                        fmt::print(fg(fmt::rgb(wRGB.r, wRGB.g, wRGB.b)), "{:.2f}%", wdl.w / 10.0);
+                        std::cout << COLORS::GREY << " W | ";
+
+                        fmt::print(fg(fmt::rgb(dRGB.r, dRGB.g, dRGB.b)), "{:.2f}%", wdl.d / 10.0);
+                        std::cout << COLORS::GREY << " D | ";
+
+                        fmt::print(fg(fmt::rgb(lRGB.r, lRGB.g, lRGB.b)), "{:.2f}%", wdl.l / 10.0);
+                        std::cout << COLORS::GREY << " L]\n";
+
+                    }
+                    
+                    std::cout << COLORS::GREY << "Best Move: " << COLORS::WHITE << uci::moveToUci(threadInfo.bestMove, searcher->board.chess960()) << "\n" << std::endl;
+                    std::cout << COLORS::GREY << "Main Line: " << COLORS::WHITE << pvss.str() << std::endl;
+                }
             }
             // Time control (soft)
             double complexity = 0;

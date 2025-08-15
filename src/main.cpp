@@ -35,7 +35,7 @@ INCBIN(EVAL, EVALFILE);
 #endif
 
 NNUE network;
-
+bool PRETTY_PRINT = true;
 // Thanks Weiss
 // I will eventaully C++ify the UCI code
 // For now it's a weird mix of C and C++ xd
@@ -168,6 +168,7 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
     }
 }
 void UCIInfo() {
+    PRETTY_PRINT = false;
     std::cout << "id name Tarnished v3.0 (Warrior)\n";
     std::cout << "id author Anik Patel\n";
     std::cout << "option name Hash type spin default 16 min 2 max 16777216\n";
@@ -331,7 +332,7 @@ void bench(Searcher& searcher) {
     int nps = static_cast<int64_t>((totalNodes / totalMS) * 1000);
     std::cout << "Average NPS: " << nps << std::endl;
     std::cout << totalNodes << " nodes " << nps << " nps" << std::endl;
-
+    
     searcher.printInfo = true;
 }
 
@@ -390,7 +391,7 @@ int main(int agrc, char* argv[]) {
             case QUIT       : searcher.stopSearching(); searcher.exit();  return 0;
 
             // Non Standard
-            case PRINT      : std::cout << board << std::endl;            break;
+            case PRINT      : printBoard(board);                          break;
             case EVAL       : UCIEvaluate(board);                         break;
             case BENCH      : bench(searcher);                            break;
             case DATAGEN    : BeginDatagen(str, board.chess960());        break;
