@@ -262,7 +262,7 @@ void runThread(int ti, bool isDFRC) {
             int eval = Search::iterativeDeepening(board, *thread, limit, nullptr);
             TT.incAge();
             
-            eval = std::min(std::max(-INFINITE, eval), INFINITE);
+            eval = std::clamp(eval, -EVAL_INF, EVAL_INF);
             eval = board.sideToMove() == Color::WHITE ? eval : -eval;
             Move m = thread->bestMove;
             moveScoreBuffer.emplace_back(packMove(m), (int16_t)eval);

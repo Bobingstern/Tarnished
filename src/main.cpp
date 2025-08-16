@@ -332,7 +332,7 @@ void bench(Searcher& searcher) {
     int nps = static_cast<int64_t>((totalNodes / totalMS) * 1000);
     std::cout << "Average NPS: " << nps << std::endl;
     std::cout << totalNodes << " nodes " << nps << " nps" << std::endl;
-    
+
     searcher.printInfo = true;
 }
 
@@ -347,6 +347,18 @@ int main(int agrc, char* argv[]) {
               << std::endl;
 #else
     network = *reinterpret_cast<const NNUE*>(gEVALData);
+#endif
+
+    Console console; // Windows nonsense
+#if defined(_WIN32)
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    if (!console.vtEnabled) {
+        // Old Windows fallback
+        console.setColor(FOREGROUND_RED | FOREGROUND_INTENSITY);
+        std::cout << "Pretty Print (WinAPI fallback)\n";
+        console.setColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    }
 #endif
 
     Search::fillLmr();

@@ -378,7 +378,7 @@ namespace Search {
                 minorCorrhist.fill(DEFAULT_HISTORY);
                 whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
                 blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
-                bestRootScore = -INFINITE;
+                bestRootScore = -EVAL_INF;
                 rootDepth = 0;
                 completed = 0;
             }

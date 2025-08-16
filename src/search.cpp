@@ -4,10 +4,7 @@
 #include "parameters.h"
 #include "searcher.h"
 #include "tt.h"
-#include "uci.h"
 #include "util.h"
-
-
 #include <algorithm>
 #include <array>
 #include <random>
@@ -229,8 +226,8 @@ namespace Search {
 
         // Get the corrected static eval if not in check
         if (inCheck) {
-            rawStaticEval = -INFINITE;
-            eval = -INFINITE;
+            rawStaticEval = -EVAL_INF;
+            eval = -EVAL_INF;
         } else {
             rawStaticEval = ttHit && ttData.staticEval != EVAL_NONE && !isMateScore(ttData.staticEval)
                                 ? ttData.staticEval
@@ -336,7 +333,7 @@ namespace Search {
             return ttData.score;
         }
 
-        int bestScore = -INFINITE;
+        int bestScore = -EVAL_INF;
         int oldAlpha = alpha;
         int rawStaticEval = EVAL_NONE;
         int score = bestScore;
@@ -654,8 +651,8 @@ namespace Search {
         std::memset(stack.get(), 0, sizeof(Stack) * (MAX_PLY + 3));
 
         PVList lastPV{};
-        int score = -INFINITE;
-        int lastScore = -INFINITE;
+        int score = -EVAL_INF;
+        int lastScore = -EVAL_INF;
 
         int64_t avgnps = 0;
         for (int depth = 1; depth <= limit.depth; depth++) {
@@ -683,18 +680,18 @@ namespace Search {
             // Aspiration Windows
             if (depth >= MIN_ASP_WINDOW_DEPTH()) {
                 int delta = INITIAL_ASP_WINDOW();
-                int alpha = std::max(lastScore - delta, -INFINITE);
-                int beta = std::min(lastScore + delta, INFINITE);
+                int alpha = std::max(lastScore - delta, -EVAL_INF);
+                int beta = std::min(lastScore + delta, EVAL_INF);
                 int aspDepth = depth;
                 while (!aborted(false)) {
                     score = search<true>(std::max(aspDepth, 1), 0, alpha, beta, false, ss, threadInfo, limit);
                     if (score <= alpha) {
                         beta = (alpha + beta) / 2;
-                        alpha = std::max(alpha - delta, -INFINITE);
+                        alpha = std::max(alpha - delta, -EVAL_INF);
                         aspDepth = depth;
                     } else {
                         if (score >= beta) {
-                            beta = std::min(beta + delta, INFINITE);
+                            beta = std::min(beta + delta, EVAL_INF);
                             aspDepth = std::max(aspDepth - 1, depth - 5);
                         } else
                             break;
@@ -702,7 +699,7 @@ namespace Search {
                     delta += delta * ASP_WIDENING_FACTOR() / 16;
                 }
             } else
-                score = search<true>(depth, 0, -INFINITE, INFINITE, false, ss, threadInfo, limit);
+                score = search<true>(depth, 0, -EVAL_INF, EVAL_INF, false, ss, threadInfo, limit);
             // ---------------------
             if (depth != 1 && aborted(false)) {
                 break;

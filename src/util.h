@@ -239,6 +239,40 @@ template <typename T, std::size_t Size, std::size_t... Sizes> class MultiArray {
         }
 };
 
+struct Console {
+#if defined(_WIN32)
+    HANDLE hConsole;
+    bool vtEnabled;
+
+    Console() {
+        hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        vtEnabled = false;
+
+        if (hConsole == INVALID_HANDLE_VALUE) return;
+
+        DWORD dwMode = 0;
+        if (GetConsoleMode(hConsole, &dwMode)) {
+            // Try enabling ANSI escape sequences
+            dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            if (SetConsoleMode(hConsole, dwMode)) {
+                vtEnabled = true;
+            }
+        }
+    }
+
+    void setColor(int fg) {
+        if (!vtEnabled) {
+            // Windows Console API fallback
+            SetConsoleTextAttribute(hConsole, fg);
+        }
+    }
+
+#else
+    // On Linux/macOS no init needed
+    Console() {}
+    void setColor(int) {}
+#endif
+};
 
 struct COLORS {
     // ANSI codes for colors https://raw.githubusercontent.com/fidian/ansi/master/images/color-codes.png
@@ -366,4 +400,126 @@ static int getTerminalWidth() {
     else
         return 80; // fallback
 #endif
+}
+
+// ---------------------- Pretty Stuff
+
+static void printBoard(Board& board) {
+    std::cout << COLORS::WHITE
+            << "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n";
+
+    int line = 1;
+    for (int rank = 0; rank < 8; rank++) {
+        std::cout << COLORS::WHITE << "\u2502 ";
+        for (int file = 0; file < 8; file++) {
+            Square sq = Square(Rank(rank), File(file));
+            Piece p = board.at(sq);
+            auto c = p.color() == Color::WHITE ? COLORS::YELLOW : COLORS::CYAN;
+            if (p == Piece::NONE)
+                c = COLORS::WHITE;
+            std::cout << c << std::string(p) << COLORS::RESET << " ";
+        }
+        std::cout << COLORS::WHITE << "\u2502 \n";
+    }
+    std::cout << COLORS::WHITE
+            << "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n";
+
+}
+
+static void printBoard(Board& board, Move move) {
+    std::cout << COLORS::WHITE
+            << "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n";
+
+    int line = 1;
+    Piece p;
+    std::string_view c;
+    auto doPieceColor = [&](Square sq) {
+        p = board.at(sq);
+        c = p.color() == Color::WHITE ? COLORS::YELLOW : COLORS::CYAN;
+        if (p == Piece::NONE)
+            c = COLORS::WHITE;
+        if (sq == move.from())
+            c = COLORS::GREY;
+        if (sq == move.to()){
+            c = COLORS::GREEN;
+            p = board.at(move.from());
+            if (move.typeOf() == Move::PROMOTION)
+                p = Piece(move.promotionType(), board.sideToMove());
+        }
+    };
+    for (int rank = 0; rank < 8; rank++) {
+        std::cout << COLORS::WHITE << "\u2502 ";
+        for (int file = 0; file < 8; file++) {
+            Square sq = Square(Rank(7 - rank), File(file));
+            doPieceColor(sq);
+            std::cout << c << std::string(p) << COLORS::RESET << " ";
+        }
+        std::cout << COLORS::WHITE << "\u2502 " << (rank + 1) << "\n";
+    }
+    std::cout << COLORS::WHITE
+            << "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n";
+    std::cout << "  a b c d e f g h\n\n";
+}
+
+static void printBoard(Board& board, std::vector<Move> moves) {
+
+    for (auto move : moves)
+        std::cout << COLORS::WHITE << "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510  ";
+    std::cout << COLORS::WHITE << "\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510  ";
+    std::cout << "\n";
+    int line = 1;
+    Piece p;
+    std::string_view c;
+    auto doPieceColor = [&](Board& testBoard, Move move, Square sq) {
+        p = testBoard.at(sq);
+        c = p.color() == Color::WHITE ? COLORS::YELLOW : COLORS::CYAN;
+        if (p == Piece::NONE)
+            c = COLORS::WHITE;
+        if (move != Move::NO_MOVE){
+            if (sq == move.from())
+                c = COLORS::GREY;
+            if (sq == move.to()){
+                c = COLORS::GREEN;
+                p = testBoard.at(move.from());
+                if (move.typeOf() == Move::PROMOTION)
+                    p = Piece(move.promotionType(), testBoard.sideToMove());
+            }
+        }
+    };
+    for (int rank = 0; rank < 8; rank++) {
+        Board testBoard = board;
+
+        std::cout << COLORS::WHITE << "\u2502 ";
+        for (int file = 0; file < 8; file++) {
+            Square sq = Square(Rank(7 - rank), File(file));
+            doPieceColor(board, Move::NO_MOVE, sq);
+            std::cout << c << std::string(p) << COLORS::RESET << " ";
+        }
+        std::cout << COLORS::WHITE << "\u2502 " << (rank + 1);
+
+        for (Move move : moves) {
+            std::cout << COLORS::WHITE << "\u2502 ";
+            for (int file = 0; file < 8; file++) {
+                Square sq = Square(Rank(7 - rank), File(file));
+                doPieceColor(testBoard, move, sq);
+                std::cout << c << std::string(p) << COLORS::RESET << " ";
+            }
+            std::cout << COLORS::WHITE << "\u2502 " << (rank + 1);
+            testBoard.makeMove(move);
+        }
+        std::cout << "\n";
+    }
+    for (auto move : moves) {
+        std::cout << COLORS::WHITE
+                << "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518  ";
+    }
+    std::cout << COLORS::WHITE
+                << "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518  ";
+    std::cout << "\n";
+    for (auto move : moves) {
+        std::cout << "  a b c d e f g h    ";
+    }
+    std::cout << "  a b c d e f g h    ";
+    std::cout << "\n\n";
+    
 }
