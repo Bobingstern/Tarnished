@@ -771,12 +771,13 @@ namespace Search {
                         std::cout << ((score < 0) ? "#-" : "#") << (MATE - std::abs(score)) / 2 + 1 << std::endl;
                     }
                     else {
-                        std::cout << COLORS::GREY << "Score:     ";
-                        heatColor((normEval + 200) / 400.0, normEval / 100.0);
-
+                        RGB scoreRGB = scoreToRGB(normEval);
                         RGB wRGB = wdlRGB(wdl.w, wdl.d, wdl.l);
                         RGB dRGB = wdlRGB(wdl.d, wdl.w, wdl.l);
                         RGB lRGB = wdlRGB(wdl.l, wdl.d, wdl.w);
+
+                        std::cout << COLORS::GREY << "Score:     ";
+                        fmt::print(fg(fmt::rgb(scoreRGB.r, scoreRGB.g, scoreRGB.b)), "{:.2f}", normEval / 100.0);
 
                         std::cout << COLORS::GREY << " [" ;
                         fmt::print(fg(fmt::rgb(wRGB.r, wRGB.g, wRGB.b)), "{:.2f}%", wdl.w / 10.0);

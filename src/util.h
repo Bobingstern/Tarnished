@@ -386,6 +386,23 @@ static inline RGB wdlRGB(int w, int d, int l){
     return RGB{double(R8), double(G8), double(B8)}; // 0xRRGGBB
 }
 
+inline RGB rgbLerp(RGB a, RGB b, double t) {
+    return { a.r + (b.r-a.r)*t, a.g + (b.g-a.g)*t, a.b + (b.b-a.b)*t };
+}
+static RGB scoreToRGB(double cp, double scale=1.0) {
+    // clamp cp to [-scale, +scale]
+    if (cp > scale) cp = scale;
+    if (cp < -scale) cp = -scale;
+
+    if (cp >= 0.0) {
+        double t = cp / scale;
+        return rgbLerp({240,240,240}, {76,175,80}, t); // gray → green
+    } else {
+        double t = -cp / scale;
+        return rgbLerp({240,240,240}, {244,67,54}, t); // gray → red
+    }
+}
+
 static int getTerminalWidth() {
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO csbi;
