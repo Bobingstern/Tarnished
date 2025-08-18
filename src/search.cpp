@@ -363,14 +363,17 @@ namespace Search {
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
+        bool canRFP = depth <= 8 && !root && !isPV && !inCheck && moveIsNull(ss->excluded);
+        int oldDepth = depth;
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
             int rfpMargin = RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
-            if (depth <= 8 && ss->eval - rfpMargin >= beta)
+            if (depth <= 8 && rfpInference(depth, ss->eval, beta, improving, corrplexity)){
                 return ss->eval;
+            }
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
@@ -417,11 +420,6 @@ namespace Search {
         // Internal Iterative Reduction
         if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;
-
-        // Thought
-        // What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
-        // and use some sort of data generation method to create a pruning heuristic
-        // with something like sigmoid(C dot I) >= 0.75 ?
 
         // Calculuate Threats
         ss->threats = calculateThreats(thread.board);
@@ -618,6 +616,19 @@ namespace Search {
                 return alpha;
             return inCheck ? -MATE + ply : 0;
         }
+        // if (canRFP) {
+        //     thread.searcher->file << oldDepth << ","
+        //         << ss->eval << ","
+        //         << beta << ","
+        //         << improving << ","
+        //         << corrplexity << ","
+        //         << cutnode << ","
+        //         << ttHit << ","
+        //         << bestScore << ","
+        //         << (ttFlag == TTFlag::BETA_CUT) << ","
+        //         << bestScore - beta << "\n";
+        // }
+
         // Sf fail firm idea
         if (bestScore >= beta && !isMateScore(bestScore) && !isMateScore(alpha))
             bestScore = (bestScore * depth + beta) / (depth + 1);
@@ -636,6 +647,8 @@ namespace Search {
             // Update TT
             thread.TT.store(thread.board.hash(), bestMove, bestScore, rawStaticEval, ttFlag, depth, ply, ttPV);
         }
+
+
 
         return bestScore;
     }

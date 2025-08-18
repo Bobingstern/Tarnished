@@ -372,6 +372,10 @@ int main(int agrc, char* argv[]) {
             }
             searcher.reset();
         }
+        if (arg == "rfp") {
+            rfpStats(searcher);
+            searcher.exit();
+        }
     }
 
     // Print Ascii

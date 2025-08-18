@@ -305,3 +305,45 @@ void startDatagen(size_t tcount, bool isDFRC) {
     }
     runThread(tcount - 1, isDFRC);
 }
+
+double rfpStats(Searcher& searcher) {
+    std::ifstream file("data/lichess.book");
+    std::string line;
+
+    if (!file) {
+        std::cerr << "Error: Could not open file\n";
+        return 0 ;
+    }
+    int poses = 0;
+    int maxPoses = 400;
+
+    TimeLimit timer = TimeLimit();
+    searcher.printInfo = false;
+    searcher.waitForSearchFinished();
+    searcher.reset();
+
+
+    while (std::getline(file, line) && poses < maxPoses) {
+        size_t pos = line.find(" [");
+        if (pos != std::string::npos) {
+            line = line.substr(0, pos);
+        }
+
+        Board board(line);
+        Search::Limit limit = Search::Limit();
+        limit.depth = 10;
+        limit.movetime = 0;
+        limit.ctime = 0;
+        limit.start();
+
+        searcher.startSearching(board, limit);
+        searcher.waitForSearchFinished();
+        searcher.reset();
+
+        poses++;
+
+        std::cout << "Position " << poses << "/" << maxPoses << std::endl;
+    }
+    return 1;
+
+}

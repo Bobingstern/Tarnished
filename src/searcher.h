@@ -8,12 +8,17 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <iostream>
+#include <fstream>
+#include <ostream>
 
 struct Searcher {
         TTable TT;
         std::vector<std::unique_ptr<Search::ThreadInfo>> threads;
         Search::Limit limit;
         Board board;
+
+        //std::ofstream file = std::ofstream("pytorch/rfpdata4.csv");
 
         int bestScore = 0;
 

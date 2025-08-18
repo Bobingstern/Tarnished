@@ -86,3 +86,4 @@ static bool matchesToken(std::string line, std::string token) {
 bool nextToken(std::string* line, std::string* token);
 void handleGenfens(Searcher& searcher, std::string params);
 
+double rfpStats(Searcher& searcher);
