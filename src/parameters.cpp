@@ -52,23 +52,25 @@ int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features) {
     return output;
 }
 
-bool rfpInference(int depth, int eval, int beta, bool improving, int corrplexity) {
+bool ebcInference(int depth, int eval, int beta, bool improving, int corrplexity, bool cutnode, bool tthit) {
     std::array<double, 16> H1 = {0};
-    double output = RFP_OUTPUT_BIAS;
+    double output = EBC_OUTPUT_BIAS;
     for (int h = 0; h < 16; h++) {
-        H1[h] += RFP_H1_BIAS[h];
-        H1[h] += depth * RFP_H1[h][0];
-        H1[h] += eval * RFP_H1[h][1];
-        H1[h] += beta * RFP_H1[h][2];
-        H1[h] += improving * RFP_H1[h][3];
-        H1[h] += corrplexity * RFP_H1[h][4];
+        H1[h] += EBC_H1_BIAS[h];
+        H1[h] += depth * EBC_H1[h][0];
+        H1[h] += eval * EBC_H1[h][1];
+        H1[h] += beta * EBC_H1[h][2];
+        H1[h] += improving * EBC_H1[h][3];
+        H1[h] += corrplexity * EBC_H1[h][4];
+        H1[h] += cutnode * EBC_H1[h][5];
+        H1[h] += tthit * EBC_H1[h][6];
         H1[h] = std::max(0.0, H1[h]);
     }
     for (int h = 0; h < 16; h++) {
-        output += H1[h] * RFP_OUTPUT[h];
+        output += H1[h] * EBC_OUTPUT[h];
     }
     //std::cout << output << std::endl;
-    return output >= RFP_THREHOLD;
+    return output >= EBC_THREHOLD;
 }
 
 void printWeatherFactoryConfig() {

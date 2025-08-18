@@ -371,7 +371,7 @@ namespace Search {
             int rfpMargin = RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
-            if (depth <= 8 && rfpInference(depth, ss->eval, beta, improving, corrplexity)){
+            if (depth <= 8 && ss->eval - rfpMargin >= beta){
                 return ss->eval;
             }
 
@@ -414,6 +414,11 @@ namespace Search {
                     if (verification >= beta)
                         return verification;
                 }
+            }
+
+            // Expected beta cutoff via NN
+            if (depth <= 8 && ss->eval > beta && ebcInference(depth, ss->eval, beta, improving, corrplexity, cutnode, ttHit)) {
+                return ss->eval;
             }
         }
 

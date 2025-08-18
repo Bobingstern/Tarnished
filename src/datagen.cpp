@@ -315,7 +315,7 @@ double rfpStats(Searcher& searcher) {
         return 0 ;
     }
     int poses = 0;
-    int maxPoses = 400;
+    int maxPoses = 1000;
 
     TimeLimit timer = TimeLimit();
     searcher.printInfo = false;
