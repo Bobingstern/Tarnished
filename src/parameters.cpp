@@ -52,7 +52,7 @@ int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features) {
     return output;
 }
 
-bool ebcInference(int depth, int eval, int beta, bool improving, int corrplexity, bool cutnode, bool tthit) {
+bool ebcInference(int depth, int eval, int beta, bool improving, int corrplexity, bool cutnode, bool tthit, int history) {
     std::array<double, 16> H1 = {0};
     double output = EBC_OUTPUT_BIAS;
     for (int h = 0; h < 16; h++) {
@@ -64,6 +64,7 @@ bool ebcInference(int depth, int eval, int beta, bool improving, int corrplexity
         H1[h] += corrplexity * EBC_H1[h][4];
         H1[h] += cutnode * EBC_H1[h][5];
         H1[h] += tthit * EBC_H1[h][6];
+        H1[h] += history * EBC_H1[h][7] / 8192.0;
         H1[h] = std::max(0.0, H1[h]);
     }
     for (int h = 0; h < 16; h++) {

@@ -365,6 +365,7 @@ namespace Search {
 
         bool canRFP = depth <= 8 && !root && !isPV && !inCheck && moveIsNull(ss->excluded);
         int oldDepth = depth;
+        int oldHist = (ss - 1)->historyScore;
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
@@ -417,8 +418,11 @@ namespace Search {
             }
 
             // Expected beta cutoff via NN
-            if (depth <= 8 && ss->eval > beta && ebcInference(depth, ss->eval, beta, improving, corrplexity, cutnode, ttHit)) {
-                return ss->eval;
+            if (depth <= 8 && ss->eval > beta && ebcInference(depth, ss->eval, beta, improving, corrplexity, cutnode, ttHit, (ss - 1)->historyScore)) {
+                int verification =
+                        search<false>(std::max(depth - 2, 0), ply + 1, beta - 1, beta, false, ss, thread, limit);
+                if (verification >= beta)
+                    return verification;
             }
         }
 
@@ -629,6 +633,7 @@ namespace Search {
         //         << corrplexity << ","
         //         << cutnode << ","
         //         << ttHit << ","
+        //         << oldHist << ","
         //         << bestScore << ","
         //         << (ttFlag == TTFlag::BETA_CUT) << ","
         //         << bestScore - beta << "\n";
