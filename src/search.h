@@ -98,6 +98,7 @@ namespace Search {
 
             Move move{};
             PieceType movedPiece;
+            PieceType captPiece;
             MultiArray<int16_t, 2, 6, 64>* conthist;
             MultiArray<int16_t, 2, 6, 64>* contCorrhist;
 
@@ -284,7 +285,7 @@ namespace Search {
                 entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
             }
 
-            void updateQuietHistory(Stack* ss, Move m, int bonus) {
+            void updateQuietHistory(Stack* ss, Move m, Board& board, int bonus) {
                 updateHistory(ss, board, m, bonus);
                 updateConthist(ss, board, m, int16_t(bonus));
                 updatePawnhist(ss, board, m, int16_t(bonus));

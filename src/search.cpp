@@ -362,6 +362,15 @@ namespace Search {
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
+        if (!inCheck && !root && moveIsNull(ss->excluded) && !moveIsNull((ss - 1)->move)
+                    && (ss - 1)->captPiece == PieceType::NONE && (ss - 1)->eval != EVAL_NONE) {
+            int value = -10 * (ss->eval + (ss - 1)->eval);  
+            int bonus = std::clamp(value, -93, 199);
+            Board oldBoard = thread.board;
+            oldBoard.unmakeMove((ss - 1)->move);
+            thread.updateQuietHistory((ss - 1), (ss - 1)->move, oldBoard, bonus);
+        }
+
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
@@ -516,6 +525,7 @@ namespace Search {
             // Update Continuation History
             ss->move = move;
             ss->movedPiece = thread.board.at<PieceType>(move.from());
+            ss->captPiece = thread.board.at<PieceType>(move.to());
             ss->conthist = thread.getConthistSegment(thread.board, move);
             ss->contCorrhist = thread.getContCorrhistSegment(thread.board, move);
 
@@ -594,11 +604,11 @@ namespace Search {
                 int bonus = historyBonus(depth);
                 int malus = historyMalus(depth);
                 if (isQuiet) {
-                    thread.updateQuietHistory(ss, move, bonus);
+                    thread.updateQuietHistory(ss, move, thread.board, bonus);
                     for (const Move quietMove : seenQuiets) {
                         if (quietMove == move)
                             continue;
-                        thread.updateQuietHistory(ss, quietMove, malus);
+                        thread.updateQuietHistory(ss, quietMove, thread.board, malus);
                     }
                 } else {
                     thread.updateCapthist(ss, thread.board, move, bonus);
