@@ -35,7 +35,7 @@ INCBIN(EVAL, EVALFILE);
 #endif
 
 NNUE network;
-
+bool PRETTY_PRINT = true;
 // Thanks Weiss
 // I will eventaully C++ify the UCI code
 // For now it's a weird mix of C and C++ xd
@@ -168,6 +168,7 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
     }
 }
 void UCIInfo() {
+    PRETTY_PRINT = false;
     std::cout << "id name Tarnished v3.0 (Warrior)\n";
     std::cout << "id author Anik Patel\n";
     std::cout << "option name Hash type spin default 16 min 2 max 16777216\n";
@@ -348,6 +349,18 @@ int main(int agrc, char* argv[]) {
     network = *reinterpret_cast<const NNUE*>(gEVALData);
 #endif
 
+    Console console; // Windows nonsense
+#if defined(_WIN32)
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    if (!console.vtEnabled) {
+        // Old Windows fallback
+        console.setColor(FOREGROUND_RED | FOREGROUND_INTENSITY);
+        std::cout << "Pretty Print (WinAPI fallback)\n";
+        console.setColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    }
+#endif
+
     Search::fillLmr();
     Searcher searcher = Searcher();
     searcher.toggleWDL(true); // Default display wdl
@@ -390,7 +403,7 @@ int main(int agrc, char* argv[]) {
             case QUIT       : searcher.stopSearching(); searcher.exit();  return 0;
 
             // Non Standard
-            case PRINT      : std::cout << board << std::endl;            break;
+            case PRINT      : printBoard(board);                          break;
             case EVAL       : UCIEvaluate(board);                         break;
             case BENCH      : bench(searcher);                            break;
             case DATAGEN    : BeginDatagen(str, board.chess960());        break;

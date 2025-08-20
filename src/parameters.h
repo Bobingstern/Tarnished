@@ -56,6 +56,7 @@ extern std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR;
 extern std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR;
 extern std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR;
 
+extern bool PRETTY_PRINT;
 
 std::list<TunableParam>& tunables();
 TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);

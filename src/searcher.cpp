@@ -37,7 +37,7 @@ void Search::ThreadInfo::exit() {
 void Search::ThreadInfo::startSearching() {
     nodes = 0;
     bestMove = Move::NO_MOVE;
-    bestRootScore = -INFINITE;
+    bestRootScore = -EVAL_INF;
     
     Search::iterativeDeepening(searcher->board, *this, searcher->limit,
                                searcher);

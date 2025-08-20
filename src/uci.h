@@ -1,8 +1,13 @@
 #pragma once
 
 #include "search.h"
+#include "util.h"
+#include "external/fmt/color.h"
+#include "external/fmt/format.h"
 #include <iostream>
 #include <string.h>
+
+using namespace chess;
 
 // Yoinked from Weiss
 // https://github.com/TerjeKir/weiss/blob/v1.0/src/uci.h
@@ -25,82 +30,67 @@ enum InputCommands {
     WAIT = 15,
     CONFIG = 13
 };
-bool GetInput(char* str) {
+static bool GetInput(char* str) {
     memset(str, 0, INPUT_SIZE);
     if (fgets(str, INPUT_SIZE, stdin) == NULL)
         return false;
     str[strcspn(str, "\r\n")] = '\0';
     return true;
 }
-bool BeginsWith(const char* str, const char* token) {
+static bool BeginsWith(const char* str, const char* token) {
     return strstr(str, token) == str;
 }
 // Tests whether the name in the setoption string matches
-bool OptionName(const char* str, const char* name) {
+static bool OptionName(const char* str, const char* name) {
     return BeginsWith(strstr(str, "name") + 5, name);
 }
 // Returns the (string) value of a setoption string
-char* OptionValue(const char* str) {
+static char* OptionValue(const char* str) {
     const char* valuePtr = strstr(str, "value");
     return (valuePtr != nullptr && strlen(valuePtr) > 6) ? (char*)(valuePtr + 6) : nullptr;
 }
 // Sets a limit to the corresponding value in line, if any
-void SetLimit(const char* str, const char* token, int64_t* limit) {
+static void SetLimit(const char* str, const char* token, int64_t* limit) {
     const char* ptr = strstr(str, token);
     if (ptr != nullptr) {
         *limit = std::stoll(ptr + strlen(token));
     }
 }
 
-void bench(Searcher* searcher);
+static void bench(Searcher* searcher);
 
 // ------------------------- ASCI ART -------------------------------
 
-void tarnishedAscii() {
-    std::cout << R"(
-                         :=*#*+:                      
-                     +#***********#                   
-                  +#****************#                 
-               .#*#******************@.               
-           .:=#*%#********************%%:             
-               :*************%***#****@*%             
-              :%**************%**@*#*%**%             
-        +:   .%*********#*****#*#@*#****%             
-       ##   :@************#@*#*#%##**%*@:             
-      :**#=##*****#**#=.-:%*@%#%#*##**%               
-      :*******%*%***%-   #***@@%##*#@.                
-       ##****%#**%*%.    =%======%+                   
-        .=%%%%*-#=.     .%+=----=+%=                  
-                     -@#--*+--::=*--#%-               
-                   =#=--=*-#=-:-#-*---=%=             
-                  #*-----++-%--%=*=-----**            
-                  %:------#=%--%=*-------%            
-                  %-------=+#=-**=------=#            
-                 :%@%-=*--=+*==+*=--#=-#@@:           
-                .%@=-=**+*%%#++*%%#+*+--=@@           
-                 %%#+=----------------=+#%@           
-                 +*%+%%@@%*======*%@@%%=%+#           
-                 :%@==%#*%%%%%%%%%@##%==@#-           
-                  =@+*%#==+++==+++==#%+=@#            
-                   +=****+*#+--+#*+****=+             
-                   =**@*%=%*%-:%*%=%*%**=             
-                 .%@#*@*%=@+%-:%*@=%*@+%@#            
-               .%+-+@=@*%*@+%-:%*@+%*@=@+:*%.         
-            =%*--==*#@#=@*##%--%*#*@=#%%+=---#%=      
-            #=#==+#+==+%#==%%=-%#+=%%+==+#+==*-#      
-            +*+%#=------=*%%@==@%%*=------+*%+*=      
-             =#=#+----------=*+=----------+#=#-       
-               #+=%+---------+=---------*%=+#         
-                 **=*%------+#++-----=%+=#*           
-                   :#*=*%=:::+=---+%*=##:             
-                      :*#+*#+***#*+#*:                
-                         :##=**=##:                   
-                            =%%-                      
+static void tarnishedAscii() {
+    std::cout << COLORS::GREY << R"(                                  
+                         X$ &&                       
+                 &   &&&&&&&&&&$+$$$$                
+                &&&&&&&&&&&&&&&& .   .x$$            
+                 $&&&&&&$:   + : ......  +$$         
+                 ;;+x&x  ..   $.  ..  ..   :$X       
+              $x        .    .&x$&X ...  .   ;$      
+             &;  .... ; X    +&&;&&+&..x ...  .&     
+            $:  ..... : xx. +:&&&. $&:::...... .$    
+           $+ ....... :      :&&&&&&&&& ......  :$   
+           $  ....... x..    .&&&&&&&&&:.......  X   
+          $x .........+   .Xx.&&&&+  ;$ .....  . +$  
+          &; .........; . ..  x   ;; ;&........ .;$  
+          $+ .........;   :+;   :X&&&&$ ......   ;$  
+          ;X ........ ;  ;    ;&&x&+&&&  ......  x$  
+           X  ....... :  : ;..:x$;&;&X; .......  $   
+           $$ ...     . :  :..:X$+&&& : +; .... x$   
+            x+        ..  .   :&&&X   .  &X;.  ;$    
+                .   x  ;.    x+&.    ;. x&:&&&&+     
+                 xx .&. :;.       .;.  $&;&&&&&&&&   
+               $; ;&$;X$.  .::;:::.  ;&$.&&+&&&&&    
+                 $$;;$+X&$+       .x&x ;$.$&&&&      
+                    $&&$;      ;x+.  .; +&&          
+                        $$$Xx;                                  
  _______       _____  _   _ _____  _____ _    _ ______ _____  
 |__   __|/\   |  __ \| \ | |_   _|/ ____| |  | |  ____|  __ \ 
    | |  /  \  | |__) |  \| | | | | (___ | |__| | |__  | |  | |
    | | / /\ \ |  _  /| . ` | | |  \___ \|  __  |  __| | |  | |
    | |/ ____ \| | \ \| |\  |_| |_ ____) | |  | | |____| |__| |
    |_/_/    \_\_|  \_\_| \_|_____|_____/|_|  |_|______|_____/                                    
-    )" << "\n" << std::endl;
+    )" << std::endl;
 }

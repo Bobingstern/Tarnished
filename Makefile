@@ -5,6 +5,7 @@
 EXE_SUFFIX =
 LDFLAGS = -fuse-ld=lld
 SOURCES := $(wildcard src/*.cpp)
+SOURCES += src/external/format.cpp
 CXX := clang++
 
 
