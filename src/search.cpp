@@ -538,6 +538,7 @@ namespace Search {
             int newDepth = depth - 1 + extension;
             // Late Move Reduction
             bool dolmr = false;
+            int red = baseLMR + lmrConvolution({isQuiet, !isPV, improving, cutnode, ttPV, ttHit, ((ss + 1)->failHighs > 2)}) - 1024 * ss->historyScore / LMR_HIST_DIVISOR();
             if (dolmr) {
                 int reduction = baseLMR;
 
@@ -591,7 +592,7 @@ namespace Search {
                                     << ttPV << ","
                                     << ttHit << ","
                                     << ((ss + 1)->failHighs > 2) << ","
-                                    << (score > alpha ? 1 : depth / 2) << "\n";
+                                    << (score > alpha ? 1024 : red) << "\n";
                 }
                 if (score > alpha) {
                     bestMove = move;
