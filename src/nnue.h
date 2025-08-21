@@ -43,7 +43,8 @@ struct Accumulator {
         alignas(64) std::array<int16_t, HL_N> black;
 
         void refresh(Board& board);
-        static bool needRefresh(Move kingMove);
+        static bool needRefresh(Move kingMove, Color stm);
+        static int kingBucket(Square kingSq, Color color);
         void print();
         // addsub, addsubsub, addaddsubsub
         void quiet(Board& board, Color stm, Square add, PieceType addPT, Square sub, PieceType subPT);
@@ -52,7 +53,7 @@ struct Accumulator {
 };
 
 struct NNUE {
-        alignas(64) std::array<int16_t, HL_N * 768> H1;
+        alignas(64) std::array<int16_t, HL_N * 768 * INPUT_BUCKETS> H1;
         alignas(64) std::array<int16_t, HL_N> H1Bias;
         alignas(64) std::array<std::array<int16_t, HL_N * 2>, OUTPUT_BUCKETS> OW;
         alignas(64) std::array<int16_t, OUTPUT_BUCKETS> outputBias;
