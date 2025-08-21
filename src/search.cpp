@@ -537,7 +537,8 @@ namespace Search {
 
             int newDepth = depth - 1 + extension;
             // Late Move Reduction
-            if (depth >= 3 && moveCount > 2 + root) {
+            bool dolmr = false;
+            if (dolmr) {
                 int reduction = baseLMR;
 
                 // Factorized "inference"
@@ -582,6 +583,16 @@ namespace Search {
 
             if (score > bestScore) {
                 bestScore = score;
+                if (depth >= 2 && moveCount > 2 + root) {
+                    thread.searcher->file << isQuiet << ","
+                                    << !isPV << ","
+                                    << improving << ","
+                                    << cutnode << ","
+                                    << ttPV << ","
+                                    << ttHit << ","
+                                    << ((ss + 1)->failHighs > 2) << ","
+                                    << (score > alpha ? 1 : depth / 2) << "\n";
+                }
                 if (score > alpha) {
                     bestMove = move;
                     ss->bestMove = bestMove;

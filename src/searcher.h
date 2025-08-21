@@ -18,7 +18,7 @@ struct Searcher {
         Search::Limit limit;
         Board board;
 
-        //std::ofstream file = std::ofstream("pytorch/betacutdata.csv");
+        std::ofstream file = std::ofstream("pytorch/lmrnet/lmrdata.csv");
 
         int bestScore = 0;
 
