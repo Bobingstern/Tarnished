@@ -141,10 +141,10 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
 
 int NNUE::feature(Color persp, Color color, PieceType p, Square sq, Square king) {
     int ci = persp == color ? 0 : 1;
-    int sqi = persp == Color::BLACK ? (sq).flip().index() : (sq).index();
+    int sqi = persp == Color::BLACK ? sq.flip().index() : sq.index();
     if (king.file() >= File::FILE_E && HORIZONTAL_MIRROR)
         sqi ^= 7;
-    return ci * 64 * 6 + (int)p * 64 + sqi; // Index of the feature
+    return Accumulator::kingBucket(king, persp) * 768 + ci * 64 * 6 + int(p) * 64 + sqi; // Index of the feature
 }
 
 void NNUE::load(const std::string& file) {
@@ -164,23 +164,6 @@ void NNUE::load(const std::string& file) {
         outputBias[i] = readLittleEndian<int16_t>(stream);
 }
 
-void NNUE::randomize() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(-500, 500);
-    for (int i = 0; i < H1.size(); ++i) {
-        H1[i] = distrib(gen);
-    }
-    for (int i = 0; i < H1Bias.size(); ++i) {
-        H1Bias[i] = distrib(gen);
-    }
-    for (int i = 0; i < OW.size(); ++i) {
-        for (int j = 0; j < OW[i].size(); j++)
-            OW[i][j] = distrib(gen);
-    }
-    for (int i = 0; i < OUTPUT_BUCKETS; i++)
-        outputBias[i] = distrib(gen);
-}
 
 int NNUE::inference(Board& board, Accumulator& accumulator) {
 
@@ -218,10 +201,29 @@ int NNUE::inference(Board& board, Accumulator& accumulator) {
 
 // ------ Accumulator -------
 
-bool Accumulator::needRefresh(Move kingMove) {
+bool Accumulator::needRefresh(Move kingMove, Color stm) {
     if (!HORIZONTAL_MIRROR)
         return false;
-    return (kingMove.from().file() >= File::FILE_E) != (kingMove.to().file() >= File::FILE_E);
+
+    Square from = kingMove.from();
+    Square to = kingMove.to();
+
+    if (kingMove.typeOf() == Move::CASTLING) {
+        Square king = kingMove.from();
+        Square standardKing = stm == Color::WHITE ? Square::SQ_E1 : Square::SQ_E8; // For chess960
+        to = (king > kingMove.to()) ? standardKing - 2 : standardKing + 2;
+    }
+
+    if ((from.file() >= File::FILE_E) != (to.file() >= File::FILE_E))
+        return true;
+    if (kingBucket(from, stm) != kingBucket(to, stm))
+        return true;
+
+    return false;
+}
+
+int Accumulator::kingBucket(Square kingSq, Color color) {
+    return BUCKET_LAYOUT[(kingSq ^ (int(color) * 56)).index()];
 }
 
 void Accumulator::refresh(Board& board) {

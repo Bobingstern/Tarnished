@@ -98,7 +98,7 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
     board.makeMove(move);
 
     if (from == PieceType::KING)
-        if (Accumulator::needRefresh(move)){
+        if (Accumulator::needRefresh(move, stm)){
             (ss + 1)->accumulator.refresh(board);
             return;
         }
