@@ -52,6 +52,25 @@ int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features) {
     return output;
 }
 
+int lmrInference(bool isQuiet, bool pv, bool improving, bool cutnode, bool ttpv, bool tthit, bool failhigh) {
+    std::array<double, 32> H1 = {0};
+    double output = LMR_OUTPUT_BIAS;
+    for (int h = 0; h < 32; h++) {
+        H1[h] += LMR_H1_BIAS[h];
+        H1[h] += isQuiet * LMR_H1[h][0];
+        H1[h] += pv * LMR_H1[h][1];
+        H1[h] += improving * LMR_H1[h][2];
+        H1[h] += cutnode * LMR_H1[h][3];
+        H1[h] += ttpv * LMR_H1[h][4];
+        H1[h] += tthit * LMR_H1[h][5];
+        H1[h] += failhigh * LMR_H1[h][6];
+        H1[h] = std::max(0.0, H1[h]) + 1e-2 * std::min(0.0, H1[h]);
+    }
+    for (int h = 0; h < 32; h++) {
+        output += H1[h] * LMR_OUTPUT[h];
+    }
+    return output;
+}
 void printWeatherFactoryConfig() {
     std::cout << "{\n";
     for (auto& param : tunables()) {
