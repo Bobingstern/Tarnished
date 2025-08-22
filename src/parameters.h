@@ -45,18 +45,18 @@ constexpr int16_t QA = 255;
 constexpr int16_t QB = 64;
 constexpr int16_t NNUE_SCALE = 400;
 constexpr int OUTPUT_BUCKETS = 8;
-constexpr int INPUT_BUCKETS = 4;
+constexpr int INPUT_BUCKETS = 8;
 const bool HORIZONTAL_MIRROR = true;
 
 const std::array<int, 64> BUCKET_LAYOUT = {
-    0, 0, 1, 1, 1, 1, 0, 0,
-    2, 2, 2, 2, 2, 2, 2, 2,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3,
+    0, 1, 2, 3, 3, 2, 1, 0,
+    4, 4, 5, 5, 5, 5, 4, 4,
+    6, 6, 6, 6, 6, 6, 6, 6,
+    6, 6, 6, 6, 6, 6, 6, 6,
+    6, 6, 6, 6, 6, 6, 6, 6,
+    7, 7, 7, 7, 7, 7, 7, 7,
+    7, 7, 7, 7, 7, 7, 7, 7,
+    7, 7, 7, 7, 7, 7, 7, 7
 };
 
 // Factorized LMR arrays
