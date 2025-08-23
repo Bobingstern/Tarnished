@@ -1,13 +1,24 @@
 # sp yoink
-
-
-
 EXE_SUFFIX =
 LDFLAGS = -fuse-ld=lld
 SOURCES := $(wildcard src/*.cpp)
 SOURCES += src/external/format.cpp
 CXX := clang++
 
+ARCH_LEVEL ?= native
+ifeq ($(ARCH_LEVEL),native)
+    ARCH := -march=native
+else ifeq ($(ARCH_LEVEL),v1)
+    ARCH := -march=x86-64
+else ifeq ($(ARCH_LEVEL),v2)
+    ARCH := -march=x86-64-v2
+else ifeq ($(ARCH_LEVEL),v3)
+    ARCH := -march=x86-64-v3
+else ifeq ($(ARCH_LEVEL),v4)
+    ARCH := -march=x86-64-v4
+else
+    $(error Invalid ARCH_LEVEL: $(ARCH_LEVEL). Use native, v1, v2, v3, or v4)
+endif
 
 cat := $(if $(filter $(OS),Windows_NT),type,cat)
 DEFAULT_NET := $(shell $(cat) network.txt)
@@ -17,7 +28,7 @@ ifndef EVALFILE
     NO_EVALFILE_SET = true
 endif
 
-CXXFLAGS := -O3 -march=native -fno-finite-math-only -funroll-loops -flto -fuse-ld=lld -std=c++20 -DNDEBUG -static -pthread -DEVALFILE=\"$(EVALFILE)\"
+CXXFLAGS := -O3 $(ARCH) -fno-finite-math-only -funroll-loops -flto -fuse-ld=lld -std=c++20 -DNDEBUG -static -pthread -DEVALFILE=\"$(EVALFILE)\"
 
 ifdef NO_EVALFILE_SET
 $(EVALFILE):
@@ -36,5 +47,18 @@ $(EXE): $(EVALFILE) $(SOURCES)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(SOURCES) -o $@
 
 native: $(EXE)
+
+v1:
+	$(MAKE) ARCH_LEVEL=v1
+
+v2:
+	$(MAKE) ARCH_LEVEL=v2
+
+v3:
+	$(MAKE) ARCH_LEVEL=v3
+
+v4:
+	$(MAKE) ARCH_LEVEL=v4
+
 
 
