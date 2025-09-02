@@ -338,7 +338,10 @@ namespace Search {
         int rawStaticEval = EVAL_NONE;
         int score = bestScore;
         int moveCount = 0;
+
         bool inCheck = thread.board.inCheck();
+        bool ttNoisy = ttData.move && thread.board.at(Move(ttData.move).to()) != Piece::NONE;
+
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
         (ss + 1)->failHighs = 0;
@@ -368,7 +371,7 @@ namespace Search {
             int rfpMargin = RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
-            if (depth <= 8 && ss->eval - rfpMargin >= beta)
+            if (depth <= 8 && (!ttData.move || ttNoisy) && ss->eval - rfpMargin >= beta)
                 return ss->eval;
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
