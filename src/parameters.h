@@ -60,8 +60,8 @@ const std::array<int, 64> BUCKET_LAYOUT = {
 };
 
 // Factorized LMR arrays
-// {isQuiet, !isPV, improving, cutnode, ttpv, tthit, failhigh > 2}
-const int LMR_ONE_COUNT = 7;
+// {isQuiet, !isPV, improving, cutnode, ttpv, tthit, failhigh > 2, corr > x}
+const int LMR_ONE_COUNT = 8;
 const int LMR_TWO_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) / 2;
 const int LMR_THREE_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) * (LMR_ONE_COUNT - 2) / 6;
 extern std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR;
@@ -143,6 +143,7 @@ TUNABLE_PARAM(LMR_DIVISOR_NOISY, 333, 150, 350, 5);
 // Reduction Constants
 TUNABLE_PARAM(LMR_HIST_DIVISOR, 8922, 4096, 16385, 650);
 TUNABLE_PARAM(LMR_BASE_SCALE, 1058, 256, 2048, 64)
+TUNABLE_PARAM(LMR_CORR_MARGIN, 69, 32, 256, 9);
 // Deeper/Shallower
 TUNABLE_PARAM(LMR_DEEPER_BASE, 36, 16, 64, 4)
 TUNABLE_PARAM(LMR_DEEPER_SCALE, 3, 3, 12, 1)
