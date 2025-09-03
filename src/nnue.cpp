@@ -277,6 +277,33 @@ void Accumulator::print() {
     }
 }
 
+
+void Accumulator::addPiece(Board& board, Color stm, Square add, PieceType addPT) {
+    Square whiteKing = board.kingSq(Color::WHITE);
+    Square blackKing = board.kingSq(Color::BLACK);
+
+    const int addW = NNUE::feature(Color::WHITE, stm, addPT, add, whiteKing);
+    const int addB = NNUE::feature(Color::BLACK, stm, addPT, add, blackKing);
+
+    for (int i = 0; i < HL_N; i++) {
+        white[i] += network.H1[addW * HL_N + i];
+        black[i] += network.H1[addB * HL_N + i];
+    }
+}
+
+void Accumulator::subPiece(Board& board, Color stm, Square sub, PieceType subPT) {
+    Square whiteKing = board.kingSq(Color::WHITE);
+    Square blackKing = board.kingSq(Color::BLACK);
+
+    const int subW = NNUE::feature(Color::WHITE, stm, subPT, sub, whiteKing);
+    const int subB = NNUE::feature(Color::BLACK, stm, subPT, sub, blackKing);
+
+    for (int i = 0; i < HL_N; i++) {
+        white[i] -= network.H1[subW * HL_N + i];
+        black[i] -= network.H1[subB * HL_N + i];
+    }
+}
+
 // Quiet Accumulation
 void Accumulator::quiet(Board& board, Color stm, Square add, PieceType addPT, Square sub,
                         PieceType subPT) {

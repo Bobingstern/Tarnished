@@ -47,6 +47,8 @@ struct Accumulator {
         static int kingBucket(Square kingSq, Color color);
         void print();
         // addsub, addsubsub, addaddsubsub
+        void addPiece(Board& board, Color stm, Square add, PieceType addPT);
+        void subPiece(Board& board, Color stm, Square sub, PieceType subPT);
         void quiet(Board& board, Color stm, Square add, PieceType addPT, Square sub, PieceType subPT);
         void capture(Board& board, Color stm, Square add, PieceType addPT, Square sub1, PieceType subPT1, Square sub2,
                      PieceType subPT2);
