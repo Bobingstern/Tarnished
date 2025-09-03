@@ -22,6 +22,7 @@ uint8_t TT_GENERATION_COUNTER = 0;
 void MakeMove(Board& board, Move move, Search::Stack* ss) {
     PieceType to = board.at<PieceType>(move.to());
     PieceType from = board.at<PieceType>(move.from());
+    Square epSq = board.enpassantSq();
     Color stm = board.sideToMove();
 
     // Hash key incremental updates
@@ -103,9 +104,14 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
             return;
         }
 
-    if (move.typeOf() == Move::ENPASSANT || move.typeOf() == Move::PROMOTION) {
-        // For now just recalculate on special moves like these
-        (ss + 1)->accumulator.refresh(board);
+    if (move.typeOf() == Move::ENPASSANT) {
+        (ss + 1)->accumulator.quiet(board, stm, move.to(), from, move.from(), from);
+        (ss + 1)->accumulator.subPiece(board, ~stm, move.to().ep_square(), PieceType::PAWN);
+    } else if (move.typeOf() == Move::PROMOTION) {
+        (ss + 1)->accumulator.subPiece(board, stm, move.from(), from);
+        (ss + 1)->accumulator.addPiece(board, stm, move.to(), move.promotionType());
+        if (to != PieceType::NONE)
+            (ss + 1)->accumulator.subPiece(board, ~stm, move.to(), to);
     } else if (move.typeOf() == Move::CASTLING) {
 
         Square king = move.from();
