@@ -345,6 +345,8 @@ namespace Search {
         int score = bestScore;
         int moveCount = 0;
         bool inCheck = thread.board.inCheck();
+        bool ttNoisy = ttData.move && thread.board.at(Move(ttData.move).to()) != Piece::NONE;
+
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
         (ss + 1)->failHighs = 0;
@@ -508,7 +510,7 @@ namespace Search {
 
                 if (seScore < sBeta) {
                     if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN())
-                        extension = 2; // Double extension
+                        extension = 2 + (!ttNoisy && seScore < sBeta - 85); // Double and triple extension
                     else
                         extension = 1; // Singular Extension
                 } 
