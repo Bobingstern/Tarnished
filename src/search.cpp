@@ -374,7 +374,9 @@ namespace Search {
             int rfpMargin = RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
-            if (depth <= 8 && ss->eval - rfpMargin >= beta)
+            bool largeEvalDiff = ply > 1 && (ss - 2)->staticEval != EVAL_NONE && ss->staticEval - (ss - 2)->staticEval > 800;
+
+            if (depth <= 8 && !largeEvalDiff && ss->eval - rfpMargin >= beta)
                 return ss->eval;
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
@@ -546,7 +548,7 @@ namespace Search {
                 // | to 3 way interactions between them. For example, a two way  |
                 // | interaction would be two_way_table[i] * (x && y), three     |
                 // | way would be three_way_table[j] * (x && y && z) etc         |
-                // | For example 6 variables, that gives us a one way           |
+                // | For example 6 variables, that gives us a one way            |
                 // | table of 6, two table of 6x5/2=15, and three way of         |
                 // | 6x5x3/3!=20. Thanks to AGE for this idea                    |
                 // ---------------------------------------------------------------
