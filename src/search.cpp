@@ -262,6 +262,15 @@ namespace Search {
             if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
 
+            // Futility Pruning
+            if (!isMateScore(bestScore) && !inCheck) {
+                int futility = eval + 300;
+                if (futility <= alpha && !SEE(thread.board, move, 1)) {
+                    bestScore = std::max(bestScore, futility);
+                    continue;
+                }
+
+            }
             // SEE Pruning
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
                 continue;
