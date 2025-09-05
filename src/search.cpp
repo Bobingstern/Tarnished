@@ -371,7 +371,7 @@ namespace Search {
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
-            bool largeEvalDiff = ply > 1 && (ss - 2)->staticEval != EVAL_NONE && ss->staticEval - (ss - 2)->staticEval > 800;
+            bool largeEvalDiff = ply > 1 && (ss - 2)->staticEval != EVAL_NONE && ss->staticEval - (ss - 2)->staticEval > 730;
             int rfpMargin = RFP_SCALE() * (depth - (improving && !largeEvalDiff));
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
