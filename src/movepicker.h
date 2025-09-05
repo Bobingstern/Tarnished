@@ -22,6 +22,7 @@ struct MovePicker {
         Move ttMove;
         int currMove;
         bool isQS;
+        bool isProbcut;
 
         // Threats
         Bitboard pawnThreats;
@@ -29,11 +30,12 @@ struct MovePicker {
         Bitboard bishopThreats;
         Bitboard rookThreats;
 
-        MovePicker(Search::ThreadInfo* T, Search::Stack* ss, uint16_t ttm, bool qs) {
+        MovePicker(Search::ThreadInfo* T, Search::Stack* ss, uint16_t ttm, bool qs, bool probcut) {
             this->thread = T;
             this->ss = ss;
             this->ttMove = Move(ttm);
             isQS = qs;
+            isProbcut = probcut;
             stage = MPStage::TTMOVE;
             currMove = 0;
             pawnThreats = ss->threats[0];

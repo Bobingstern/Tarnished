@@ -256,7 +256,7 @@ namespace Search {
         
         // This will do evasions as well
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
+        MovePicker picker = MovePicker(&thread, ss, ttData.move, true, false);
 
         while (!moveIsNull(move = picker.nextMove())) {
             if (thread.stopped.load() || thread.exiting.load())
@@ -419,6 +419,42 @@ namespace Search {
             }
         }
 
+        const int pcBeta = beta + 300;
+        if (!isPV && depth >= 5 && !isMateScore(beta) && !inCheck &&
+            (!ttHit || ttData.score >= pcBeta || ttData.depth < depth - 3)) {
+
+            Move move;
+            MovePicker picker = MovePicker(&thread, ss, ttData.move, false, true);
+
+            while (!moveIsNull(move = picker.nextMove())) {
+                if (move == ss->excluded)
+                    continue;
+                if (!SEE(thread.board, move, pcBeta - ss->staticEval))
+                    continue;
+
+                thread.TT.prefetch(prefetchKey(thread.board, move));
+
+                ss->move = move;
+                ss->movedPiece = thread.board.at<PieceType>(move.from());
+                ss->conthist = thread.getConthistSegment(thread.board, move);
+                ss->contCorrhist = thread.getContCorrhistSegment(thread.board, move);
+
+                MakeMove(thread.board, move, ss);
+                thread.nodes.fetch_add(1, std::memory_order::relaxed);
+
+                int score = -qsearch<false>(ply + 1, -pcBeta, -pcBeta + 1, ss + 1, thread, limit);
+                if (score >= pcBeta)
+                    score = -search<false>(depth - 4, ply + 1, -pcBeta, -pcBeta + 1, !cutnode, ss + 1, thread, limit);
+
+                UnmakeMove(thread.board, move);
+
+                if (score >= pcBeta) {
+                    thread.TT.store(thread.board.hash(), move, score, rawStaticEval, TTFlag::BETA_CUT, depth - 3, ply, ttPV);
+                    return score;
+                }
+            }
+        }
+
         // Internal Iterative Reduction
         if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;
@@ -433,7 +469,7 @@ namespace Search {
 
         Move bestMove = Move::NO_MOVE;
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttData.move, false);
+        MovePicker picker = MovePicker(&thread, ss, ttData.move, false, false);
 
         Movelist seenQuiets;
         Movelist seenCaptures;
