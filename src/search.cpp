@@ -371,12 +371,11 @@ namespace Search {
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
-            int rfpMargin = RFP_SCALE() * (depth - improving);
+            bool largeEvalDiff = ply > 1 && (ss - 2)->staticEval != EVAL_NONE && ss->staticEval - (ss - 2)->staticEval > 800;
+            int rfpMargin = RFP_SCALE() * (depth - (improving && !largeEvalDiff));
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
-            bool largeEvalDiff = ply > 1 && (ss - 2)->staticEval != EVAL_NONE && ss->staticEval - (ss - 2)->staticEval > 800;
-
-            if (depth <= 8 && !largeEvalDiff && ss->eval - rfpMargin >= beta)
+            if (depth <= 8 && ss->eval - rfpMargin >= beta)
                 return ss->eval;
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
