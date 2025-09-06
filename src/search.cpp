@@ -508,7 +508,7 @@ namespace Search {
 
                 if (seScore < sBeta) {
                     if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN())
-                        extension = 2; // Double extension
+                        extension = 2 + (isQuiet && seScore < sBeta - 69); // Double and triple extension
                     else
                         extension = 1; // Singular Extension
                 } 
