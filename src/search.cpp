@@ -256,7 +256,7 @@ namespace Search {
         
         // This will do evasions as well
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttData.move, true, false);
+        MovePicker picker = MovePicker(&thread, ss, ttData.move, true, false, 0);
 
         while (!moveIsNull(move = picker.nextMove())) {
             if (thread.stopped.load() || thread.exiting.load())
@@ -419,17 +419,15 @@ namespace Search {
             }
         }
 
-        const int pcBeta = beta + 300;
+        const int pcBeta = beta + 200;
         if (!isPV && depth >= 5 && !isMateScore(beta) && !inCheck &&
             (!ttHit || ttData.score >= pcBeta || ttData.depth < depth - 3)) {
 
             Move move;
-            MovePicker picker = MovePicker(&thread, ss, ttData.move, false, true);
+            MovePicker picker = MovePicker(&thread, ss, ttData.move, false, true, pcBeta - ss->staticEval);
 
             while (!moveIsNull(move = picker.nextMove())) {
                 if (move == ss->excluded)
-                    continue;
-                if (!SEE(thread.board, move, pcBeta - ss->staticEval))
                     continue;
 
                 thread.TT.prefetch(prefetchKey(thread.board, move));
@@ -469,7 +467,7 @@ namespace Search {
 
         Move bestMove = Move::NO_MOVE;
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttData.move, false, false);
+        MovePicker picker = MovePicker(&thread, ss, ttData.move, false, false, 0);
 
         Movelist seenQuiets;
         Movelist seenCaptures;
@@ -582,7 +580,7 @@ namespace Search {
                 // | to 3 way interactions between them. For example, a two way  |
                 // | interaction would be two_way_table[i] * (x && y), three     |
                 // | way would be three_way_table[j] * (x && y && z) etc         |
-                // | For example 6 variables, that gives us a one way           |
+                // | For example 6 variables, that gives us a one way            |
                 // | table of 6, two table of 6x5/2=15, and three way of         |
                 // | 6x5x3/3!=20. Thanks to AGE for this idea                    |
                 // ---------------------------------------------------------------

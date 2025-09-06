@@ -90,7 +90,7 @@ Move MovePicker::nextMove() {
                 if (move == ttMove) {
                     continue;
                 }
-                if (!SEE(thread->board, move, -move.score() / 4 + 15))
+                if (!SEE(thread->board, move, isProbcut ? seeThreshold : -move.score() / 4 + 15))
                     badNoises.add(move);
                 else
                     return move;
