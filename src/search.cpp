@@ -377,7 +377,7 @@ namespace Search {
             if (depth <= 8 && ss->eval - rfpMargin >= beta)
                 return ss->eval;
 
-            if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
+            if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * (depth - !improving) <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
                 if (score <= alpha)
                     return score;
