@@ -512,8 +512,10 @@ namespace Search {
                     else
                         extension = 1; // Singular Extension
                 } 
-                else if (sBeta >= beta)
+                else if (sBeta >= beta){
+                    thread.TT.store(thread.board.hash(), Move(ttData.move), sBeta, rawStaticEval, TTFlag::BETA_CUT, sDepth, ply, ttPV);
                     return sBeta;
+                }
                 else if (ttData.score >= beta)
                     extension = -3; // Negative Extension
                 else if (cutnode)
