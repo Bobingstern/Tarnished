@@ -512,8 +512,14 @@ namespace Search {
                     else
                         extension = 1; // Singular Extension
                 } 
-                else if (sBeta >= beta)
+                else if (sBeta >= beta){
+                    if (!inCheck && sBeta > ss->staticEval) {
+                        int bonus =
+                            static_cast<int>((CORRHIST_BONUS_WEIGHT() / 100.0) * (sBeta - ss->staticEval) * depth / 8);
+                        thread.updateCorrhist(ss, thread.board, bonus);
+                    }
                     return sBeta;
+                }
                 else if (ttData.score >= beta)
                     extension = -3; // Negative Extension
                 else if (cutnode)
