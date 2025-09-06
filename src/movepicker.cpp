@@ -96,6 +96,8 @@ Move MovePicker::nextMove() {
                     return move;
             }
             ++stage;
+            if (isProbcut)
+                return Move(Move::NO_MOVE);
 
         case KILLER:
             ++stage;
