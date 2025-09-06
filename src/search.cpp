@@ -511,6 +511,8 @@ namespace Search {
                         extension = 2; // Double extension
                     else
                         extension = 1; // Singular Extension
+
+                    depth += (extension > 1 && depth < 14);
                 } 
                 else if (sBeta >= beta)
                     return sBeta;
