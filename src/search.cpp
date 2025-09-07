@@ -306,7 +306,6 @@ namespace Search {
         if (depth <= 0) {
             return qsearch<isPV>(ply, alpha, beta, ss, thread, limit);
         }
-
         // Terminal Conditions (and checkmate)
         if (!root) {
             if (thread.board.isRepetition(1) || thread.board.isHalfMoveDraw())
