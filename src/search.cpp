@@ -656,9 +656,9 @@ namespace Search {
 
         bool isMain = threadInfo.type == ThreadType::MAIN;
 
-        auto stack = std::make_unique<std::array<Stack, MAX_PLY + 3>>();
-        Stack* ss = reinterpret_cast<Stack*>(stack->data() + 2); // Saftey for conthist
-        std::memset(stack.get(), 0, sizeof(Stack) * (MAX_PLY + 3));
+        auto stack = std::make_unique<std::array<Stack, MAX_PLY + 6 + 3>>();
+        Stack* ss = reinterpret_cast<Stack*>(stack->data() + 3); // Saftey for conthist
+        std::memset(stack.get(), 0, sizeof(Stack) * (MAX_PLY + 6 + 3));
 
         PVList lastPV{};
         int score = -EVAL_INF;
