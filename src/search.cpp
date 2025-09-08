@@ -365,6 +365,7 @@ namespace Search {
         // We are better than 2 plies ago
         bool improving =
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
+        bool opponentWorsening = !inCheck && (ss - 1)->staticEval != EVAL_NONE && ss->staticEval + (ss - 1)->staticEval > 1;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
         // Pruning
@@ -372,6 +373,7 @@ namespace Search {
             // Reverse Futility Pruning
             int rfpMargin = RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
+            rfpMargin -= 20 * opponentWorsening;
 
             if (depth <= 8 && ss->eval - rfpMargin >= beta)
                 return ss->eval;
