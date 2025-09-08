@@ -28,6 +28,12 @@ ifndef EVALFILE
     NO_EVALFILE_SET = true
 endif
 
+ifeq ($(OS),Windows_NT)
+    STACK_FLAGS := -Wl,/STACK:8388608
+else
+    STACK_FLAGS :=
+endif
+
 CXXFLAGS := -O3 $(ARCH) -fno-finite-math-only -funroll-loops -flto -fuse-ld=lld -std=c++20 -DNDEBUG -static -pthread -DEVALFILE=\"$(EVALFILE)\"
 
 ifdef NO_EVALFILE_SET
@@ -44,7 +50,7 @@ ifndef EXE
 endif
 
 $(EXE): $(EVALFILE) $(SOURCES) 
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(SOURCES) -o $@
+	$(CXX) $(CXXFLAGS) $(STACK_FLAGS) $(LDFLAGS) $(SOURCES) -o $@
 
 native: $(EXE)
 

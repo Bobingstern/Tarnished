@@ -306,7 +306,6 @@ namespace Search {
         if (depth <= 0) {
             return qsearch<isPV>(ply, alpha, beta, ss, thread, limit);
         }
-
         // Terminal Conditions (and checkmate)
         if (!root) {
             if (thread.board.isRepetition(1) || thread.board.isHalfMoveDraw())
@@ -511,6 +510,8 @@ namespace Search {
                         extension = 2; // Double extension
                     else
                         extension = 1; // Singular Extension
+
+                    depth += (extension > 1 && depth < 14);
                 } 
                 else if (sBeta >= beta)
                     return sBeta;
@@ -654,9 +655,9 @@ namespace Search {
 
         bool isMain = threadInfo.type == ThreadType::MAIN;
 
-        auto stack = std::make_unique<std::array<Stack, MAX_PLY + 3>>();
-        Stack* ss = reinterpret_cast<Stack*>(stack->data() + 2); // Saftey for conthist
-        std::memset(stack.get(), 0, sizeof(Stack) * (MAX_PLY + 3));
+        auto stack = std::make_unique<std::array<Stack, MAX_PLY + 6 + 3>>();
+        Stack* ss = reinterpret_cast<Stack*>(stack->data() + 3); // Saftey for conthist
+        std::memset(stack.get(), 0, sizeof(Stack) * (MAX_PLY + 6 + 3));
 
         PVList lastPV{};
         int score = -EVAL_INF;
