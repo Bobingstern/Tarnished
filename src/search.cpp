@@ -252,7 +252,7 @@ namespace Search {
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
         // Calculuate Threats
-        ss->threats = calculateThreats(thread.board);
+        ss->threats = calculateThreats(thread.board).first;
         
         // This will do evasions as well
         Move move;
@@ -361,16 +361,17 @@ namespace Search {
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
             corrplexity = rawStaticEval - ss->staticEval;
         }
+
         // Improving heurstic
         // We are better than 2 plies ago
         bool improving =
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
-        bool oppEasyCapture = easyCapture(thread.board, ss->threats);
-
-        uint8_t ttFlag = TTFlag::FAIL_LOW;
+        bool oppEasyCapture = false;
 
         // Calculuate Threats
-        ss->threats = calculateThreats(thread.board);
+        std::tie(ss->threats, oppEasyCapture) = calculateThreats(thread.board);
+
+        uint8_t ttFlag = TTFlag::FAIL_LOW;
 
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {

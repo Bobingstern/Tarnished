@@ -91,7 +91,7 @@ bool isLegal(Board& board, Move move) {
 }
 
 // Threats
-std::array<Bitboard, 7> calculateThreats(Board& board) {
+std::pair<std::array<Bitboard, 7>, bool> calculateThreats(Board& board) {
     Color color = ~board.sideToMove();
     Bitboard occ = board.occ();
     Bitboard pawns = board.pieces(PieceType::PAWN, color);
@@ -129,20 +129,19 @@ std::array<Bitboard, 7> calculateThreats(Board& board) {
                 threats[3] | 
                 threats[4] | 
                 threats[5];
-    return threats;
-}
-
-bool easyCapture(Board&board, std::array<Bitboard, 7>& threats) {
-    Color stm = board.sideToMove();
-    Bitboard minors = board.pieces(PieceType::KNIGHT, stm) | board.pieces(PieceType::BISHOP, stm);
-    Bitboard rooks = board.pieces(PieceType::ROOK, stm);
-    Bitboard queens = board.pieces(PieceType::QUEEN, stm);
 
     Bitboard minorThreats = threats[0] | threats[1] | threats[2];
     Bitboard rookThreats = minorThreats | threats[3];
 
-    return !((queens & rookThreats) | (rooks & minorThreats) | (minors & threats[0])).empty();
+    Color stm = board.sideToMove();
+    Bitboard stmMinors = board.pieces(PieceType::KNIGHT, stm) | board.pieces(PieceType::BISHOP, stm);
+    Bitboard stmRooks = board.pieces(PieceType::ROOK, stm);
+    Bitboard stmQueens = board.pieces(PieceType::QUEEN, stm);
+
+    bool easyCapture = !((stmQueens & rookThreats) | (stmRooks & minorThreats) | (stmMinors & threats[0])).empty();
+    return std::make_pair(threats, easyCapture);
 }
+
 
 // Utility attackers
 Bitboard attackersTo(Board& board, Square s, Bitboard occ) {

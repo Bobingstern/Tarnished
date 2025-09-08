@@ -75,10 +75,7 @@ bool isMinor(PieceType pt);
 bool isLegal(Board& board, Move move);
 
 // Threats
-std::array<Bitboard, 7> calculateThreats(Board& board);
-// Easy Capture
-bool easyCapture(Board&board, std::array<Bitboard, 7>& threats);
-
+std::pair<std::array<Bitboard, 7>, bool> calculateThreats(Board& board);
 // Accumulator wrapper
 void MakeMove(Board& board, Move move, Search::Stack* ss);
 void UnmakeMove(Board& board, Move move);
