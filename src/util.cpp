@@ -132,6 +132,18 @@ std::array<Bitboard, 7> calculateThreats(Board& board) {
     return threats;
 }
 
+bool easyCapture(Board&board, std::array<Bitboard, 7>& threats) {
+    Color stm = board.sideToMove();
+    Bitboard minors = board.pieces(PieceType::KNIGHT, stm) | board.pieces(PieceType::BISHOP, stm);
+    Bitboard rooks = board.pieces(PieceType::ROOK, stm);
+    Bitboard queens = board.pieces(PieceType::QUEEN, stm);
+
+    Bitboard minorThreats = threats[0] | threats[1] | threats[2];
+    Bitboard rookThreats = minorThreats | threats[3];
+
+    return !((queens & rookThreats) | (rooks & minorThreats) | (minors & threats[0])).empty();
+}
+
 // Utility attackers
 Bitboard attackersTo(Board& board, Square s, Bitboard occ) {
     return (attacks::pawn(Color::WHITE, s) &

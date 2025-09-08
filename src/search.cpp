@@ -365,12 +365,17 @@ namespace Search {
         // We are better than 2 plies ago
         bool improving =
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
+        bool oppEasyCapture = easyCapture(thread.board, ss->threats);
+
         uint8_t ttFlag = TTFlag::FAIL_LOW;
+
+        // Calculuate Threats
+        ss->threats = calculateThreats(thread.board);
 
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
-            int rfpMargin = RFP_SCALE() * (depth - improving);
+            int rfpMargin = RFP_SCALE() * (depth - (improving && !oppEasyCapture));
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
             if (depth <= 8 && ss->eval - rfpMargin >= beta)
@@ -426,9 +431,6 @@ namespace Search {
         // What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
         // and use some sort of data generation method to create a pruning heuristic
         // with something like sigmoid(C dot I) >= 0.75 ?
-
-        // Calculuate Threats
-        ss->threats = calculateThreats(thread.board);
 
         Move bestMove = Move::NO_MOVE;
         Move move;

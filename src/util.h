@@ -76,6 +76,8 @@ bool isLegal(Board& board, Move move);
 
 // Threats
 std::array<Bitboard, 7> calculateThreats(Board& board);
+// Easy Capture
+bool easyCapture(Board&board, std::array<Bitboard, 7>& threats);
 
 // Accumulator wrapper
 void MakeMove(Board& board, Move move, Search::Stack* ss);
