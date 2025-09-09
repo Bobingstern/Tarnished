@@ -438,12 +438,15 @@ namespace Search {
         Movelist seenCaptures;
 
         bool skipQuiets = false;
+        bool ttNoisy = false;
 
         while (!moveIsNull(move = picker.nextMove())) {
             if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
 
             bool isQuiet = !thread.board.isCapture(move);
+            if (move == Move(ttData.move))
+                ttNoisy = !isQuiet;
             if (move == ss->excluded)
                 continue;
             if (isQuiet && skipQuiets)
@@ -554,6 +557,8 @@ namespace Search {
                 reduction += lmrConvolution({isQuiet, !isPV, improving, cutnode, ttPV, ttHit, ((ss + 1)->failHighs > 2), corrplexity > LMR_CORR_MARGIN()});
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
+                // Reduce noisy tt move more
+                reduction += 512 * ttNoisy;
                 
                 reduction /= 1024;
 
