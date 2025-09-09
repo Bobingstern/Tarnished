@@ -367,15 +367,17 @@ namespace Search {
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
-        // Pruning
-        if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
-            // Reverse Futility Pruning
+        // Reverse Futility Pruning
+        if (!root && !ttPV && !inCheck && moveIsNull(ss->excluded)){
             int rfpMargin = RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
             if (depth <= 8 && ss->eval - rfpMargin >= beta)
                 return ss->eval;
+        }
 
+        if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
+            // Razoring
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
                 if (score <= alpha)
