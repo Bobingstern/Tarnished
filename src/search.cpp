@@ -591,6 +591,9 @@ namespace Search {
                     if (isPV) {
                         ss->pv.update(move, (ss + 1)->pv);
                     }
+
+                    if (depth >= 3 && depth <= 16 && !isMateScore(score))
+                        depth--;
                 }
             }
             if (score >= beta) {
