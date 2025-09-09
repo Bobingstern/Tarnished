@@ -461,7 +461,7 @@ namespace Search {
             if (!root && bestScore > GETTING_MATED) {
                 int lmrDepth = std::max(depth - baseLMR / 1024, 0);
                 // Late Move Pruning
-                if (!isPV && !inCheck && moveCount >= 2 + depth * depth / (2 - improving))
+                if (!isPV && !inCheck && moveCount >= 2 + depth * depth / (2 - (improving || ss->staticEval >= beta + 20)))
                     break;
 
                 if (!isPV && isQuiet && depth <= 4 && thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth) {
