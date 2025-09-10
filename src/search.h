@@ -13,6 +13,9 @@
 #include <cstring>
 #include <mutex>
 #include <thread>
+#include <iostream>
+#include <fstream>
+#include <ostream>
 
 using namespace chess;
 
@@ -194,6 +197,9 @@ namespace Search {
 
             Searcher* searcher;
             int threadId;
+
+            std::ofstream file = std::ofstream("pytorch/rfpanalysis/rfpdata.csv");
+            bool isVerif = false;
 
             // indexed by [stm][from][to][threat]
             MultiArray<int, 2, 64, 64, 4> history;

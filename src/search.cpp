@@ -368,13 +368,31 @@ namespace Search {
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
         // Pruning
-        if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
+        if (!root && !isPV && !inCheck && moveIsNull(ss->excluded) && !thread.isVerif) {
             // Reverse Futility Pruning
             int rfpMargin = RFP_SCALE() * (depth - improving);
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
-            if (depth <= 8 && ss->eval - rfpMargin >= beta)
-                return ss->eval;
+            if (depth <= 8){
+                bool rfpDecision = ss->eval - rfpMargin >= beta;
+                // Verify if this was a beta cut
+                thread.isVerif = true;
+                int verif = search<false>(10, ply, beta - 1, beta, cutnode, ss, thread, limit);
+                thread.isVerif = false;
+                bool failHigh = verif > beta;
+
+                // depth,beta,corr,eval,improving,cutnode,rfp,verif
+                thread.file << depth << ","
+                            << beta << ","
+                            << corrplexity << ","
+                            << ss->eval << ","
+                            << improving << ","
+                            << cutnode << ","
+                            << rfpDecision << ","
+                            << failHigh << "\n";
+
+                //return ss->eval;
+            }
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
