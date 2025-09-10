@@ -241,8 +241,12 @@ namespace Search {
             eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
         }
 
-        if (eval >= beta)
+        if (eval >= beta){
+            if (!ttHit) {
+                thread.TT.store(thread.board.hash(), Move::NO_MOVE, eval, rawStaticEval, TTFlag::BETA_CUT, 0, ply, ttPV);
+            }
             return eval;
+        }
         if (eval > alpha)
             alpha = eval;
 
