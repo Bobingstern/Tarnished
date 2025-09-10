@@ -472,6 +472,8 @@ namespace Search {
                 int futility = ss->staticEval + FP_SCALE() * depth + FP_OFFSET() + ss->historyScore / FP_HIST_DIVISOR();
                 if (!inCheck && isQuiet && lmrDepth <= 8 && std::abs(alpha) < 2000 && futility <= alpha) {
                     skipQuiets = true;
+                    if (!isMateScore(bestScore) && bestScore <= futility)
+                        bestScore = futility;
                     continue;
                 }
                 // Reckless idea 
