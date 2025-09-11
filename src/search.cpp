@@ -506,10 +506,9 @@ namespace Search {
                 ss->excluded = Move::NO_MOVE;
 
                 if (seScore < sBeta) {
-                    if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN())
-                        extension = 2; // Double extension
-                    else
-                        extension = 1; // Singular Extension
+                    extension = 1; // Single extension
+                    if (seScore < sBeta - SE_DOUBLE_MARGIN() - 200 * isPV)
+                        extension++; // Double extension
 
                     depth += (extension > 1 && depth < 14);
                 } 
