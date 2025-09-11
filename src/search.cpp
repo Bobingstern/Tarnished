@@ -600,8 +600,9 @@ namespace Search {
                 // Butterfly History
                 // Continuation History
                 // Capture History
-                int bonus = historyBonus(depth);
-                int malus = historyMalus(depth);
+                int histDepth = depth + (score >= beta + 50);
+                int bonus = historyBonus(histDepth);
+                int malus = historyMalus(histDepth);
                 if (isQuiet) {
                     thread.updateQuietHistory(ss, move, bonus);
                     for (const Move quietMove : seenQuiets) {
