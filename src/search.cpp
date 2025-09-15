@@ -262,6 +262,8 @@ namespace Search {
             if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
 
+            if (picker.stage == MPStage::BAD_NOISY && moveCount >= 3)
+                break;
             // SEE Pruning
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
                 continue;
