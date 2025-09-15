@@ -373,6 +373,7 @@ namespace Search {
             int rfpMargin = RFP_SCALE() * depth;
             rfpMargin -= RFP_IMPROVING_SCALE() * improving;
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
+            rfpMargin -= 16 * cutnode;
 
             if (depth <= 8 && ss->eval - rfpMargin >= beta)
                 return ss->eval;
