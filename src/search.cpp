@@ -262,8 +262,13 @@ namespace Search {
             if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
 
+            bool isQuiet = !thread.board.isCapture(move);
+
             if (!isLoss(bestScore) && move.to() != (ss - 1)->toSquare) {
                 if (moveCount >= 3)
+                    break;
+
+                if (inCheck && isQuiet)
                     break;
             }
             // SEE Pruning
@@ -271,7 +276,7 @@ namespace Search {
                 continue;
 
             thread.TT.prefetch(prefetchKey(thread.board, move));
-            if (thread.board.isCapture(move))
+            if (!isQuiet)
                 ss->toSquare = move.to();
             MakeMove(thread.board, move, ss);
 
