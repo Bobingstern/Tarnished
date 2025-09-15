@@ -168,13 +168,13 @@ namespace Search {
         return std::abs(score) >= FOUND_MATE;
     }
     int evaluate(Board& board, Accumulator& accumulator) {
-        int materialOffset = 100 * board.pieces(PieceType::PAWN).count() + 450 * board.pieces(PieceType::KNIGHT).count() + 
-                            450 * board.pieces(PieceType::BISHOP).count() + 650 * board.pieces(PieceType::ROOK).count() + 
-                            1250 * board.pieces(PieceType::QUEEN).count();
+        int materialOffset = MAT_SCALE_PAWN() * board.pieces(PieceType::PAWN).count() + MAT_SCALE_KNIGHT() * board.pieces(PieceType::KNIGHT).count() + 
+                            MAT_SCALE_BISHOP() * board.pieces(PieceType::BISHOP).count() + MAT_SCALE_ROOK() * board.pieces(PieceType::ROOK).count() + 
+                            MAT_SCALE_QUEEN() * board.pieces(PieceType::QUEEN).count();
 
         int eval = network.inference(board, accumulator);
 
-        eval = eval * (26500 + materialOffset) / 32768; // Calvin yoink
+        eval = eval * (MAT_SCALE_BASE() + materialOffset) / 32768; // Calvin yoink
         return std::clamp(eval, GETTING_MATED + 1, FOUND_MATE - 1);
     }
     void fillLmr() {
@@ -370,7 +370,8 @@ namespace Search {
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
-            int rfpMargin = RFP_SCALE() * (depth - improving);
+            int rfpMargin = RFP_SCALE() * depth;
+            rfpMargin -= RFP_IMPROVING_SCALE() * improving;
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
             if (depth <= 8 && ss->eval - rfpMargin >= beta)
