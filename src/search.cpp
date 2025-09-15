@@ -262,14 +262,17 @@ namespace Search {
             if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
 
-            if (picker.stage == MPStage::BAD_NOISY && moveCount >= 3)
-                break;
+            if (!isLoss(bestScore) && move.to() != (ss - 1)->toSquare) {
+                if (moveCount >= 3)
+                    break;
+            }
             // SEE Pruning
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
                 continue;
 
             thread.TT.prefetch(prefetchKey(thread.board, move));
-
+            if (thread.board.isCapture(move))
+                ss->toSquare = move.to();
             MakeMove(thread.board, move, ss);
 
             thread.nodes.fetch_add(1, std::memory_order::relaxed);
