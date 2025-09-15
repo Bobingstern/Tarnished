@@ -97,6 +97,7 @@ namespace Search {
             Move bestMove{};
 
             Move move{};
+            Square toSquare = Square::NO_SQ;
             PieceType movedPiece;
             MultiArray<int16_t, 2, 6, 64>* conthist;
             MultiArray<int16_t, 2, 6, 64>* contCorrhist;
