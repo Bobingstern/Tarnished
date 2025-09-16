@@ -482,7 +482,9 @@ namespace Search {
                 }
                 // Reckless idea 
                 // Bad noisy futility pruning
-                futility = ss->staticEval + BNFP_DEPTH_SCALE() * depth + BNFP_MOVECOUNT_SCALE() * moveCount / 128;
+                futility = 
+                    ss->staticEval + BNFP_DEPTH_SCALE() * depth + BNFP_MOVECOUNT_SCALE() * moveCount / 128
+                    + 90 * PieceValue[(int)thread.board.at<PieceType>(move.to())] / 1024;
                 if (!inCheck && depth <= 5 && picker.stage == MPStage::BAD_NOISY && std::abs(alpha) < 2000 && futility <= alpha) {
                     if (!isMateScore(bestScore) && bestScore <= futility)
                         bestScore = futility;

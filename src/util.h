@@ -43,7 +43,6 @@ struct StateInfo {
         }
 };
 
-extern std::array<int, 8> PieceValue;
 
 // [stm][side]
 // kingside is 0, queenside 1
