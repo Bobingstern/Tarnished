@@ -265,6 +265,14 @@ namespace Search {
             if (!isLoss(bestScore) && move.to() != (ss - 1)->toSquare) {
                 if (moveCount >= 3)
                     break;
+
+                int futility = eval + 120;
+
+                if (!inCheck && futility <= alpha && !SEE(thread.board, move, 1)) {
+                    bestScore = std::max(futility, bestScore);
+                    continue;
+                }
+
             }
             // SEE Pruning
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))

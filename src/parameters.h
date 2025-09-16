@@ -68,6 +68,8 @@ extern std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR;
 extern std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR;
 extern std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR;
 
+extern std::array<int, 8> PieceValue;
+
 extern bool PRETTY_PRINT;
 
 std::list<TunableParam>& tunables();
