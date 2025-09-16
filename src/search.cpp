@@ -100,7 +100,29 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
 
     if (from == PieceType::KING)
         if (Accumulator::needRefresh(move, stm)){
-            (ss + 1)->accumulator.refresh(board);
+            (ss + 1)->accumulator.refresh(board, stm);
+            // Take care of updates for other accumulator
+            // This includes, king quiet, capture, and castle
+            if (move.typeOf() != Move::CASTLING) {
+                (ss + 1)->accumulator.subPiece(board, stm, ~stm, move.from(), from);
+                (ss + 1)->accumulator.addPiece(board, stm, ~stm, move.to(), from);
+            }
+            if (move.typeOf() == Move::CASTLING) {
+                Square standardKing = stm == Color::WHITE ? Square::SQ_E1 : Square::SQ_E8; // For chess960
+                Square kingTo = (move.from() > move.to()) ? standardKing - 2 : standardKing + 2;
+                Square rookTo = (move.from() > move.to()) ? kingTo + 1 : kingTo - 1;
+
+                (ss + 1)->accumulator.subPiece(board, stm, ~stm, move.to(), PieceType::ROOK);
+                (ss + 1)->accumulator.addPiece(board, stm, ~stm, rookTo, PieceType::ROOK);
+
+                (ss + 1)->accumulator.subPiece(board, stm, ~stm, move.from(), from);
+                (ss + 1)->accumulator.addPiece(board, stm, ~stm, kingTo, from);
+            }
+            if (to != PieceType::NONE && move.typeOf() != Move::CASTLING){
+                // Remove captured piece 
+                (ss + 1)->accumulator.subPiece(board, ~stm, ~stm, move.to(), to);
+                
+            }
             return;
         }
 

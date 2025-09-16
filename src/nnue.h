@@ -43,12 +43,17 @@ struct Accumulator {
         alignas(64) std::array<int16_t, HL_N> black;
 
         void refresh(Board& board);
+        void refresh(Board& board, Color persp);
         static bool needRefresh(Move kingMove, Color stm);
         static int kingBucket(Square kingSq, Color color);
         void print();
         // addsub, addsubsub, addaddsubsub
         void addPiece(Board& board, Color stm, Square add, PieceType addPT);
         void subPiece(Board& board, Color stm, Square sub, PieceType subPT);
+
+        void addPiece(Board& board, Color stm, Color persp, Square add, PieceType addPT);
+        void subPiece(Board& board, Color stm, Color persp, Square sub, PieceType subPT);
+
         void quiet(Board& board, Color stm, Square add, PieceType addPT, Square sub, PieceType subPT);
         void capture(Board& board, Color stm, Square add, PieceType addPT, Square sub1, PieceType subPT1, Square sub2,
                      PieceType subPT2);

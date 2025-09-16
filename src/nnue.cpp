@@ -226,30 +226,27 @@ int Accumulator::kingBucket(Square kingSq, Color color) {
     return BUCKET_LAYOUT[(kingSq ^ (int(color) * 56)).index()];
 }
 
-void Accumulator::refresh(Board& board) {
+void Accumulator::refresh(Board& board, Color persp) {
     Bitboard whiteBB = board.us(Color::WHITE);
     Bitboard blackBB = board.us(Color::BLACK);
 
-    // Obviously the bias is commutative so just add it first
-    white = network.H1Bias;
-    black = network.H1Bias;
+    auto& accPerspective = persp == Color::WHITE ? white : black;
 
-    Square whiteKing = board.kingSq(Color::WHITE);
-    Square blackKing = board.kingSq(Color::BLACK);
+    // Obviously the bias is commutative so just add it first
+    accPerspective = network.H1Bias;
+
+    Square kingSq = board.kingSq(persp);
 
     while (whiteBB) {
         Square sq = whiteBB.pop();
 
         // White features for both perspectives
-        int wf = NNUE::feature(Color::WHITE, Color::WHITE,
-                               board.at<PieceType>(sq), sq, whiteKing);
-        int bf = NNUE::feature(Color::BLACK, Color::WHITE,
-                               board.at<PieceType>(sq), sq, blackKing);
+        int feature = NNUE::feature(persp, Color::WHITE,
+                               board.at<PieceType>(sq), sq, kingSq);
 
         for (int i = 0; i < HL_N; i++) {
             // Do the matrix mutliply for the next layer
-            white[i] += network.H1[wf * HL_N + i];
-            black[i] += network.H1[bf * HL_N + i];
+            accPerspective[i] += network.H1[feature * HL_N + i];
         }
     }
 
@@ -257,17 +254,19 @@ void Accumulator::refresh(Board& board) {
         Square sq = blackBB.pop();
 
         // Black features for both perspectives
-        int wf = NNUE::feature(Color::WHITE, Color::BLACK,
-                               board.at<PieceType>(sq), sq, whiteKing);
-        int bf = NNUE::feature(Color::BLACK, Color::BLACK,
-                               board.at<PieceType>(sq), sq, blackKing);
-
+        int feature = NNUE::feature(persp, Color::BLACK,
+                               board.at<PieceType>(sq), sq, kingSq);
+        
         for (int i = 0; i < HL_N; i++) {
             // Do the matrix mutliply for the next layer
-            white[i] += network.H1[wf * HL_N + i];
-            black[i] += network.H1[bf * HL_N + i];
+            accPerspective[i] += network.H1[feature * HL_N + i];
         }
     }
+}
+
+void Accumulator::refresh(Board& board) {
+    refresh(board, Color::WHITE);
+    refresh(board, Color::BLACK);
 }
 
 void Accumulator::print() {
@@ -278,30 +277,36 @@ void Accumulator::print() {
 }
 
 
-void Accumulator::addPiece(Board& board, Color stm, Square add, PieceType addPT) {
-    Square whiteKing = board.kingSq(Color::WHITE);
-    Square blackKing = board.kingSq(Color::BLACK);
+void Accumulator::addPiece(Board& board, Color stm, Color persp, Square add, PieceType addPT) {
+    Square kingSq = board.kingSq(persp);
+    auto& accPerspective = persp == Color::WHITE ? white : black;
 
-    const int addW = NNUE::feature(Color::WHITE, stm, addPT, add, whiteKing);
-    const int addB = NNUE::feature(Color::BLACK, stm, addPT, add, blackKing);
+    const int feature = NNUE::feature(persp, stm, addPT, add, kingSq);
 
     for (int i = 0; i < HL_N; i++) {
-        white[i] += network.H1[addW * HL_N + i];
-        black[i] += network.H1[addB * HL_N + i];
+        accPerspective[i] += network.H1[feature * HL_N + i];
     }
 }
 
-void Accumulator::subPiece(Board& board, Color stm, Square sub, PieceType subPT) {
-    Square whiteKing = board.kingSq(Color::WHITE);
-    Square blackKing = board.kingSq(Color::BLACK);
+void Accumulator::subPiece(Board& board, Color stm, Color persp, Square sub, PieceType subPT) {
+    Square kingSq = board.kingSq(persp);
+    auto& accPerspective = persp == Color::WHITE ? white : black;
 
-    const int subW = NNUE::feature(Color::WHITE, stm, subPT, sub, whiteKing);
-    const int subB = NNUE::feature(Color::BLACK, stm, subPT, sub, blackKing);
+    const int feature = NNUE::feature(persp, stm, subPT, sub, kingSq);
 
     for (int i = 0; i < HL_N; i++) {
-        white[i] -= network.H1[subW * HL_N + i];
-        black[i] -= network.H1[subB * HL_N + i];
+        accPerspective[i] -= network.H1[feature * HL_N + i];
     }
+}
+
+void Accumulator::addPiece(Board& board, Color stm, Square add, PieceType addPT) {
+    addPiece(board, stm, Color::WHITE, add, addPT);
+    addPiece(board, stm, Color::BLACK, add, addPT);
+}
+
+void Accumulator::subPiece(Board& board, Color stm, Square sub, PieceType subPT) {
+    subPiece(board, stm, Color::WHITE, sub, subPT);
+    subPiece(board, stm, Color::BLACK, sub, subPT);
 }
 
 // Quiet Accumulation
