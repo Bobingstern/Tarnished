@@ -78,7 +78,7 @@ bool isLegal(Board& board, Move move);
 std::array<Bitboard, 7> calculateThreats(Board& board);
 
 // Accumulator wrapper
-void MakeMove(Board& board, Move move, Search::Stack* ss);
+void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::Stack* ss);
 void UnmakeMove(Board& board, Move move);
 // SEE stuff
 void initLookups();

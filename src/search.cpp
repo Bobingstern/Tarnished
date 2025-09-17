@@ -19,7 +19,7 @@ uint8_t TT_GENERATION_COUNTER = 0;
 // pawn zobrist key for correction history (stored in the search stack)
 // The incremental hash logic is terrible and code is ugly. I will refactor into an add piece and remove piece
 // eventually
-void MakeMove(Board& board, Move move, Search::Stack* ss) {
+void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::Stack* ss) {
     PieceType to = board.at<PieceType>(move.to());
     PieceType from = board.at<PieceType>(move.from());
     Square epSq = board.enpassantSq();
@@ -100,7 +100,7 @@ void MakeMove(Board& board, Move move, Search::Stack* ss) {
 
     if (from == PieceType::KING)
         if (Accumulator::needRefresh(move, stm)){
-            (ss + 1)->accumulator.refresh(board, stm);
+            (ss + 1)->accumulator.refresh(board, stm, bucketCache);
             // Take care of updates for other accumulator
             // This includes, king quiet, capture, and castle
             if (move.typeOf() != Move::CASTLING) {
@@ -295,7 +295,7 @@ namespace Search {
             thread.TT.prefetch(prefetchKey(thread.board, move));
             if (thread.board.isCapture(move))
                 ss->toSquare = move.to();
-            MakeMove(thread.board, move, ss);
+            MakeMove(thread.board, move, thread.bucketCache, ss);
 
             thread.nodes.fetch_add(1, std::memory_order::relaxed);
             moveCount++;
@@ -424,7 +424,7 @@ namespace Search {
                 // Null move prefetch is just flip color
                 thread.TT.prefetch(thread.board.hash() ^ Zobrist::sideToMove());
 
-                MakeMove(thread.board, Move(Move::NULL_MOVE), ss);
+                MakeMove(thread.board, Move(Move::NULL_MOVE), thread.bucketCache, ss);
                 int nmpScore =
                     -search<false>(depth - reduction, ply + 1, -beta, -beta + 1, !cutnode, ss + 1, thread, limit);
                 UnmakeMove(thread.board, Move(Move::NULL_MOVE));
@@ -560,7 +560,7 @@ namespace Search {
 
             thread.TT.prefetch(prefetchKey(thread.board, move));
 
-            MakeMove(thread.board, move, ss);
+            MakeMove(thread.board, move, thread.bucketCache, ss);
             moveCount++;
             thread.nodes.fetch_add(1, std::memory_order::relaxed);
 
@@ -680,6 +680,7 @@ namespace Search {
         threadInfo.board = board;
         Accumulator baseAcc;
         baseAcc.refresh(threadInfo.board);
+        threadInfo.bucketCache = InputBucketCache();
 
         bool isMain = threadInfo.type == ThreadType::MAIN;
 

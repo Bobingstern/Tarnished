@@ -38,12 +38,52 @@ template <typename IntType> inline IntType readLittleEndian(std::istream& stream
     return result;
 }
 
+struct BucketCacheEntry {
+    std::array<int16_t, HL_N> features;
+    std::array<Bitboard, 8> cachedPieces;
+    bool isInit;
+
+    BucketCacheEntry() {
+        //cachedPieces.fill(0);
+        features.fill(0);
+        isInit = false;
+    }
+
+    void set(Board& board, std::array<int16_t, HL_N>& feats) {
+        for (PieceType pt : {PieceType::PAWN, PieceType::KNIGHT, PieceType::BISHOP, 
+                        PieceType::ROOK, PieceType::QUEEN, PieceType::KING}) {
+            cachedPieces[int(pt)] = board.pieces(pt);
+        }
+        
+        cachedPieces[6] = board.us(Color::WHITE);
+        cachedPieces[7] = board.us(Color::BLACK);
+
+        features = feats;
+    }
+};
+
+struct InputBucketCache {
+    std::array<std::array<std::array<BucketCacheEntry, INPUT_BUCKETS>, 2>, 2> cache;
+
+    InputBucketCache() {
+        for (int persp : {0, 1}) {
+            for (int mirror : {0, 1}) {
+                for (int b = 0; b < INPUT_BUCKETS; b++) {
+                    cache[persp][mirror][b] = BucketCacheEntry();
+                }
+            }
+        }
+    }
+};
+
 struct Accumulator {
         alignas(64) std::array<int16_t, HL_N> white;
         alignas(64) std::array<int16_t, HL_N> black;
 
         void refresh(Board& board);
         void refresh(Board& board, Color persp);
+        void refresh(Board& board, Color persp, InputBucketCache& bucketCache);
+
         static bool needRefresh(Move kingMove, Color stm);
         static int kingBucket(Square kingSq, Color color);
         void print();

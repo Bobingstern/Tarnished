@@ -184,7 +184,7 @@ namespace Search {
 
             Board board;
             Limit limit;
-            Accumulator accumulator;
+            InputBucketCache bucketCache;
             std::atomic<uint64_t> nodes;
 
             Move bestMove;

@@ -264,6 +264,54 @@ void Accumulator::refresh(Board& board, Color persp) {
     }
 }
 
+// Refresh with cache
+void Accumulator::refresh(Board& board, Color persp, InputBucketCache& bucketCache) {
+    Square kingSq = board.kingSq(persp);
+
+    auto& accPerspective = persp == Color::WHITE ? white : black;
+
+    BucketCacheEntry& cache = bucketCache.cache[int(persp)][kingSq.file() >= File::FILE_E][kingBucket(kingSq, persp)];
+
+    if (!cache.isInit) {
+        cache.features = network.H1Bias;
+        cache.isInit = true;
+    }
+
+    accPerspective = cache.features;
+
+    for (Color c : {Color::WHITE, Color::BLACK}) {
+        for (PieceType pt : {PieceType::PAWN, PieceType::KNIGHT, PieceType::BISHOP, 
+                        PieceType::ROOK, PieceType::QUEEN, PieceType::KING}) {
+            Bitboard cachedPieces = cache.cachedPieces[int(pt)] & cache.cachedPieces[int(c) + 6];
+            Bitboard added = board.pieces(pt, c) & ~cachedPieces;
+            Bitboard subbed = ~board.pieces(pt, c) & cachedPieces;
+
+            while (added) {
+                Square sq = added.pop();
+                int feature = NNUE::feature(persp, c, pt, sq, kingSq);
+
+                for (int i = 0; i < HL_N; i++) {
+                    // Do the matrix mutliply for the next layer
+                    accPerspective[i] += network.H1[feature * HL_N + i];
+                }
+            }
+
+            while (subbed) {
+                Square sq = subbed.pop();
+                int feature = NNUE::feature(persp, c, pt, sq, kingSq);
+
+                for (int i = 0; i < HL_N; i++) {
+                    // Do the matrix mutliply for the next layer
+                    accPerspective[i] -= network.H1[feature * HL_N + i];
+                }
+            }
+        }
+    }
+
+    cache.set(board, accPerspective);
+    
+}
+
 void Accumulator::refresh(Board& board) {
     refresh(board, Color::WHITE);
     refresh(board, Color::BLACK);
