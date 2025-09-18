@@ -7,15 +7,15 @@ CXX := clang++
 
 ARCH_LEVEL ?= native
 ifeq ($(ARCH_LEVEL),native)
-    ARCH := -march=native
+    ARCH := -march=native -static
 else ifeq ($(ARCH_LEVEL),v1)
-    ARCH := -march=x86-64
+    ARCH := -march=x86-64 -static
 else ifeq ($(ARCH_LEVEL),v2)
-    ARCH := -march=x86-64-v2
+    ARCH := -march=x86-64-v2 -static
 else ifeq ($(ARCH_LEVEL),v3)
-    ARCH := -march=x86-64-v3
+    ARCH := -march=x86-64-v3 -static
 else ifeq ($(ARCH_LEVEL),v4)
-    ARCH := -march=x86-64-v4
+    ARCH := -march=x86-64-v4 -static
 else
     $(error Invalid ARCH_LEVEL: $(ARCH_LEVEL). Use native, v1, v2, v3, or v4)
 endif
