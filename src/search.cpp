@@ -628,7 +628,7 @@ namespace Search {
                 // Butterfly History
                 // Continuation History
                 // Capture History
-                int bonus = historyBonus(depth);
+                int bonus = historyBonus(depth) - 70 * cutnode;
                 int malus = historyMalus(depth);
                 if (isQuiet) {
                     thread.updateQuietHistory(ss, move, bonus);
