@@ -413,7 +413,8 @@ namespace Search {
             // Null Move Pruning
             Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^
                                 thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
-            if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()) {
+            if (depth >= 2 && ss->eval >= beta - 20 * depth + 100 
+                            && ply > thread.minNmpPly && !nonPawns.empty()) {
                 // Sirius formula
                 const int reduction = NMP_BASE_REDUCTION() + depth / NMP_REDUCTION_SCALE() +
                                       std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE());
@@ -575,7 +576,7 @@ namespace Search {
                 // | to 3 way interactions between them. For example, a two way  |
                 // | interaction would be two_way_table[i] * (x && y), three     |
                 // | way would be three_way_table[j] * (x && y && z) etc         |
-                // | For example 6 variables, that gives us a one way           |
+                // | For example 6 variables, that gives us a one way            |
                 // | table of 6, two table of 6x5/2=15, and three way of         |
                 // | 6x5x3/3!=20. Thanks to AGE for this idea                    |
                 // ---------------------------------------------------------------
