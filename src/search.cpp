@@ -251,6 +251,7 @@ namespace Search {
 
         bool inCheck = thread.board.inCheck();
         int rawStaticEval, eval = 0;
+        int bestScore;
 
         // Get the corrected static eval if not in check
         if (inCheck) {
@@ -263,12 +264,16 @@ namespace Search {
             eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
         }
 
+        bestScore = eval;
+
         if (eval >= beta)
-            return eval;
+            if (!isMateScore(beta) && !isMateScore(eval))
+                bestScore = (eval + beta) / 2;
+            return bestScore;
         if (eval > alpha)
             alpha = eval;
 
-        int bestScore = eval;
+        
         int moveCount = 0;
         Move qBestMove = Move::NO_MOVE;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
