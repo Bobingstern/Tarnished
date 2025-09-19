@@ -359,7 +359,7 @@ namespace Search {
 
         bool ttPV = isPV || (ttHit && ttData.pv);
 
-        if (!isPV && ttHit && ttData.depth >= depth &&
+        if (!isPV && ttHit && ttData.depth >= depth + (ttData.score >= beta) &&
             (ttData.bound == TTFlag::EXACT || (ttData.bound == TTFlag::BETA_CUT && ttData.score >= beta) ||
              (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= alpha))) {
             return ttData.score;
