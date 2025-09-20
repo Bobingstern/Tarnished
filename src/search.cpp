@@ -371,6 +371,8 @@ namespace Search {
         int score = bestScore;
         int moveCount = 0;
         bool inCheck = thread.board.inCheck();
+        bool ttMoveNoisy = ttHit && thread.board.at<PieceType>(Move(ttData.move).to()) != PieceType::NONE;
+
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
         (ss + 1)->failHighs = 0;
@@ -416,7 +418,7 @@ namespace Search {
             if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()) {
                 // Sirius formula
                 const int reduction = NMP_BASE_REDUCTION() + depth / NMP_REDUCTION_SCALE() +
-                                      std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE());
+                                      std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE()) + ttMoveNoisy;
 
                 ss->conthist = nullptr;
                 ss->contCorrhist = nullptr;
