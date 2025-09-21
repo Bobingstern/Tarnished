@@ -734,7 +734,7 @@ namespace Search {
                         } else
                             break;
                     }
-                    delta += delta * ASP_WIDENING_FACTOR() / 16;
+                    delta += delta * (ASP_WIDENING_FACTOR() + 12 * (depth - aspDepth)) / 128;
                 }
             } else
                 score = search<true>(depth, 0, -EVAL_INF, EVAL_INF, false, ss, threadInfo, limit);
