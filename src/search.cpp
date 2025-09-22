@@ -284,17 +284,27 @@ namespace Search {
             if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
 
+            bool isQuiet = !thread.board.isCapture(move);
+
             if (!isLoss(bestScore) && move.to() != (ss - 1)->toSquare) {
                 if (moveCount >= 3)
                     break;
+
+                int futility = eval + 180;
+                if (!inCheck && !isQuiet && futility <= alpha && !SEE(thread.board, move, 1)) {
+                    bestScore = std::max(futility, bestScore);
+                    continue;
+                }
             }
             // SEE Pruning
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
                 continue;
 
             thread.TT.prefetch(prefetchKey(thread.board, move));
-            if (thread.board.isCapture(move))
+
+            if (!isQuiet)
                 ss->toSquare = move.to();
+
             MakeMove(thread.board, move, thread.bucketCache, ss);
 
             thread.nodes.fetch_add(1, std::memory_order::relaxed);
