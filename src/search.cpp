@@ -318,6 +318,9 @@ namespace Search {
         if (!moveCount && inCheck)
             return -MATE + ply;
 
+        if (!isPV && !isMateScore(bestScore) && !isMateScore(beta) && bestScore >= beta)
+            bestScore = (bestScore + beta) / 2;
+
         thread.TT.store(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ply, ttPV);
 
         return bestScore;
