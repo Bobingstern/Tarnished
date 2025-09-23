@@ -87,6 +87,9 @@ Bitboard attackersTo(Board& board, Square s, Bitboard occ);
 void pinnersBlockers(Board& board, Color c, StateInfo sti);
 bool SEE(Board& board, Move& move, int margin);
 
+// Roughly check check
+bool roughCheck(Board& board, Move& move);
+
 // Util Move
 static bool moveIsNull(Move m) {
     return m == Move::NO_MOVE;

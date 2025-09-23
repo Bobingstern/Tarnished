@@ -132,6 +132,27 @@ std::array<Bitboard, 7> calculateThreats(Board& board) {
     return threats;
 }
 
+// Check rough
+bool roughCheck(Board& board, Move& move) {
+    Color opp = ~board.sideToMove();
+    PieceType pt = board.at<PieceType>(move.from());
+    Bitboard occ = board.occ() ^ Bitboard::fromSquare(move.from()) ^ Bitboard::fromSquare(move.to());
+    Bitboard threats;
+    switch (pt) {
+        case int(PieceType::PAWN):
+            threats = attacks::pawn(opp, move.to());
+        case int(PieceType::KNIGHT):
+            threats = attacks::knight(move.to());
+        case int(PieceType::BISHOP):
+            threats = attacks::bishop(move.to(), occ);
+        case int(PieceType::ROOK):
+            threats = attacks::rook(move.to(), occ);
+        case int(PieceType::QUEEN):
+            threats = attacks::queen(move.to(), occ);
+    }
+    return threats.check(board.kingSq(board.sideToMove()).index());
+}
+
 // Utility attackers
 Bitboard attackersTo(Board& board, Square s, Bitboard occ) {
     return (attacks::pawn(Color::WHITE, s) &

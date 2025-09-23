@@ -487,7 +487,7 @@ namespace Search {
             int baseLMR = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
 
             if (!root && bestScore > GETTING_MATED) {
-                int lmrDepth = std::max(depth - baseLMR / 1024, 0);
+                int lmrDepth = std::max(depth - (baseLMR) / 1024, 0);
                 // Late Move Pruning
                 if (!isPV && !inCheck && moveCount >= 2 + depth * depth / (2 - improving))
                     break;
@@ -498,7 +498,7 @@ namespace Search {
                 }
 
                 int futility = ss->staticEval + FP_SCALE() * depth + FP_OFFSET() + ss->historyScore / FP_HIST_DIVISOR();
-                if (!inCheck && isQuiet && lmrDepth <= 8 && std::abs(alpha) < 2000 && futility <= alpha) {
+                if (!inCheck && !roughCheck(thread.board, move) && isQuiet && lmrDepth <= 8 && std::abs(alpha) < 2000 && futility <= alpha) {
                     skipQuiets = true;
                     continue;
                 }
