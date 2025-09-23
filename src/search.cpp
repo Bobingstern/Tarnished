@@ -487,7 +487,7 @@ namespace Search {
             int baseLMR = LMR_BASE_SCALE() * lmrTable[isQuiet && move.typeOf() != Move::PROMOTION][depth][moveCount];
 
             if (!root && bestScore > GETTING_MATED) {
-                int lmrDepth = std::max(depth - baseLMR / 1024, 0);
+                int lmrDepth = std::max(depth - (baseLMR + LMR_ONE_PAIR[2]) / 1024, 0);
                 // Late Move Pruning
                 if (!isPV && !inCheck && moveCount >= 2 + depth * depth / (2 - improving))
                     break;
