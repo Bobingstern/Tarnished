@@ -22,24 +22,29 @@ void MovePicker::scoreMoves(Movelist& moves) {
             Bitboard toBB = Bitboard::fromSquare(move.to());
 
             int score = thread->getQuietHistory(thread->board, move, ss);
-            // Penalize if we're moving into a threat and vice versa
-            if (pt == PieceType::QUEEN) {
-                // Everything threatens a queen
-                Bitboard threats = pawnThreats | knightThreats | bishopThreats | rookThreats;
-                score += (threats & fromBB).empty() ? 0 : 12228;
-                score -= (threats & toBB).empty() ? 0 : 11264;
+            if (move.typeOf() != Move::PROMOTION){
+                // Penalize if we're moving into a threat and vice versa
+                if (pt == PieceType::QUEEN) {
+                    // Everything threatens a queen
+                    Bitboard threats = pawnThreats | knightThreats | bishopThreats | rookThreats;
+                    score += (threats & fromBB).empty() ? 0 : 12228;
+                    score -= (threats & toBB).empty() ? 0 : 11264;
+                }
+                else if (pt == PieceType::ROOK) {
+                    // P, N, B
+                    Bitboard threats = pawnThreats | knightThreats | bishopThreats;
+                    score += (threats & fromBB).empty() ? 0 : 10240;
+                    score -= (threats & toBB).empty() ? 0 : 9216;
+                }
+                else if (pt == PieceType::BISHOP || pt == PieceType::KNIGHT) {
+                    // P
+                    Bitboard threats = pawnThreats;
+                    score += (threats & fromBB).empty() ? 0 : 8192;
+                    score -= (threats & toBB).empty() ? 0 : 7168;
+                }
             }
-            else if (pt == PieceType::ROOK) {
-                // P, N, B
-                Bitboard threats = pawnThreats | knightThreats | bishopThreats;
-                score += (threats & fromBB).empty() ? 0 : 10240;
-                score -= (threats & toBB).empty() ? 0 : 9216;
-            }
-            else if (pt == PieceType::BISHOP || pt == PieceType::KNIGHT) {
-                // P
-                Bitboard threats = pawnThreats;
-                score += (threats & fromBB).empty() ? 0 : 8192;
-                score -= (threats & toBB).empty() ? 0 : 7168;
+            else {
+                score += 20000 + int(move.promotionType());
             }
 
             move.setScore(score);
