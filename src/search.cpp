@@ -511,7 +511,7 @@ namespace Search {
                     break;
                 }
 
-                int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth : SEE_NOISY_SCALE() * lmrDepth;
+                int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth - 12 * lmrDepth * ttPV : SEE_NOISY_SCALE() * lmrDepth;
                 if (!SEE(thread.board, move, seeMargin))
                     continue;
 
