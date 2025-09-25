@@ -512,7 +512,7 @@ namespace Search {
                 }
 
                 int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth : SEE_NOISY_SCALE() * lmrDepth;
-                if (!SEE(thread.board, move, seeMargin))
+                if (depth <= 8 && !isMateScore(bestScore) && !SEE(thread.board, move, seeMargin))
                     continue;
 
             }
