@@ -7,31 +7,33 @@ CXX := clang++
 
 ARCH_LEVEL ?= native
 ifeq ($(ARCH_LEVEL),native)
-    ARCH := -march=native -static
+	ARCH := -march=native
 else ifeq ($(ARCH_LEVEL),v1)
-    ARCH := -march=x86-64 -static
+	ARCH := -march=x86-64 -static
 else ifeq ($(ARCH_LEVEL),v2)
-    ARCH := -march=x86-64-v2 -static
+	ARCH := -march=x86-64-v2 -static
 else ifeq ($(ARCH_LEVEL),v3)
-    ARCH := -march=x86-64-v3 -static
+	ARCH := -march=x86-64-v3 -static
 else ifeq ($(ARCH_LEVEL),v4)
-    ARCH := -march=x86-64-v4 -static
+	ARCH := -march=x86-64-v4 -static
+else ifeq ($(ARCH_LEVEL),power9)
+	ARCH := --target=powerpc64le-linux-gnu -mcpu=power9 -static
 else
-    $(error Invalid ARCH_LEVEL: $(ARCH_LEVEL). Use native, v1, v2, v3, or v4)
+	$(error Invalid ARCH_LEVEL: $(ARCH_LEVEL). Use native, v1, v2, v3, or v4)
 endif
 
 cat := $(if $(filter $(OS),Windows_NT),type,cat)
 DEFAULT_NET := $(shell $(cat) network.txt)
 
 ifndef EVALFILE
-    EVALFILE = $(DEFAULT_NET).bin
-    NO_EVALFILE_SET = true
+	EVALFILE = $(DEFAULT_NET).bin
+	NO_EVALFILE_SET = true
 endif
 
 ifeq ($(OS),Windows_NT)
-    STACK_FLAGS := -Wl,/STACK:8388608
+	STACK_FLAGS := -Wl,/STACK:8388608
 else
-    STACK_FLAGS :=
+	STACK_FLAGS :=
 endif
 
 CXXFLAGS := -O3 $(ARCH) -fno-finite-math-only -funroll-loops -flto -fuse-ld=lld -std=c++20 -DNDEBUG -pthread -DEVALFILE=\"$(EVALFILE)\"
@@ -46,7 +48,7 @@ endif
 .DEFAULT_GOAL := native
 
 ifndef EXE
-    EXE = tarnished$(EXE_SUFFIX)
+	EXE = tarnished$(EXE_SUFFIX)
 endif
 
 $(EXE): $(EVALFILE) $(SOURCES) 
@@ -66,5 +68,7 @@ v3:
 v4:
 	$(MAKE) ARCH_LEVEL=v4
 
+power9:
+	$(MAKE) ARCH_LEVEL=power9
 
 
