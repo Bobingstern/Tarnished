@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <fstream>
-#include <immintrin.h>
 #include <random>
 
 int16_t NNUE::ReLU_(int16_t x) {
