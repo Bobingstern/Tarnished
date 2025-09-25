@@ -123,6 +123,88 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
     return reduce_epi32(accumulator);
 }
 
+// POWER / VSX implementation (Power9)
+#elif defined(__powerpc64__) || defined(__PPC64__) || defined(__powerpc__)
+    #pragma message("Using POWER/VSX NNUE inference")
+    #include <altivec.h>
+    // avoid the altivec 'vector' macro colliding with std::vector in C++
+    #ifdef __cplusplus
+    #undef vector
+    #undef bool
+    #undef pixel
+    #endif
+
+    using nativeVector = __vector signed short; // 8 x int16_t (128-bit)
+    using accVector    = __vector signed int;   // 4 x int32_t (128-bit)
+
+    // --- intrinsics/macros mapping (keeps call-sites identical to AVX code) ---
+    #define set1_epi16(x)    vec_splats((short)(x)) /* splat 16-bit value */ 
+    #define load_epi16(ptr)  ((nativeVector)vec_vsx_ld(0, (const short*)(ptr)))
+    #define min_epi16        vec_min
+    #define max_epi16        vec_max
+    #define mullo_epi16      vec_mul
+    /* madd: pairwise (a0*b0 + a1*b1) into 32-bit lanes, plus c (we pass zero) */
+    #define madd_epi16(a,b)  vec_msum((a),(b), (accVector)vec_splats((int)0))
+    #define add_epi32        vec_add
+
+    /* deterministic reduction: store lanes, add as unsigned 32-bit to force
+       two's-complement (mod 2^32) wrapping identical to SIMD arithmetic */
+    #define reduce_epi32                                                   \
+        [](accVector vec)->int32_t {                                       \
+            int32_t tmp[4] __attribute__((aligned(16)));                   \
+            /* store 128-bit vector -> 4x int32 */                         \
+            vec_st(vec, 0, tmp);                                           \
+            /* sum as uint32_t to mirror SIMD modular wrap */              \
+            uint32_t s = (uint32_t)tmp[0] + (uint32_t)tmp[1] +             \
+                         (uint32_t)tmp[2] + (uint32_t)tmp[3];               \
+            return (int32_t)s;                                             \
+        }
+
+int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
+                              const std::array<int16_t, HL_N>& OPP, Color col,
+                              size_t bucket) {
+    const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
+    static_assert(HL_N % VECTOR_SIZE == 0,
+                  "HL size must be divisible by the native register size of "
+                  "your CPU for vectorization to work");
+
+    const nativeVector VEC_QA   = set1_epi16(QA);
+    const nativeVector VEC_ZERO = set1_epi16(0);
+
+    accVector accumulator = (accVector)vec_splats((int)0); // zero accumulator
+
+    for (size_t i = 0; i < HL_N; i += VECTOR_SIZE) {
+        // load a SIMD vector of inputs, x (8 x int16)
+        const nativeVector stmAccumValues =
+            load_epi16(&STM[i]);
+        const nativeVector nstmAccumValues =
+            load_epi16(&OPP[i]);
+
+        // clamp to [0, QA]
+        const nativeVector stmClamped =
+            min_epi16(VEC_QA, max_epi16(stmAccumValues, VEC_ZERO));
+        const nativeVector nstmClamped =
+            min_epi16(VEC_QA, max_epi16(nstmAccumValues, VEC_ZERO));
+
+        // load weights (assumes OW[bucket] is int16_t[] with 2*HL_N entries)
+        const nativeVector stmWeights =
+            load_epi16(&OW[bucket][i]);
+        const nativeVector nstmWeights =
+            load_epi16(&OW[bucket][i + HL_N]);
+
+        // perform SCReLU: v * (v * w) pairwise-accumulated to 32-bit lanes
+        const accVector stmActivated =
+            madd_epi16(stmClamped, mullo_epi16(stmClamped, stmWeights));
+        const accVector nstmActivated =
+            madd_epi16(nstmClamped, mullo_epi16(nstmClamped, nstmWeights));
+
+        accumulator = add_epi32(accumulator, stmActivated);
+        accumulator = add_epi32(accumulator, nstmActivated);
+    }
+
+    return reduce_epi32(accumulator);
+}
+
 #else
 
 int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
