@@ -17,7 +17,7 @@ else ifeq ($(ARCH_LEVEL),v3)
 else ifeq ($(ARCH_LEVEL),v4)
 	ARCH := -march=x86-64-v4 -static
 else ifeq ($(ARCH_LEVEL),power9)
-	ARCH := --target=powerpc64le-linux-gnu -mcpu=power9 -static
+	ARCH := --target=powerpc64le-linux-gnu -mcpu=power9 -mvsx -maltivec -static
 else
 	$(error Invalid ARCH_LEVEL: $(ARCH_LEVEL). Use native, v1, v2, v3, or v4)
 endif
