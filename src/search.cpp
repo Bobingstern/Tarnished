@@ -450,6 +450,12 @@ namespace Search {
         if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;
 
+        int pcBeta = beta + 400;
+        if (ttHit && moveIsNull(ss->excluded) && !isPV && ttData.bound == TTFlag::BETA_CUT && 
+            ttData.depth >= depth - 4 && ttData.score >= pcBeta && !isMateScore(beta) && !isMateScore(ttData.score)) {
+            return pcBeta;
+        }
+
         // Thought
         // What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
         // and use some sort of data generation method to create a pruning heuristic
