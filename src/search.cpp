@@ -450,13 +450,40 @@ namespace Search {
         if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;
 
-        // Thought
-        // What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
-        // and use some sort of data generation method to create a pruning heuristic
-        // with something like sigmoid(C dot I) >= 0.75 ?
-
         // Calculuate Threats
         ss->threats = calculateThreats(thread.board);
+
+        // Probcut
+        int pcBeta = beta + 200;
+        if (!isPV && !inCheck && depth >= 5 && !isMateScore(beta) && moveIsNull(ss->excluded) && 
+            (!ttHit || ttData.depth + 3 < depth || ttData.score >= pcBeta)) {
+            int pcDepth = depth - 4;
+            MovePicker pcPicker = MovePicker(&thread, ss, ttData.move, true);
+            Move move;
+
+            while (!moveIsNull(move = pcPicker.nextMove())) {
+                if (!SEE(thread.board, move, 100))
+                    continue;
+
+                MakeMove(thread.board, move, thread.bucketCache, ss);
+                thread.nodes.fetch_add(1, std::memory_order::relaxed);
+
+                int pcValue = -qsearch<false>(ply + 1, -pcBeta, -pcBeta + 1, ss + 1, thread, limit);
+
+                if (pcValue >= pcBeta) {
+                    pcValue = -search<false>(pcDepth, ply + 1, -pcBeta, -pcBeta + 1, !cutnode, ss + 1, thread, limit);
+                }
+
+                UnmakeMove(thread.board, move);
+
+                if (pcValue >= pcBeta) {
+                    thread.TT.store(thread.board.hash(), move, pcValue, rawStaticEval, TTFlag::BETA_CUT, pcDepth, ply, ttPV);
+                    return pcValue;
+                }
+
+            }
+
+        }
 
         Move bestMove = Move::NO_MOVE;
         Move move;
