@@ -40,23 +40,23 @@ constexpr int CORR_HIST_ENTRIES = 16384;
 constexpr int PAWN_HIST_ENTRIES = 1024;
 constexpr int MAX_CORR_HIST = 1024;
 // NNUE Parameters
-constexpr int16_t HL_N = 1024;
+constexpr int16_t HL_N = 1280;
 constexpr int16_t QA = 255;
 constexpr int16_t QB = 64;
 constexpr int16_t NNUE_SCALE = 400;
 constexpr int OUTPUT_BUCKETS = 8;
-constexpr int INPUT_BUCKETS = 4;
+constexpr int INPUT_BUCKETS = 6;
 const bool HORIZONTAL_MIRROR = true;
 
 const std::array<int, 64> BUCKET_LAYOUT = {
     0, 0, 1, 1, 1, 1, 0, 0,
-    2, 2, 2, 2, 2, 2, 2, 2,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3,
-    3, 3, 3, 3, 3, 3, 3, 3,
+    2, 2, 3, 3, 3, 3, 2, 2, 
+    4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4, 4,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5,
+    5, 5, 5, 5, 5, 5, 5, 5,
 };
 
 // Factorized LMR arrays
