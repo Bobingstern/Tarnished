@@ -79,6 +79,7 @@ void startDatagen(size_t tc, bool isDFRC);
 uint16_t packMove(Move m);
 void writeViriformat(std::ofstream& outFile, ViriEntry& game);
 std::string randomDFRC();
+std::string randomDFRC(std::mt19937_64 &engine);
 
 static bool matchesToken(std::string line, std::string token) {
     return line.rfind(token, 0) == 0;
