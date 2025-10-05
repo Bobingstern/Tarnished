@@ -138,6 +138,17 @@ std::string randomDFRC() {
     return fen;
 }
 
+std::string randomDFRC(std::mt19937_64 &engine) {
+    std::uniform_int_distribution<int> dist(0, 959);
+    std::string black = frcFens[dist(engine)];
+    std::string white = frcFens[dist(engine)];
+    // Make them all uppercase for white
+    std::transform(white.begin(), white.end(), white.begin(), [](unsigned char c) { return std::toupper(c); });
+
+    std::string fen = black + "/pppppppp/8/8/8/8/PPPPPPPP/" + white + " w KQkq - 0 1";
+    return fen;
+}
+
 // PlentyChess yoink
 bool nextToken(std::string* line, std::string* token) {
     if (line->length() == 0) return false;
@@ -168,6 +179,7 @@ void handleGenfens(Searcher& searcher, std::string params) {
     }
 
     std::mt19937_64 engine(seed);
+    std::uniform_int_distribution<int> dist(0, 100);
     Search::Limit limit = Search::Limit();
     
     searcher.printInfo = false;
@@ -175,8 +187,13 @@ void handleGenfens(Searcher& searcher, std::string params) {
 
     for (int i = 0; i < N; i++) {
         std::string fen;
+        bool dfrcFen = dist(engine) < 10;
         while (true) {
             Board board;
+            if (dfrcFen) {
+                board.set960(true);
+                board.setFen(randomDFRC(engine));
+            }
             for (int m = 0; m < 8; m++) {
                 makeRandomMove(board, engine);
                 if (board.isGameOver().second != GameResult::NONE)
