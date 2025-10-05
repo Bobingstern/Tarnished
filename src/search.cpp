@@ -401,7 +401,7 @@ namespace Search {
             rfpMargin -= RFP_IMPROVING_SCALE() * improving;
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
-            if (depth <= 8 && ss->eval - rfpMargin >= beta)
+            if (depth <= 9 && ss->eval - rfpMargin >= beta)
                 return (ss->eval + beta) / 2;
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
