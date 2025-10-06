@@ -337,13 +337,13 @@ namespace Search {
             }
 
             int getQuietHistory(Board& board, Move m, Stack* ss) {
-                int hist = getHistory(board.sideToMove(), m, ss);
-                hist += getPawnhist(board, m, ss);
+                int cont = 0;
                 if (ss != nullptr && ss->ply > 0 && (ss - 1)->conthist != nullptr)
-                    hist += getConthist((ss - 1)->conthist, board, m);
+                    cont += getConthist((ss - 1)->conthist, board, m);
                 if (ss != nullptr && ss->ply > 1 && (ss - 2)->conthist != nullptr)
-                    hist += getConthist((ss - 2)->conthist, board, m);
-                return hist;
+                    cont += getConthist((ss - 2)->conthist, board, m);
+
+                return getHistory(board.sideToMove(), m, ss) + 2 * cont + getPawnhist(board, m, ss);
             }
 
             int correctStaticEval(Stack* ss, Board& board, int eval) {
