@@ -343,7 +343,7 @@ namespace Search {
                 if (ss != nullptr && ss->ply > 1 && (ss - 2)->conthist != nullptr)
                     cont += getConthist((ss - 2)->conthist, board, m);
 
-                return getHistory(board.sideToMove(), m, ss) + 2 * cont + getPawnhist(board, m, ss);
+                return 0.75 * getHistory(board.sideToMove(), m, ss) + 1.5 * cont + 0.75 * getPawnhist(board, m, ss);
             }
 
             int correctStaticEval(Stack* ss, Board& board, int eval) {
