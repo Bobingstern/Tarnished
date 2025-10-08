@@ -402,7 +402,7 @@ namespace Search {
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
 
             if (depth <= 8 && ss->eval - rfpMargin >= beta)
-                return (ss->eval + beta) / 2;
+                return beta + (ss->eval - beta) / 3;
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + RAZORING_SCALE() * depth <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
