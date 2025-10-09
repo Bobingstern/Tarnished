@@ -394,6 +394,8 @@ namespace Search {
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
+        (ss + 1)->killer = Move::NO_MOVE;
+
         // Pruning
         if (!root && !isPV && !inCheck && moveIsNull(ss->excluded)) {
             // Reverse Futility Pruning
@@ -457,6 +459,7 @@ namespace Search {
 
         // Calculuate Threats
         ss->threats = calculateThreats(thread.board);
+
 
         Move bestMove = Move::NO_MOVE;
         Move move;
@@ -623,8 +626,9 @@ namespace Search {
             }
             if (score >= beta) {
                 ttFlag = TTFlag::BETA_CUT;
-                ss->killer = isQuiet ? bestMove : Move::NO_MOVE;
                 ss->failHighs++;
+                if (isQuiet)
+                    ss->killer = bestMove;
                 // Butterfly History
                 // Continuation History
                 // Capture History
