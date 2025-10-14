@@ -578,7 +578,7 @@ namespace Search {
                 // | to 3 way interactions between them. For example, a two way  |
                 // | interaction would be two_way_table[i] * (x && y), three     |
                 // | way would be three_way_table[j] * (x && y && z) etc         |
-                // | For example 6 variables, that gives us a one way           |
+                // | For example 6 variables, that gives us a one way            |
                 // | table of 6, two table of 6x5/2=15, and three way of         |
                 // | 6x5x3/3!=20. Thanks to AGE for this idea                    |
                 // ---------------------------------------------------------------
