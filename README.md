@@ -16,7 +16,7 @@
 | 2.0 | 2025-05-17 | 3156 | -
 | 2.1 | 2025-05-24 | 3375 | -
 | 3.0 | 2025-06-29 | 3495 | 3605
-| 4.0 | 2025-08-22 | - | 3650*
+| 4.0 | 2025-08-22 | 3571 | 3663
 
 </div>
 
@@ -30,14 +30,14 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
 
 - Move Generation
     - Internally uses [chess-library](https://disservin.github.io/chess-library/)
-- NNUE `(768x4hm->1024)x2->1x8`
+- NNUE `(768x12hm->1024)x2->1x8`
     - Trained with [bullet](https://github.com/jw1912/bullet)
     - Self generated training data
     - `(piece, square, color)` input features, 4 king buckets, 8 output buckets
     - Horizontal Mirroring
     - 5000 soft nodes for self play
     - 8 random plies for opening
-    - ~3.5b positions
+    - ~16b positions
 - Search
     - Principle Variation Search
     - Quiescence Search
@@ -99,16 +99,12 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
     - Ignore all input until search is completed. Useful for scripts
 - `bench`
     - Runs an OpenBench style benchmark on 50 positions. Alternatively run `./tarnished bench`
- - `datagen name Threads value <threads>`
-     - Begins data generation with the specified number of threads with viriformat output files.
-     - It should create a folder with `<threads>` number of `.vf` files. If you're on windows, you can run `copy /b *.vf output.vf` to merge them all into one file for training.
-     - Hyperthreading seems to be somewhat profitable
-     - Send me your data!
 
 ## Credits
 - The name Tarnished is a reference to a certain video game protagonist
 - Thanks to everyone in the Stockfish Discord Server
 - [MattBench](https://chess.n9x.co/index/) (Thanks Matt and everyone else for sharing cores, special thanks to Micpilar for helping with datagen)
+- [Rensselaer Polytechnic Institute (CCI)](https://cci.rpi.edu/) (Thanks to my university for letting me use their enourmous computing clusters for data generation and training nets)
 - [Swedishchef](https://github.com/JonathanHallstrom) (Helping out with many engine development related things)
 - [Dan](https://github.com/kelseyde) (Tossing around ideas and helping out with NNUE and other engine related things)
 - [Weiss](https://github.com/TerjeKir/Weiss)
