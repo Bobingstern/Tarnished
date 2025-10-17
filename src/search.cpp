@@ -397,7 +397,7 @@ namespace Search {
         (ss + 1)->killer = Move::NO_MOVE;
 
         // Hindsight extension
-        if ((ss - 1)->reduction >= 3 && !inCheck && (ss - 1)->staticEval != EVAL_NONE && ss->staticEval + (ss - 1)->staticEval <= 0)
+        if ((ss - 1)->reduction >= 4 && !inCheck && (ss - 1)->staticEval != EVAL_NONE && ss->staticEval + (ss - 1)->staticEval <= 0)
             depth++;
 
         // Pruning
