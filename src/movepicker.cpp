@@ -66,10 +66,15 @@ Move MovePicker::nextMove() {
         case TTMOVE:
             ++stage;
             // Only return ttMove if in QS if we're in check or if its a capture
-            if (isLegal(thread->board, ttMove) &&
-                (!isQS || thread->board.isCapture(ttMove) ||
-                 thread->board.inCheck())) {
-                return ttMove;
+            // If in noisy good only, only return noisy tt
+            if (isLegal(thread->board, ttMove)) {
+                if (thread->board.isCapture(ttMove)) {
+                    return ttMove;
+                }
+                if ( (!isQS || thread->board.inCheck()) && !goodNoisyOnly ) {
+                    return ttMove;
+            }
+                
             }
         case GEN_NOISY:
             movegen::legalmoves<movegen::MoveGenType::CAPTURE>(movesList,
@@ -83,10 +88,15 @@ Move MovePicker::nextMove() {
                 if (move == ttMove) {
                     continue;
                 }
-                if (!SEE(thread->board, move, -move.score() / 4 + 15))
+                int margin = goodNoisyOnly ? seeMargin : -move.score() / 4 + 15;
+                if (!SEE(thread->board, move, margin))
                     badNoises.add(move);
                 else
                     return move;
+            }
+            if (goodNoisyOnly) {
+                stage = MPStage::END;
+                return Move(Move::NO_MOVE);
             }
             ++stage;
 
@@ -124,6 +134,8 @@ Move MovePicker::nextMove() {
                 return move;
             }
             ++stage;
+            
+        case END:
             return Move(Move::NO_MOVE);
     }
 

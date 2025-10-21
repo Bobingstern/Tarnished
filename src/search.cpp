@@ -452,6 +452,38 @@ namespace Search {
             }
         }
 
+        const int pcBeta = beta + 300;
+        if (!inCheck && depth >= 6 && !isMateScore(beta) && 
+            (!ttHit || ttData.depth + 3 < depth) || ttData.score >= pcBeta) {
+
+            const int seeThreshold = pcBeta - ss->staticEval;
+
+            Move move;
+            MovePicker picker = MovePicker(&thread, ss, ttData.move, false);
+            picker.setGoodNoisy(seeThreshold);
+            while (!moveIsNull(move = picker.nextMove())) {
+
+                thread.TT.prefetch(prefetchKey(thread.board, move));
+
+                MakeMove(thread.board, move, thread.bucketCache, ss);
+                moveCount++;
+                thread.nodes.fetch_add(1, std::memory_order::relaxed);
+
+                const int pcDepth = depth - 3;
+                int pcScore = -qsearch<isPV>(ply + 1, -pcBeta, -pcBeta + 1, ss + 1, thread, limit);
+
+                if (pcScore >= pcBeta) {
+                    pcScore = -search<isPV>(pcDepth, ply + 1, -pcBeta, -pcBeta + 1, !cutnode, ss + 1, thread, limit);
+                }
+
+                UnmakeMove(thread.board, move);
+
+                if (pcScore >= pcBeta) {
+                    return pcScore;
+                }
+            }
+        }
+
         // Internal Iterative Reduction
         if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;

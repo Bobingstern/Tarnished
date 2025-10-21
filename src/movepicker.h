@@ -6,7 +6,7 @@
 #include "search.h"
 #include "util.h"
 
-enum class MPStage { TTMOVE, GEN_NOISY, NOISY_GOOD, KILLER, GEN_QUIET, QUIET, BAD_NOISY };
+enum class MPStage { TTMOVE, GEN_NOISY, NOISY_GOOD, KILLER, GEN_QUIET, QUIET, BAD_NOISY, END };
 
 inline MPStage operator++(MPStage& stage) {
     stage = static_cast<MPStage>(static_cast<int>(stage) + 1);
@@ -22,6 +22,8 @@ struct MovePicker {
         Move ttMove;
         int currMove;
         bool isQS;
+        bool goodNoisyOnly;
+        int seeMargin;
 
         // Threats
         Bitboard pawnThreats;
@@ -34,6 +36,7 @@ struct MovePicker {
             this->ss = ss;
             this->ttMove = Move(ttm);
             isQS = qs;
+            goodNoisyOnly = false;
             stage = MPStage::TTMOVE;
             currMove = 0;
             pawnThreats = ss->threats[0];
@@ -45,4 +48,8 @@ struct MovePicker {
         Move nextMove();
         void scoreMoves(Movelist& moves);
         Move selectHighest(Movelist& moves);
+        void setGoodNoisy(int margin) {
+            goodNoisyOnly = true;
+            seeMargin = margin;
+        }
 };
