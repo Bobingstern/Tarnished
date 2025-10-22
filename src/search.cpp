@@ -463,10 +463,17 @@ namespace Search {
             picker.setGoodNoisy(seeThreshold);
             while (!moveIsNull(move = picker.nextMove())) {
 
+                if (move == ss->excluded)
+                    continue;
+
+                ss->move = move;
+                ss->movedPiece = thread.board.at<PieceType>(move.from());
+                ss->conthist = thread.getConthistSegment(thread.board, move);
+                ss->contCorrhist = thread.getContCorrhistSegment(thread.board, move);
+                
                 thread.TT.prefetch(prefetchKey(thread.board, move));
 
                 MakeMove(thread.board, move, thread.bucketCache, ss);
-                moveCount++;
                 thread.nodes.fetch_add(1, std::memory_order::relaxed);
 
                 const int pcDepth = depth - 3;
