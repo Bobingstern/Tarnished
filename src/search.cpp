@@ -454,7 +454,7 @@ namespace Search {
 
         const int pcBeta = beta + 300;
         if (!inCheck && depth >= 6 && !isMateScore(beta) && 
-            (!ttHit || ttData.depth + 3 < depth) || ttData.score >= pcBeta) {
+            (!ttHit || ttData.depth + 3 < depth || ttData.score >= pcBeta) ) {
 
             const int seeThreshold = pcBeta - ss->staticEval;
 
