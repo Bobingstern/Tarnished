@@ -470,7 +470,7 @@ namespace Search {
                 ss->movedPiece = thread.board.at<PieceType>(move.from());
                 ss->conthist = thread.getConthistSegment(thread.board, move);
                 ss->contCorrhist = thread.getContCorrhistSegment(thread.board, move);
-                
+
                 thread.TT.prefetch(prefetchKey(thread.board, move));
 
                 MakeMove(thread.board, move, thread.bucketCache, ss);
@@ -480,12 +480,13 @@ namespace Search {
                 int pcScore = -qsearch<isPV>(ply + 1, -pcBeta, -pcBeta + 1, ss + 1, thread, limit);
 
                 if (pcScore >= pcBeta) {
-                    pcScore = -search<isPV>(pcDepth, ply + 1, -pcBeta, -pcBeta + 1, !cutnode, ss + 1, thread, limit);
+                    pcScore = -search<isPV>(pcDepth - 1, ply + 1, -pcBeta, -pcBeta + 1, !cutnode, ss + 1, thread, limit);
                 }
 
                 UnmakeMove(thread.board, move);
 
                 if (pcScore >= pcBeta) {
+                    thread.TT.store(thread.board.hash(), Move(Move::NO_MOVE), pcScore, rawStaticEval, TTFlag::BETA_CUT, pcDepth, ply, ttPV);
                     return pcScore;
                 }
             }
