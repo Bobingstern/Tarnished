@@ -450,47 +450,50 @@ namespace Search {
                         return verification;
                 }
             }
-        }
+            
+            // ProbCut
+            const int pcBeta = beta + 230;
+            if (depth >= 5 && !isMateScore(beta) && 
+                (!ttHit || ttData.depth + 3 < depth || ttData.score >= pcBeta) ) {
 
-        const int pcBeta = beta + 230;
-        if (!inCheck && depth >= 5 && !isMateScore(beta) && 
-            (!ttHit || ttData.depth + 3 < depth || ttData.score >= pcBeta) ) {
+                const int seeThreshold = pcBeta - ss->staticEval;
 
-            const int seeThreshold = pcBeta - ss->staticEval;
+                Move move;
+                MovePicker picker = MovePicker(&thread, ss, ttData.move, false);
+                picker.setGoodNoisy(seeThreshold);
+                while (!moveIsNull(move = picker.nextMove())) {
 
-            Move move;
-            MovePicker picker = MovePicker(&thread, ss, ttData.move, false);
-            picker.setGoodNoisy(seeThreshold);
-            while (!moveIsNull(move = picker.nextMove())) {
+                    if (move == ss->excluded)
+                        continue;
 
-                if (move == ss->excluded)
-                    continue;
+                    ss->move = move;
+                    ss->movedPiece = thread.board.at<PieceType>(move.from());
+                    ss->conthist = thread.getConthistSegment(thread.board, move);
+                    ss->contCorrhist = thread.getContCorrhistSegment(thread.board, move);
 
-                ss->move = move;
-                ss->movedPiece = thread.board.at<PieceType>(move.from());
-                ss->conthist = thread.getConthistSegment(thread.board, move);
-                ss->contCorrhist = thread.getContCorrhistSegment(thread.board, move);
+                    thread.TT.prefetch(prefetchKey(thread.board, move));
 
-                thread.TT.prefetch(prefetchKey(thread.board, move));
+                    MakeMove(thread.board, move, thread.bucketCache, ss);
+                    thread.nodes.fetch_add(1, std::memory_order::relaxed);
 
-                MakeMove(thread.board, move, thread.bucketCache, ss);
-                thread.nodes.fetch_add(1, std::memory_order::relaxed);
+                    const int pcDepth = depth - 3;
+                    int pcScore = -qsearch<isPV>(ply + 1, -pcBeta, -pcBeta + 1, ss + 1, thread, limit);
 
-                const int pcDepth = depth - 3;
-                int pcScore = -qsearch<isPV>(ply + 1, -pcBeta, -pcBeta + 1, ss + 1, thread, limit);
+                    if (pcScore >= pcBeta) {
+                        pcScore = -search<isPV>(pcDepth - 1, ply + 1, -pcBeta, -pcBeta + 1, !cutnode, ss + 1, thread, limit);
+                    }
 
-                if (pcScore >= pcBeta) {
-                    pcScore = -search<isPV>(pcDepth - 1, ply + 1, -pcBeta, -pcBeta + 1, !cutnode, ss + 1, thread, limit);
-                }
+                    UnmakeMove(thread.board, move);
 
-                UnmakeMove(thread.board, move);
-
-                if (pcScore >= pcBeta) {
-                    thread.TT.store(thread.board.hash(), Move(Move::NO_MOVE), pcScore, rawStaticEval, TTFlag::BETA_CUT, pcDepth, ply, ttPV);
-                    return pcScore;
+                    if (pcScore >= pcBeta) {
+                        thread.TT.store(thread.board.hash(), Move(Move::NO_MOVE), pcScore, rawStaticEval, TTFlag::BETA_CUT, pcDepth, ply, ttPV);
+                        return pcScore;
+                    }
                 }
             }
         }
+
+        
 
         // Internal Iterative Reduction
         if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
