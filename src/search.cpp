@@ -392,6 +392,10 @@ namespace Search {
         // We are better than 2 plies ago
         bool improving =
             !inCheck && ply > 1 && (ss - 2)->staticEval != EVAL_NONE && (ss - 2)->staticEval < ss->staticEval;
+
+        if (!inCheck && ss->staticEval >= beta)
+            improving = true;
+        
         uint8_t ttFlag = TTFlag::FAIL_LOW;
 
         (ss + 1)->killer = Move::NO_MOVE;
