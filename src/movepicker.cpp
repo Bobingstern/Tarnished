@@ -26,20 +26,20 @@ void MovePicker::scoreMoves(Movelist& moves) {
             if (pt == PieceType::QUEEN) {
                 // Everything threatens a queen
                 Bitboard threats = pawnThreats | knightThreats | bishopThreats | rookThreats;
-                score += (threats & fromBB).empty() ? 0 : 12228;
-                score -= (threats & toBB).empty() ? 0 : 11264;
+                score += (threats & fromBB).empty() ? 0 : THREAT_QUEEN_BONUS();
+                score -= (threats & toBB).empty() ? 0 : THREAT_QUEEN_MALUS();
             }
             else if (pt == PieceType::ROOK) {
                 // P, N, B
                 Bitboard threats = pawnThreats | knightThreats | bishopThreats;
-                score += (threats & fromBB).empty() ? 0 : 10240;
-                score -= (threats & toBB).empty() ? 0 : 9216;
+                score += (threats & fromBB).empty() ? 0 : THREAT_ROOK_BONUS();
+                score -= (threats & toBB).empty() ? 0 : THREAT_ROOK_MALUS();
             }
             else if (pt == PieceType::BISHOP || pt == PieceType::KNIGHT) {
                 // P
                 Bitboard threats = pawnThreats;
-                score += (threats & fromBB).empty() ? 0 : 8192;
-                score -= (threats & toBB).empty() ? 0 : 7168;
+                score += (threats & fromBB).empty() ? 0 : THREAT_MINOR_BONUS();
+                score -= (threats & toBB).empty() ? 0 : THREAT_MINOR_MALUS();
             }
 
             move.setScore(score);
