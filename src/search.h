@@ -275,6 +275,9 @@ namespace Search {
                 if (ss->ply > 1 && (ss - 2)->conthist != nullptr)
                     updateEntry(
                         (*(ss - 2)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()]);
+                if (ss->ply > 3 && (ss - 4)->conthist != nullptr)
+                    updateEntry(
+                        (*(ss - 4)->conthist)[board.sideToMove()][(int)board.at<PieceType>(m.from())][m.to().index()]);
             }
 
             // Pawn History
@@ -344,6 +347,8 @@ namespace Search {
                     hist += getConthist((ss - 1)->conthist, board, m);
                 if (ss != nullptr && ss->ply > 1 && (ss - 2)->conthist != nullptr)
                     hist += getConthist((ss - 2)->conthist, board, m);
+                if (ss != nullptr && ss->ply > 3 && (ss - 4)->conthist != nullptr)
+                    hist += getConthist((ss - 4)->conthist, board, m);
                 return hist;
             }
 
