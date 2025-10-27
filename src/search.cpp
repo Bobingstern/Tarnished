@@ -371,6 +371,7 @@ namespace Search {
         int score = bestScore;
         int moveCount = 0;
         bool inCheck = thread.board.inCheck();
+        bool ttNoisy = ttData.move && thread.board.at(Move(ttData.move).to()) != Piece::NONE;
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
         (ss + 1)->failHighs = 0;
@@ -420,9 +421,9 @@ namespace Search {
             Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^
                                 thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
             if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty()) {
-                // Sirius formula
+
                 const int reduction = NMP_BASE_REDUCTION() + depth / NMP_REDUCTION_SCALE() +
-                                      std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE());
+                                      std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE()) + ttNoisy;
 
                 ss->conthist = nullptr;
                 ss->contCorrhist = nullptr;
