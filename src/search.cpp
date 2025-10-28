@@ -280,6 +280,8 @@ namespace Search {
         Move move;
         MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
 
+        Movelist seenCaptures;
+
         while (!moveIsNull(move = picker.nextMove())) {
             if (thread.stopped.load() || thread.exiting.load())
                 return bestScore;
@@ -293,8 +295,12 @@ namespace Search {
                 continue;
 
             thread.TT.prefetch(prefetchKey(thread.board, move));
-            if (thread.board.isCapture(move))
+
+            bool isCapture = thread.board.isCapture(move);
+            if (isCapture) {
                 ss->toSquare = move.to();
+                seenCaptures.add(move);
+            }
             MakeMove(thread.board, move, thread.bucketCache, ss);
 
             thread.nodes.fetch_add(1, std::memory_order::relaxed);
@@ -312,6 +318,17 @@ namespace Search {
             }
             if (score >= beta) {
                 ttFlag = TTFlag::BETA_CUT;
+
+                int bonus = historyBonus(1);
+                int malus = historyMalus(1);
+                if (isCapture) {
+                    thread.updateCapthist(ss, thread.board, move, bonus);
+                }
+                for (const Move noisyMove : seenCaptures) {
+                    if (noisyMove == move)
+                        continue;
+                    thread.updateCapthist(ss, thread.board, noisyMove, malus);
+                }
                 break;
             }
         }
