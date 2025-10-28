@@ -100,6 +100,7 @@ namespace Search {
             Move move{};
             Square toSquare = Square::NO_SQ;
             PieceType movedPiece;
+            PieceType capturedPiece;
             MultiArray<int16_t, 2, 6, 64>* conthist;
             MultiArray<int16_t, 2, 6, 64>* contCorrhist;
 
@@ -282,6 +283,13 @@ namespace Search {
                 int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
                 int16_t& entry = 
                     pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+                entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+                entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
+            }
+            void updatePawnhist(Stack* ss, Board& board, Move m, PieceType moved, int16_t bonus) {
+                int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+                int16_t& entry = 
+                    pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][int(moved)][m.to().index()];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
                 entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
             }

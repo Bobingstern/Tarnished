@@ -426,6 +426,9 @@ namespace Search {
 
                 ss->conthist = nullptr;
                 ss->contCorrhist = nullptr;
+                ss->move = Move::NULL_MOVE;
+                ss->capturedPiece = PieceType::NONE;
+                ss->movedPiece = PieceType::NONE;
 
                 // Null move prefetch is just flip color
                 thread.TT.prefetch(thread.board.hash() ^ Zobrist::sideToMove());
@@ -455,11 +458,6 @@ namespace Search {
         // Internal Iterative Reduction
         if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;
-
-        // Thought
-        // What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
-        // and use some sort of data generation method to create a pruning heuristic
-        // with something like sigmoid(C dot I) >= 0.75 ?
 
         // Calculuate Threats
         ss->threats = calculateThreats(thread.board);
@@ -560,6 +558,7 @@ namespace Search {
             // Update Continuation History
             ss->move = move;
             ss->movedPiece = thread.board.at<PieceType>(move.from());
+            ss->capturedPiece = thread.board.at<PieceType>(move.to());
             ss->conthist = thread.getConthistSegment(thread.board, move);
             ss->contCorrhist = thread.getContCorrhistSegment(thread.board, move);
 
