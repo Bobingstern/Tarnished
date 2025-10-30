@@ -527,7 +527,7 @@ namespace Search {
             // Singular Extensions
             // Sirius conditions
             // https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
-            bool doSE = !root && moveIsNull(ss->excluded) && depth >= 7 && Move(ttData.move) == move &&
+            bool doSE = !root && moveIsNull(ss->excluded) && depth >= 6 + ttPV && Move(ttData.move) == move &&
                         ttData.depth >= depth - 3 && ttData.bound != TTFlag::FAIL_LOW && !isMateScore(ttData.score);
 
             int extension = 0;
