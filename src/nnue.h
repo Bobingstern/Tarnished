@@ -102,7 +102,7 @@ struct Accumulator {
 struct NNUE {
         alignas(64) std::array<int16_t, HL_N * 768 * INPUT_BUCKETS> H1;
         alignas(64) std::array<int16_t, HL_N> H1Bias;
-        alignas(64) std::array<std::array<int16_t, HL_N * 2>, OUTPUT_BUCKETS> OW;
+        alignas(64) std::array<std::array<int16_t, HL_N>, OUTPUT_BUCKETS> OW;
         alignas(64) std::array<int16_t, OUTPUT_BUCKETS> outputBias;
 
         int16_t ReLU_(int16_t x);
