@@ -533,7 +533,7 @@ namespace Search {
             int extension = 0;
 
             if (doSE) {
-                int sBeta = std::max(-MATE, ttData.score - SE_BETA_SCALE() * depth * (1 + (ttPV && !isPV)) / 16);
+                int sBeta = std::max(-MATE, ttData.score - SE_BETA_SCALE() * depth / 16);
                 int sDepth = (depth - 1) / 2;
                 // How good are we without this move
                 ss->excluded = Move(ttData.move);
