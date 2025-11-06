@@ -723,7 +723,7 @@ namespace Search {
             }
             // Aspiration Windows
             if (depth >= MIN_ASP_WINDOW_DEPTH()) {
-                int delta = INITIAL_ASP_WINDOW();
+                int delta = INITIAL_ASP_WINDOW() + score * score / 9140;
                 int alpha = std::max(lastScore - delta, -EVAL_INF);
                 int beta = std::min(lastScore + delta, EVAL_INF);
                 int aspDepth = depth;
