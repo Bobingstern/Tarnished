@@ -635,26 +635,22 @@ namespace Search {
                 ss->failHighs++;
                 if (isQuiet)
                     ss->killer = bestMove;
-                // Butterfly History
-                // Continuation History
-                // Capture History
-                int bonus = historyBonus(depth);
-                int malus = historyMalus(depth);
+
                 if (isQuiet) {
-                    thread.updateQuietHistory(ss, move, bonus);
+                    thread.updateQuietHistory(ss, move, depth, true);
                     for (const Move quietMove : seenQuiets) {
                         if (quietMove == move)
                             continue;
-                        thread.updateQuietHistory(ss, quietMove, malus);
+                        thread.updateQuietHistory(ss, quietMove, depth, false);
                     }
                 } else {
-                    thread.updateCapthist(ss, thread.board, move, bonus);
+                    thread.updateCapthist(ss, thread.board, move, depth, true);
                 }
                 // Always malus captures
                 for (const Move noisyMove : seenCaptures) {
                     if (noisyMove == move)
                         continue;
-                    thread.updateCapthist(ss, thread.board, noisyMove, malus);
+                    thread.updateCapthist(ss, thread.board, noisyMove, depth, false);
                 }
                 break;
             }

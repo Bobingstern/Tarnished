@@ -34,11 +34,27 @@ namespace Search {
     int evaluate(Board& board, Accumulator& accumulator);
 
     inline int historyBonus(int depth) {
-        return std::min(HIST_BONUS_QUADRATIC() * depth * depth + HIST_BONUS_LINEAR() * depth - HIST_BONUS_OFFSET(),
+        return std::min(HIST_BONUS_QUADRATIC() * depth * depth + HIST_BONUS_LINEAR() * depth + HIST_BONUS_OFFSET(),
+                        2048);
+    }
+    inline int historyBonusCont(int depth) {
+        return std::min(CONT_HIST_BONUS_QUADRATIC() * depth * depth + CONT_HIST_BONUS_LINEAR() * depth + CONT_HIST_BONUS_OFFSET(),
+                        2048);
+    }
+    inline int historyBonusCapt(int depth) {
+        return std::min(CAPT_HIST_BONUS_QUADRATIC() * depth * depth + CAPT_HIST_BONUS_LINEAR() * depth + CAPT_HIST_BONUS_OFFSET(),
                         2048);
     }
     inline int historyMalus(int depth) {
         return -std::min(HIST_MALUS_QUADRATIC() * depth * depth + HIST_MALUS_LINEAR() * depth + HIST_MALUS_OFFSET(),
+                         1024);
+    }
+    inline int historyMalusCont(int depth) {
+        return -std::min(CONT_HIST_MALUS_QUADRATIC() * depth * depth + CONT_HIST_MALUS_LINEAR() * depth + CONT_HIST_MALUS_OFFSET(),
+                         1024);
+    }
+    inline int historyMalusCapt(int depth) {
+        return -std::min(CAPT_HIST_MALUS_QUADRATIC() * depth * depth + CAPT_HIST_MALUS_LINEAR() * depth + CAPT_HIST_MALUS_OFFSET(),
                          1024);
     }
 
@@ -255,7 +271,8 @@ namespace Search {
             }
 
             // Capture History
-            void updateCapthist(Stack* ss, Board& board, Move m, int bonus) {
+            void updateCapthist(Stack* ss, Board& board, Move m, int depth, bool b) {
+                int bonus = b ? historyBonusCapt(depth) : historyMalus(depth);
                 int clamped = std::clamp(int(bonus), int(-MAX_HISTORY), int(MAX_HISTORY));
                 int& entry = capthist[board.sideToMove()][board.at<PieceType>(m.from())][board.at<PieceType>(m.to())]
                                      [m.to().index()][threatIndex(m, ss->threats[6])];
@@ -286,10 +303,10 @@ namespace Search {
                 entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
             }
 
-            void updateQuietHistory(Stack* ss, Move m, int bonus) {
-                updateHistory(ss, board, m, bonus);
-                updateConthist(ss, board, m, int16_t(bonus));
-                updatePawnhist(ss, board, m, int16_t(bonus));
+            void updateQuietHistory(Stack* ss, Move m, int depth, bool bonus) {
+                updateHistory(ss, board, m, bonus ? historyBonus(depth) : historyMalus(depth));
+                updateConthist(ss, board, m, bonus ? historyBonusCont(depth) : historyMalusCont(depth));
+                updatePawnhist(ss, board, m, bonus ? historyBonus(depth) : historyMalus(depth));
             }
 
             // Static eval correction history
