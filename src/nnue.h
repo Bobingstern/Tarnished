@@ -87,6 +87,10 @@ struct Accumulator {
         static bool needRefresh(Move kingMove, Color stm);
         static int kingBucket(Square kingSq, Color color);
         void print();
+
+        // addaddaddadd, subsubsubsub
+        void refreshAdd4(std::array<int16_t, HL_N>& acc, int add0, int add1, int add2, int add3);
+        void refreshSub4(std::array<int16_t, HL_N>& acc, int sub0, int sub1, int sub2, int sub3);
         // addsub, addsubsub, addaddsubsub
         void addPiece(Board& board, Color stm, Square add, PieceType addPT);
         void subPiece(Board& board, Color stm, Square sub, PieceType subPT);
