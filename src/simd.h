@@ -10,22 +10,28 @@
 using nativeVector = __m512i;
         #define set1_epi16 _mm512_set1_epi16
         #define load_epi16 _mm512_load_si512
+        #define store_epi16 _mm512_store_si512
         #define min_epi16 _mm512_min_epi16
         #define max_epi16 _mm512_max_epi16
         #define madd_epi16 _mm512_madd_epi16
         #define mullo_epi16 _mm512_mullo_epi16
+        #define add_epi16 _mm512_add_epi16
         #define add_epi32 _mm512_add_epi32
+        #define sub_epi16 _mm512_sub_epi16
         #define reduce_epi32 _mm512_reduce_add_epi32
     #elif defined(__AVX2__)
         #pragma message("Using AVX2 NNUE inference")
 using nativeVector = __m256i;
         #define set1_epi16 _mm256_set1_epi16
         #define load_epi16 _mm256_load_si256
+        #define store_epi16 _mm256_store_si256
         #define min_epi16 _mm256_min_epi16
         #define max_epi16 _mm256_max_epi16
         #define madd_epi16 _mm256_madd_epi16
         #define mullo_epi16 _mm256_mullo_epi16
+        #define add_epi16 _mm256_add_epi16
         #define add_epi32 _mm256_add_epi32
+        #define sub_epi16 _mm256_sub_epi16
         #define reduce_epi32                                                   \
             [](nativeVector vec) {                                             \
                 __m128i xmm1 = _mm256_extracti128_si256(vec, 1);               \
@@ -43,11 +49,14 @@ using nativeVector = __m256i;
 using nativeVector = __m128i;
         #define set1_epi16 _mm_set1_epi16
         #define load_epi16 _mm_load_si128
+        #define store_epi16 _mm128_store_si128
         #define min_epi16 _mm_min_epi16
         #define max_epi16 _mm_max_epi16
         #define madd_epi16 _mm_madd_epi16
         #define mullo_epi16 _mm_mullo_epi16
+        #define add_epi16 _mm_add_epi16
         #define add_epi32 _mm_add_epi32
+        #define sub_epi16 _mm_sub_epi16
         #define reduce_epi32                                                   \
             [](nativeVector vec) {                                             \
                 __m128i xmm1 = _mm_shuffle_epi32(vec, 238);                    \
@@ -97,3 +106,4 @@ using nativeVector = __m128i;
     #define AUTOVEC
 
 #endif
+

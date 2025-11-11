@@ -225,6 +225,11 @@ void Accumulator::refresh(Board& board, Color persp, InputBucketCache& bucketCac
 
     accPerspective = cache.features;
 
+    int addIndex = 0;
+    int subIndex = 0;
+    std::array<int, 32> adds = {};
+    std::array<int, 32> subs = {};
+
     for (Color c : {Color::WHITE, Color::BLACK}) {
         for (PieceType pt : {PieceType::PAWN, PieceType::KNIGHT, PieceType::BISHOP, 
                         PieceType::ROOK, PieceType::QUEEN, PieceType::KING}) {
@@ -235,23 +240,41 @@ void Accumulator::refresh(Board& board, Color persp, InputBucketCache& bucketCac
             while (added) {
                 Square sq = added.pop();
                 int feature = NNUE::feature(persp, c, pt, sq, kingSq);
-
-                for (int i = 0; i < HL_N; i++) {
-                    // Do the matrix mutliply for the next layer
-                    accPerspective[i] += network.H1[feature * HL_N + i];
-                }
+                adds[addIndex] = feature;
+                addIndex++;
             }
 
             while (subbed) {
                 Square sq = subbed.pop();
                 int feature = NNUE::feature(persp, c, pt, sq, kingSq);
-
-                for (int i = 0; i < HL_N; i++) {
-                    // Do the matrix mutliply for the next layer
-                    accPerspective[i] -= network.H1[feature * HL_N + i];
-                }
+                subs[subIndex] = feature;
+                subIndex++;
             }
         }
+    }
+    // add in batches of 4
+    while (addIndex >= 4) {
+        refreshAdd4(accPerspective, adds[addIndex - 1], adds[addIndex - 2], adds[addIndex - 3], adds[addIndex - 4]);
+        addIndex -= 4;
+    }
+    // add remaining individually
+    while (addIndex > 0) {
+        for (int i = 0; i < HL_N; i++) {
+            accPerspective[i] += network.H1[adds[addIndex - 1] * HL_N + i];
+        }
+        addIndex--;
+    }
+    // sub in batches of 4
+    while (subIndex >= 4) {
+        refreshSub4(accPerspective, subs[subIndex - 1], subs[subIndex - 2], subs[subIndex - 3], subs[subIndex - 4]);
+        subIndex -= 4;
+    }
+    // sub remaining individually
+    while (subIndex > 0) {
+        for (int i = 0; i < HL_N; i++) {
+            accPerspective[i] -= network.H1[subs[subIndex - 1] * HL_N + i];
+        }
+        subIndex--;
     }
 
     cache.set(board, accPerspective);
@@ -271,15 +294,44 @@ void Accumulator::print() {
 }
 
 
+void Accumulator::refreshAdd4(std::array<int16_t, HL_N>& acc, int add0, int add1, int add2, int add3) {
+    for (int i = 0; i < HL_N; i++) {
+        acc[i] += network.H1[add0 * HL_N + i];
+        acc[i] += network.H1[add1 * HL_N + i];
+        acc[i] += network.H1[add2 * HL_N + i];
+        acc[i] += network.H1[add3 * HL_N + i];
+    }
+}
+void Accumulator::refreshSub4(std::array<int16_t, HL_N>& acc, int sub0, int sub1, int sub2, int sub3) {
+    for (int i = 0; i < HL_N; i++) {
+        acc[i] -= network.H1[sub0 * HL_N + i];
+        acc[i] -= network.H1[sub1 * HL_N + i];
+        acc[i] -= network.H1[sub2 * HL_N + i];
+        acc[i] -= network.H1[sub3 * HL_N + i];
+    }
+}
+
 void Accumulator::addPiece(Board& board, Color stm, Color persp, Square add, PieceType addPT) {
     Square kingSq = board.kingSq(persp);
     auto& accPerspective = persp == Color::WHITE ? white : black;
-
     const int feature = NNUE::feature(persp, stm, addPT, add, kingSq);
 
+#ifndef AUTOVEC
+    int16_t* accPtr = accPerspective.data();
+    const int16_t* h1Ptr = &network.H1[feature * HL_N];
+    nativeVector* accV = reinterpret_cast<nativeVector*>(accPtr);
+    const nativeVector* h1V = reinterpret_cast<const nativeVector*>(h1Ptr);
+
+    const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
+    for (int i = 0; i < HL_N / VECTOR_SIZE; i++) {
+        accV[i] = add_epi16(accV[i], h1V[i]);
+    }
+    
+#else
     for (int i = 0; i < HL_N; i++) {
         accPerspective[i] += network.H1[feature * HL_N + i];
     }
+#endif
 }
 
 void Accumulator::subPiece(Board& board, Color stm, Color persp, Square sub, PieceType subPT) {
@@ -288,9 +340,22 @@ void Accumulator::subPiece(Board& board, Color stm, Color persp, Square sub, Pie
 
     const int feature = NNUE::feature(persp, stm, subPT, sub, kingSq);
 
-    for (int i = 0; i < HL_N; i++) {
-        accPerspective[i] -= network.H1[feature * HL_N + i];
+#ifndef AUTOVEC
+    int16_t* accPtr = accPerspective.data();
+    const int16_t* h1Ptr = &network.H1[feature * HL_N];
+    nativeVector* accV = reinterpret_cast<nativeVector*>(accPtr);
+    const nativeVector* h1V = reinterpret_cast<const nativeVector*>(h1Ptr);
+
+    const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
+    for (int i = 0; i < HL_N / VECTOR_SIZE; i++) {
+        accV[i] = sub_epi16(accV[i], h1V[i]);
     }
+    
+#else
+    for (int i = 0; i < HL_N; i++) {
+        accPerspective[i] += network.H1[feature * HL_N + i];
+    }
+#endif
 }
 
 void Accumulator::addPiece(Board& board, Color stm, Square add, PieceType addPT) {
@@ -316,10 +381,33 @@ void Accumulator::quiet(Board& board, Color stm, Square add, PieceType addPT, Sq
     const int subW = NNUE::feature(Color::WHITE, stm, subPT, sub, whiteKing);
     const int subB = NNUE::feature(Color::BLACK, stm, subPT, sub, blackKing);
 
+#ifndef AUTOVEC
+    nativeVector* wPtr = reinterpret_cast<nativeVector*>(white.data());
+    nativeVector* bPtr = reinterpret_cast<nativeVector*>(black.data());
+
+    const nativeVector* addWPtr = reinterpret_cast<const nativeVector*>(&network.H1[addW * HL_N]);
+    const nativeVector* addBPtr = reinterpret_cast<const nativeVector*>(&network.H1[addB * HL_N]);
+    const nativeVector* subWPtr = reinterpret_cast<const nativeVector*>(&network.H1[subW * HL_N]);
+    const nativeVector* subBPtr = reinterpret_cast<const nativeVector*>(&network.H1[subB * HL_N]);
+
+    const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
+    for (int i = 0; i < HL_N / VECTOR_SIZE; i++) {
+        nativeVector w  = load_epi16(&wPtr[i]);
+        nativeVector b  = load_epi16(&bPtr[i]);
+        nativeVector aw = load_epi16(&addWPtr[i]);
+        nativeVector ab = load_epi16(&addBPtr[i]);
+        nativeVector sw = load_epi16(&subWPtr[i]);
+        nativeVector sb = load_epi16(&subBPtr[i]);
+
+        wPtr[i] = add_epi16(wPtr[i], sub_epi16(aw, sw));
+        bPtr[i] = add_epi16(bPtr[i], sub_epi16(ab, sb));
+    }
+#else
     for (int i = 0; i < HL_N; i++) {
         white[i] += network.H1[addW * HL_N + i] - network.H1[subW * HL_N + i];
         black[i] += network.H1[addB * HL_N + i] - network.H1[subB * HL_N + i];
     }
+#endif
 }
 // Capture Accumulation
 void Accumulator::capture(Board& board, Color stm, Square add, PieceType addPT, Square sub1,
@@ -337,10 +425,37 @@ void Accumulator::capture(Board& board, Color stm, Square add, PieceType addPT, 
     const int subW2 = NNUE::feature(Color::WHITE, ~stm, subPT2, sub2, whiteKing);
     const int subB2 = NNUE::feature(Color::BLACK, ~stm, subPT2, sub2, blackKing);
 
+#ifndef AUTOVEC
+    nativeVector*       wPtr   = reinterpret_cast<nativeVector*>(white.data());
+    nativeVector*       bPtr   = reinterpret_cast<nativeVector*>(black.data());
+    const nativeVector* addWPtr = reinterpret_cast<const nativeVector*>(&network.H1[addW * HL_N]);
+    const nativeVector* addBPtr = reinterpret_cast<const nativeVector*>(&network.H1[addB * HL_N]);
+    const nativeVector* subW1Ptr = reinterpret_cast<const nativeVector*>(&network.H1[subW1 * HL_N]);
+    const nativeVector* subB1Ptr = reinterpret_cast<const nativeVector*>(&network.H1[subB1 * HL_N]);
+    const nativeVector* subW2Ptr = reinterpret_cast<const nativeVector*>(&network.H1[subW2 * HL_N]);
+    const nativeVector* subB2Ptr = reinterpret_cast<const nativeVector*>(&network.H1[subB2 * HL_N]);
+
+    const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
+    for (int i = 0; i < HL_N / VECTOR_SIZE; i++) {
+        nativeVector aw  = addWPtr[i];
+        nativeVector ab  = addBPtr[i];
+        nativeVector sw1 = subW1Ptr[i];
+        nativeVector sb1 = subB1Ptr[i];
+        nativeVector sw2 = subW2Ptr[i];
+        nativeVector sb2 = subB2Ptr[i];
+
+        // white[i] += addW - subW1 - subW2
+        wPtr[i] = add_epi16(wPtr[i], sub_epi16(sub_epi16(aw, sw1), sw2));
+
+        // black[i] += addB - subB1 - subB2
+        bPtr[i] = add_epi16(bPtr[i], sub_epi16(sub_epi16(ab, sb1), sb2));
+    }
+#else
     for (int i = 0; i < HL_N; i++) {
         white[i] += network.H1[addW * HL_N + i] - network.H1[subW1 * HL_N + i] -
                     network.H1[subW2 * HL_N + i];
         black[i] += network.H1[addB * HL_N + i] - network.H1[subB1 * HL_N + i] -
                     network.H1[subB2 * HL_N + i];
     }
+#endif
 }
