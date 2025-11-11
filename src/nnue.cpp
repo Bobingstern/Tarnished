@@ -242,10 +242,6 @@ void Accumulator::refresh(Board& board, Color persp, InputBucketCache& bucketCac
                 int feature = NNUE::feature(persp, c, pt, sq, kingSq);
                 adds[addIndex] = feature;
                 addIndex++;
-                // for (int i = 0; i < HL_N; i++) {
-                //     // Do the matrix mutliply for the next layer
-                //     accPerspective[i] += network.H1[feature * HL_N + i];
-                // }
             }
 
             while (subbed) {
@@ -253,10 +249,6 @@ void Accumulator::refresh(Board& board, Color persp, InputBucketCache& bucketCac
                 int feature = NNUE::feature(persp, c, pt, sq, kingSq);
                 subs[subIndex] = feature;
                 subIndex++;
-                // for (int i = 0; i < HL_N; i++) {
-                //     // Do the matrix mutliply for the next layer
-                //     accPerspective[i] -= network.H1[feature * HL_N + i];
-                // }
             }
         }
     }
