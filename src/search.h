@@ -31,7 +31,7 @@ namespace Search {
     bool isLoss(int score);
     int storeScore(int score, int ply);
     int readScore(int score, int ply);
-    int evaluate(Board& board, Accumulator& accumulator);
+    int evaluate(Board& board, Stack* ss, InputBucketCache& bucketCache);
 
     inline int historyBonus(int depth) {
         return std::min(HIST_BONUS_QUADRATIC() * depth * depth + HIST_BONUS_LINEAR() * depth + HIST_BONUS_OFFSET(),
