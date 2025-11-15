@@ -31,12 +31,29 @@ void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::St
     (ss + 1)->minorKey = ss->minorKey;
     (ss + 1)->nonPawnKey[0] = ss->nonPawnKey[0];
     (ss + 1)->nonPawnKey[1] = ss->nonPawnKey[1];
+
     // Accumulator copy
-    (ss + 1)->accumulator = ss->accumulator;
+    (ss + 1)->accumulator.featureDeltas[0].clear();
+    (ss + 1)->accumulator.featureDeltas[1].clear();
+
     if (move == Move::NULL_MOVE) {
+        (ss + 1)->accumulator.white = ss->accumulator.white;
+        (ss + 1)->accumulator.black = ss->accumulator.black;
+
+        (ss + 1)->accumulator.computed[0] = ss->accumulator.computed[0];
+        (ss + 1)->accumulator.computed[1] = ss->accumulator.computed[1];
+
+        (ss + 1)->accumulator.needsRefresh[0] = ss->accumulator.needsRefresh[0];
+        (ss + 1)->accumulator.needsRefresh[1] = ss->accumulator.needsRefresh[1];
+
         board.makeNullMove();
         return;
     }
+
+    (ss + 1)->accumulator.needsRefresh[0] = ss->accumulator.needsRefresh[0];
+    (ss + 1)->accumulator.needsRefresh[1] = ss->accumulator.needsRefresh[1];
+
+    (ss + 1)->accumulator.computed[0] = (ss + 1)->accumulator.computed[1] = false;
 
     if (from == PieceType::PAWN) {
         // Update pawn zobrist key
@@ -100,7 +117,8 @@ void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::St
 
     if (from == PieceType::KING)
         if (Accumulator::needRefresh(move, stm)){
-            (ss + 1)->accumulator.refresh(board, stm, bucketCache);
+            (ss + 1)->accumulator.needsRefresh[int(stm)] = true;
+            //(ss + 1)->accumulator.refresh(board, stm, bucketCache);
             // Take care of updates for other accumulator
             // This includes, king quiet, capture, and castle
             if (move.typeOf() != Move::CASTLING) {
@@ -129,6 +147,7 @@ void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::St
     if (move.typeOf() == Move::ENPASSANT) {
         (ss + 1)->accumulator.quiet(board, stm, move.to(), from, move.from(), from);
         (ss + 1)->accumulator.subPiece(board, ~stm, move.to().ep_square(), PieceType::PAWN);
+
     } else if (move.typeOf() == Move::PROMOTION) {
         (ss + 1)->accumulator.subPiece(board, stm, move.from(), from);
         (ss + 1)->accumulator.addPiece(board, stm, move.to(), move.promotionType());
@@ -167,6 +186,8 @@ void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::St
     } else
         (ss + 1)->accumulator.quiet(board, stm, move.to(), from, move.from(), from);
 
+    
+
 }
 
 void UnmakeMove(Board& board, Move move) {
@@ -189,12 +210,37 @@ namespace Search {
     bool isMateScore(int score) {
         return std::abs(score) >= FOUND_MATE;
     }
-    int evaluate(Board& board, Accumulator& accumulator) {
+    int evaluate(Board& board, Stack* ss, InputBucketCache& bucketCache) {
         int materialOffset = MAT_SCALE_PAWN() * board.pieces(PieceType::PAWN).count() + MAT_SCALE_KNIGHT() * board.pieces(PieceType::KNIGHT).count() + 
                             MAT_SCALE_BISHOP() * board.pieces(PieceType::BISHOP).count() + MAT_SCALE_ROOK() * board.pieces(PieceType::ROOK).count() + 
                             MAT_SCALE_QUEEN() * board.pieces(PieceType::QUEEN).count();
 
-        int eval = network.inference(board, accumulator);
+        // Apply lazy updates
+        for (Color persp : {Color::WHITE, Color::BLACK}) {
+            if (ss->accumulator.computed[int(persp)])
+                continue;
+            
+            if (ss->accumulator.needsRefresh[int(persp)]) {
+                ss->accumulator.refresh(board, persp, bucketCache);
+                continue;
+            }
+
+            int c = 1;
+            while (!(ss - c)->accumulator.computed[int(persp)] && !(ss - c)->accumulator.needsRefresh[int(persp)])
+                c++;
+
+            if ((ss - c)->accumulator.needsRefresh[int(persp)])
+                ss->accumulator.refresh(board, persp, bucketCache);
+            else {
+                while (c != 0) {
+                    (ss - c + 1)->accumulator.applyDelta(persp, (ss - c)->accumulator);
+                    c--;
+                }
+            }
+
+        }
+
+        int eval = network.inference(board, ss->accumulator);
 
         eval = eval * (MAT_SCALE_BASE() + materialOffset) / 32768; // Calvin yoink
         return std::clamp(eval, GETTING_MATED + 1, FOUND_MATE - 1);
@@ -230,7 +276,7 @@ namespace Search {
             thread.searcher->stopSearching();
         }
         if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
-            return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? network.inference(thread.board, ss->accumulator)
+            return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? evaluate(thread.board, ss, thread.bucketCache)
                                                                    : 0;
         }
 
@@ -259,7 +305,7 @@ namespace Search {
         } else {
             rawStaticEval = ttHit && ttData.staticEval != EVAL_NONE && !isMateScore(ttData.staticEval)
                                 ? ttData.staticEval
-                                : evaluate(thread.board, ss->accumulator);
+                                : evaluate(thread.board, ss, thread.bucketCache);
             eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
         }
 
@@ -345,7 +391,7 @@ namespace Search {
             }
             if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
                 return (ply >= MAX_PLY - 1 && !thread.board.inCheck())
-                           ? network.inference(thread.board, ss->accumulator)
+                           ? evaluate(thread.board, ss, thread.bucketCache)
                            : 0;
             }
         }
@@ -384,7 +430,7 @@ namespace Search {
         } else {
             rawStaticEval = ttHit && ttData.staticEval != EVAL_NONE && !isMateScore(ttData.staticEval)
                                 ? ttData.staticEval
-                                : evaluate(thread.board, ss->accumulator);
+                                : evaluate(thread.board, ss, thread.bucketCache);
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
             corrplexity = rawStaticEval - ss->staticEval;
         }
@@ -716,7 +762,7 @@ namespace Search {
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
             ss->accumulator = baseAcc;
-            int eval = evaluate(threadInfo.board, ss->accumulator);
+            int eval = evaluate(threadInfo.board, ss, threadInfo.bucketCache);
 
             if (limit.softNodes(threadInfo.nodes)){
                 break;

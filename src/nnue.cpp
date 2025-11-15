@@ -178,6 +178,9 @@ void Accumulator::refresh(Board& board, Color persp) {
 
     auto& accPerspective = persp == Color::WHITE ? white : black;
 
+    needsRefresh[int(persp)] = false;
+    computed[int(persp)] = true;
+
     // Obviously the bias is commutative so just add it first
     accPerspective = network.H1Bias;
 
@@ -215,6 +218,9 @@ void Accumulator::refresh(Board& board, Color persp, InputBucketCache& bucketCac
     Square kingSq = board.kingSq(persp);
 
     auto& accPerspective = persp == Color::WHITE ? white : black;
+
+    needsRefresh[int(persp)] = false;
+    computed[int(persp)] = true;
 
     BucketCacheEntry& cache = bucketCache.cache[int(persp)][kingSq.file() >= File::FILE_E][kingBucket(kingSq, persp)];
 
@@ -311,51 +317,63 @@ void Accumulator::refreshSub4(std::array<int16_t, HL_N>& acc, int sub0, int sub1
     }
 }
 
+void Accumulator::applyDelta(Color persp, Accumulator& prev) {
+    FeatureDelta delta = featureDeltas[int(persp)];
+    if (persp == Color::WHITE)
+        white = prev.white;
+    else
+        black = prev.black;
+    if (delta.adds == 1 && delta.subs == 1)
+        addSubDelta(persp, delta.toAdd[0], delta.toSub[0]);
+    else if (delta.adds == 1 && delta.subs == 2)
+        addSubSubDelta(persp, delta.toAdd[0], delta.toSub[0], delta.toSub[1]);
+    else if (delta.adds == 2 && delta.subs == 2)
+        addAddSubSubDelta(persp, delta.toAdd[0], delta.toAdd[1], delta.toSub[0], delta.toSub[1]);
+
+    computed[int(persp)] = true;
+
+}
+void Accumulator::addSubDelta(Color persp, int addF, int subF) {
+    auto& accPerspective = persp == Color::WHITE ? white : black;
+    for (int i = 0; i < HL_N; i++) {
+        accPerspective[i] += network.H1[addF * HL_N + i];
+        accPerspective[i] -= network.H1[subF * HL_N + i];
+    }
+}
+void Accumulator::addSubSubDelta(Color persp, int addF, int subF1, int subF2) {
+    auto& accPerspective = persp == Color::WHITE ? white : black;
+    for (int i = 0; i < HL_N; i++) {
+        accPerspective[i] += network.H1[addF * HL_N + i];
+        accPerspective[i] -= network.H1[subF1 * HL_N + i];
+        accPerspective[i] -= network.H1[subF2 * HL_N + i];
+    }
+}
+void Accumulator::addAddSubSubDelta(Color persp, int addF1, int addF2, int subF1, int subF2) {
+    auto& accPerspective = persp == Color::WHITE ? white : black;
+    for (int i = 0; i < HL_N; i++) {
+        accPerspective[i] += network.H1[addF1 * HL_N + i];
+        accPerspective[i] += network.H1[addF2 * HL_N + i];
+        accPerspective[i] -= network.H1[subF1 * HL_N + i];
+        accPerspective[i] -= network.H1[subF2 * HL_N + i];
+    }
+}
+
 void Accumulator::addPiece(Board& board, Color stm, Color persp, Square add, PieceType addPT) {
     Square kingSq = board.kingSq(persp);
     auto& accPerspective = persp == Color::WHITE ? white : black;
     const int feature = NNUE::feature(persp, stm, addPT, add, kingSq);
 
-#ifndef AUTOVEC
-    int16_t* accPtr = accPerspective.data();
-    const int16_t* h1Ptr = &network.H1[feature * HL_N];
-    nativeVector* accV = reinterpret_cast<nativeVector*>(accPtr);
-    const nativeVector* h1V = reinterpret_cast<const nativeVector*>(h1Ptr);
-
-    const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
-    for (int i = 0; i < HL_N / VECTOR_SIZE; i++) {
-        accV[i] = add_epi16(accV[i], h1V[i]);
-    }
-    
-#else
-    for (int i = 0; i < HL_N; i++) {
-        accPerspective[i] += network.H1[feature * HL_N + i];
-    }
-#endif
+    FeatureDelta& delta = featureDeltas[int(persp)];
+    delta.toAdd[delta.adds++] = feature;
 }
 
 void Accumulator::subPiece(Board& board, Color stm, Color persp, Square sub, PieceType subPT) {
     Square kingSq = board.kingSq(persp);
     auto& accPerspective = persp == Color::WHITE ? white : black;
-
     const int feature = NNUE::feature(persp, stm, subPT, sub, kingSq);
 
-#ifndef AUTOVEC
-    int16_t* accPtr = accPerspective.data();
-    const int16_t* h1Ptr = &network.H1[feature * HL_N];
-    nativeVector* accV = reinterpret_cast<nativeVector*>(accPtr);
-    const nativeVector* h1V = reinterpret_cast<const nativeVector*>(h1Ptr);
-
-    const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
-    for (int i = 0; i < HL_N / VECTOR_SIZE; i++) {
-        accV[i] = sub_epi16(accV[i], h1V[i]);
-    }
-    
-#else
-    for (int i = 0; i < HL_N; i++) {
-        accPerspective[i] += network.H1[feature * HL_N + i];
-    }
-#endif
+    FeatureDelta& delta = featureDeltas[int(persp)];
+    delta.toSub[delta.subs++] = feature;
 }
 
 void Accumulator::addPiece(Board& board, Color stm, Square add, PieceType addPT) {
@@ -381,33 +399,14 @@ void Accumulator::quiet(Board& board, Color stm, Square add, PieceType addPT, Sq
     const int subW = NNUE::feature(Color::WHITE, stm, subPT, sub, whiteKing);
     const int subB = NNUE::feature(Color::BLACK, stm, subPT, sub, blackKing);
 
-#ifndef AUTOVEC
-    nativeVector* wPtr = reinterpret_cast<nativeVector*>(white.data());
-    nativeVector* bPtr = reinterpret_cast<nativeVector*>(black.data());
+    FeatureDelta& deltaW = featureDeltas[0];
+    FeatureDelta& deltaB = featureDeltas[1];
 
-    const nativeVector* addWPtr = reinterpret_cast<const nativeVector*>(&network.H1[addW * HL_N]);
-    const nativeVector* addBPtr = reinterpret_cast<const nativeVector*>(&network.H1[addB * HL_N]);
-    const nativeVector* subWPtr = reinterpret_cast<const nativeVector*>(&network.H1[subW * HL_N]);
-    const nativeVector* subBPtr = reinterpret_cast<const nativeVector*>(&network.H1[subB * HL_N]);
+    deltaW.toAdd[deltaW.adds++] = addW;
+    deltaB.toAdd[deltaB.adds++] = addB;
 
-    const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
-    for (int i = 0; i < HL_N / VECTOR_SIZE; i++) {
-        nativeVector w  = load_epi16(&wPtr[i]);
-        nativeVector b  = load_epi16(&bPtr[i]);
-        nativeVector aw = load_epi16(&addWPtr[i]);
-        nativeVector ab = load_epi16(&addBPtr[i]);
-        nativeVector sw = load_epi16(&subWPtr[i]);
-        nativeVector sb = load_epi16(&subBPtr[i]);
-
-        wPtr[i] = add_epi16(wPtr[i], sub_epi16(aw, sw));
-        bPtr[i] = add_epi16(bPtr[i], sub_epi16(ab, sb));
-    }
-#else
-    for (int i = 0; i < HL_N; i++) {
-        white[i] += network.H1[addW * HL_N + i] - network.H1[subW * HL_N + i];
-        black[i] += network.H1[addB * HL_N + i] - network.H1[subB * HL_N + i];
-    }
-#endif
+    deltaW.toSub[deltaW.subs++] = subW;
+    deltaB.toSub[deltaB.subs++] = subB;
 }
 // Capture Accumulation
 void Accumulator::capture(Board& board, Color stm, Square add, PieceType addPT, Square sub1,
@@ -425,37 +424,15 @@ void Accumulator::capture(Board& board, Color stm, Square add, PieceType addPT, 
     const int subW2 = NNUE::feature(Color::WHITE, ~stm, subPT2, sub2, whiteKing);
     const int subB2 = NNUE::feature(Color::BLACK, ~stm, subPT2, sub2, blackKing);
 
-#ifndef AUTOVEC
-    nativeVector*       wPtr   = reinterpret_cast<nativeVector*>(white.data());
-    nativeVector*       bPtr   = reinterpret_cast<nativeVector*>(black.data());
-    const nativeVector* addWPtr = reinterpret_cast<const nativeVector*>(&network.H1[addW * HL_N]);
-    const nativeVector* addBPtr = reinterpret_cast<const nativeVector*>(&network.H1[addB * HL_N]);
-    const nativeVector* subW1Ptr = reinterpret_cast<const nativeVector*>(&network.H1[subW1 * HL_N]);
-    const nativeVector* subB1Ptr = reinterpret_cast<const nativeVector*>(&network.H1[subB1 * HL_N]);
-    const nativeVector* subW2Ptr = reinterpret_cast<const nativeVector*>(&network.H1[subW2 * HL_N]);
-    const nativeVector* subB2Ptr = reinterpret_cast<const nativeVector*>(&network.H1[subB2 * HL_N]);
+    FeatureDelta& deltaW = featureDeltas[0];
+    FeatureDelta& deltaB = featureDeltas[1];
 
-    const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
-    for (int i = 0; i < HL_N / VECTOR_SIZE; i++) {
-        nativeVector aw  = addWPtr[i];
-        nativeVector ab  = addBPtr[i];
-        nativeVector sw1 = subW1Ptr[i];
-        nativeVector sb1 = subB1Ptr[i];
-        nativeVector sw2 = subW2Ptr[i];
-        nativeVector sb2 = subB2Ptr[i];
+    deltaW.toAdd[deltaW.adds++] = addW;
+    deltaB.toAdd[deltaB.adds++] = addB;
 
-        // white[i] += addW - subW1 - subW2
-        wPtr[i] = add_epi16(wPtr[i], sub_epi16(sub_epi16(aw, sw1), sw2));
+    deltaW.toSub[deltaW.subs++] = subW1;
+    deltaB.toSub[deltaB.subs++] = subB1;
 
-        // black[i] += addB - subB1 - subB2
-        bPtr[i] = add_epi16(bPtr[i], sub_epi16(sub_epi16(ab, sb1), sb2));
-    }
-#else
-    for (int i = 0; i < HL_N; i++) {
-        white[i] += network.H1[addW * HL_N + i] - network.H1[subW1 * HL_N + i] -
-                    network.H1[subW2 * HL_N + i];
-        black[i] += network.H1[addB * HL_N + i] - network.H1[subB1 * HL_N + i] -
-                    network.H1[subB2 * HL_N + i];
-    }
-#endif
+    deltaW.toSub[deltaW.subs++] = subW2;
+    deltaB.toSub[deltaB.subs++] = subB2;
 }

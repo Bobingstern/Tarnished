@@ -76,13 +76,40 @@ struct InputBucketCache {
     }
 };
 
+struct FeatureDelta {
+    int adds = 0;
+    int subs = 0;
+    std::array<int, 2> toAdd{};
+    std::array<int, 2> toSub{};
+
+    FeatureDelta() {
+        toAdd.fill(0);
+        toSub.fill(0);
+    }
+    void clear() {
+        toAdd.fill(0);
+        toSub.fill(0);
+        adds = 0;
+        subs = 0;
+    }
+};
+
 struct Accumulator {
         alignas(64) std::array<int16_t, HL_N> white;
         alignas(64) std::array<int16_t, HL_N> black;
 
+        std::array<bool, 2> needsRefresh{};
+        std::array<bool, 2> computed{};
+        std::array<FeatureDelta, 2> featureDeltas{};
+
         void refresh(Board& board);
         void refresh(Board& board, Color persp);
         void refresh(Board& board, Color persp, InputBucketCache& bucketCache);
+
+        void applyDelta(Color persp, Accumulator& prev);
+        void addSubDelta(Color persp, int addF, int subF);
+        void addSubSubDelta(Color persp, int addF, int subF1, int subF2);
+        void addAddSubSubDelta(Color persp, int addF1, int addF2, int subF1, int subF2);
 
         static bool needRefresh(Move kingMove, Color stm);
         static int kingBucket(Square kingSq, Color color);
