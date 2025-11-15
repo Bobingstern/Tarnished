@@ -433,6 +433,9 @@ namespace Search {
                                 : evaluate(thread.board, ss, thread.bucketCache);
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
             corrplexity = rawStaticEval - ss->staticEval;
+
+            if (!ttHit)
+                thread.TT.store(thread.board.hash(), Move::NO_MOVE, -EVAL_INF, rawStaticEval, TTFlag::NO_BOUND, 0, ply, ttPV);
         }
         // Improving heurstic
         // We are better than 2 plies ago
