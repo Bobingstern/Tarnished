@@ -746,6 +746,7 @@ namespace Search {
         PVList lastPV{};
         int score = -EVAL_INF;
         int lastScore = -EVAL_INF;
+        int baseScore = -EVAL_INF;
 
         int64_t avgnps = 0;
         for (int depth = 1; depth <= limit.depth; depth++) {
@@ -765,7 +766,6 @@ namespace Search {
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
             ss->accumulator = baseAcc;
-            int eval = evaluate(threadInfo.board, ss, threadInfo.bucketCache);
 
             if (limit.softNodes(threadInfo.nodes)){
                 break;
@@ -797,6 +797,8 @@ namespace Search {
             if (depth != 1 && aborted(false)) {
                 break;
             }
+
+            baseScore = depth == 1 ? score : baseScore;
 
             lastScore = score;
             lastPV = ss->pv;
@@ -891,7 +893,7 @@ namespace Search {
             // Time control (soft)
             double complexity = 0;
             if (!isMateScore(score))
-                complexity = (COMPLEXITY_TM_SCALE() / 100.0) * std::abs(eval - score) * std::log(static_cast<double>(depth));
+                complexity = (COMPLEXITY_TM_SCALE() / 100.0) * std::abs(baseScore - score) * std::log(static_cast<double>(depth));
             if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes, complexity))
                 break;
         }
