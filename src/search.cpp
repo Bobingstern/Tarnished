@@ -598,7 +598,7 @@ namespace Search {
                     depth += (extension > 1 && depth < 14);
                 } 
                 else if (sBeta >= beta)
-                    return sBeta;
+                    return (seScore + sBeta) / 2;
                 else if (ttData.score >= beta)
                     extension = -3; // Negative Extension
                 else if (cutnode)
