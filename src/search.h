@@ -280,10 +280,10 @@ namespace Search {
             }
 
             // Continuation History
-            void updateConthist(Stack* ss, Board& board, Move m, int16_t bonus) {
+            void updateConthist(Stack* ss, Board& board, Move m, int base, int bonus) {
                 auto updateEntry = [&](int16_t& entry) {
                     int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
-                    entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+                    entry += clamped - base * std::abs(clamped) / MAX_HISTORY;
                     entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
                 };
                 if (ss->ply > 0 && (ss - 1)->conthist != nullptr)
@@ -304,8 +304,13 @@ namespace Search {
             }
 
             void updateQuietHistory(Stack* ss, Move m, int depth, bool bonus) {
+                int cont = 0;
+                if (ss != nullptr && ss->ply > 0 && (ss - 1)->conthist != nullptr)
+                    cont += getConthist((ss - 1)->conthist, board, m);
+                if (ss != nullptr && ss->ply > 1 && (ss - 2)->conthist != nullptr)
+                    cont += getConthist((ss - 2)->conthist, board, m);
                 updateHistory(ss, board, m, bonus ? historyBonus(depth) : historyMalus(depth));
-                updateConthist(ss, board, m, bonus ? historyBonusCont(depth) : historyMalusCont(depth));
+                updateConthist(ss, board, m, cont, bonus ? historyBonusCont(depth) : historyMalusCont(depth));
                 updatePawnhist(ss, board, m, bonus ? historyBonus(depth) : historyMalus(depth));
             }
 
