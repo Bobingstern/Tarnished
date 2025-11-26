@@ -20,7 +20,7 @@ using u128 = std::_Unsigned128;
 using u128 = unsigned __int128;
 #endif
 
-// #define TUNE
+#define TUNE
 // #define LMR_TUNE
 
 // Struct for tunable parameters
@@ -121,6 +121,8 @@ TUNABLE_PARAM(NODE_TM_SCALE, 145, 30, 200, 5)
 TUNABLE_PARAM(COMPLEXITY_TM_SCALE, 83, 30, 200, 5)
 TUNABLE_PARAM(COMPLEXITY_TM_BASE, 77, 30, 200, 5)
 TUNABLE_PARAM(COMPLEXITY_TM_DIVISOR, 386, 200, 800, 10)
+
+TUNABLE_PARAM(SOFT_TM_SCALE, 60, 2, 100, 2)
 
 // SEE
 TUNABLE_PARAM(PAWN_VALUE, 100, 50, 200, 7)
