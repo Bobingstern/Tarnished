@@ -159,7 +159,7 @@ namespace Search {
                 if (ctime != 0) {
                     // Calculate movetime and softime
                     movetime = ctime * 0.5 - 50;
-                    softtime = 0.6 * (ctime / 20 + inc * 3 / 4);
+                    softtime = static_cast<double>(SOFT_TM_SCALE()) / 100.0 * (ctime / 20 + inc * 3 / 4);
                 }
                 timer.start();
             }
