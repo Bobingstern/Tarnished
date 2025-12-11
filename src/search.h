@@ -215,6 +215,8 @@ namespace Search {
 
             // indexed by [stm][from][to][threat]
             MultiArray<int, 2, 64, 64, 4> history;
+            // indexed by [stm][from][to]
+            MultiArray<int, 2, 64, 64> historyFactorizer;
             // indexed by [stm][hash % entries][pt][to]
             MultiArray<int16_t, 2, PAWN_HIST_ENTRIES, 6, 64> pawnHistory;
             // indexed by [prev stm][prev pt][prev to][stm][pt][to]
@@ -236,6 +238,8 @@ namespace Search {
                   minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), bestRootScore(other.bestRootScore) {
                 this->board = other.board;
                 nodes.store(other.nodes.load());
+                history = other.history;
+                historyFactorizer = other.historyFactorizer;
                 conthist = other.conthist;
                 pawnHistory = other.pawnHistory;
                 contCorrhist = other.contCorrhist;
@@ -267,7 +271,10 @@ namespace Search {
             void updateHistory(Stack* ss, Board& board, Move m, int bonus) {
                 int clamped = std::clamp(int(bonus), int(-MAX_HISTORY), int(MAX_HISTORY));
                 int& entry = history[(int)board.sideToMove()][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
+                int &factorizerEntry = historyFactorizer[(int)board.sideToMove()][m.from().index()][m.to().index()];
+
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
+                factorizerEntry += clamped - factorizerEntry * std::abs(clamped) / (MAX_HISTORY / 2);
             }
 
             // Capture History
@@ -335,7 +342,8 @@ namespace Search {
             }
             // ----------------- History getters
             int getHistory(Color c, Move m, Stack* ss) {
-                return history[(int)c][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
+                return history[(int)c][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])] 
+                        + historyFactorizer[(int)c][m.from().index()][m.to().index()];
             }
 
             int getCapthist(Board& board, Move m, Stack* ss) {
@@ -393,6 +401,7 @@ namespace Search {
                 nodes = 0;
                 bestMove = Move::NO_MOVE;
                 history.fill((int)DEFAULT_HISTORY);
+                historyFactorizer.fill((int)DEFAULT_HISTORY);
                 conthist.fill(DEFAULT_HISTORY);
                 pawnHistory.fill(DEFAULT_HISTORY);
                 contCorrhist.fill(DEFAULT_HISTORY);
