@@ -7,6 +7,9 @@
 #include <cstring>
 #include <sstream>
 #include <vector>
+#include <iostream>
+#include <fstream>
+#include <string>
 
 using namespace chess;
 
@@ -148,6 +151,8 @@ struct NNUE {
         int32_t optimizedSCReLU(const std::array<int16_t, HL_N>& STM, const std::array<int16_t, HL_N>& OPP, Color col,
                                 size_t bucket);
         int inference(Board& board, Accumulator& accumulator);
+
+        void computeScale(const std::string& filename);
 };
 
 extern NNUE network;

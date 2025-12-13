@@ -390,25 +390,29 @@ int main(int agrc, char* argv[]) {
     // Print Ascii
     tarnishedAscii();
 
+    
+
     char str[INPUT_SIZE];
     while (GetInput(str)) {
+        std::cout << HashInput(str) << std::endl;
         switch (HashInput(str)) {
-            case GO         : UCIGo(searcher, board, str);                break;
-            case UCI        : UCIInfo();                                  break;
-            case ISREADY    : std::cout << "readyok" << std::endl;        break;
-            case POSITION   : UCIPosition(board, str);                    break;
-            case SETOPTION  : UCISetOption(searcher, board, str);         break;
-            case UCINEWGAME : searcher.reset();                           break;
-            case STOP       : searcher.stopSearching();                   break;
-            case QUIT       : searcher.stopSearching(); searcher.exit();  return 0;
+            case GO         : UCIGo(searcher, board, str);                              break;
+            case UCI        : UCIInfo();                                                break;
+            case ISREADY    : std::cout << "readyok" << std::endl;                      break;
+            case POSITION   : UCIPosition(board, str);                                  break;
+            case SETOPTION  : UCISetOption(searcher, board, str);                       break;
+            case UCINEWGAME : searcher.reset();                                         break;
+            case STOP       : searcher.stopSearching();                                 break;
+            case QUIT       : searcher.stopSearching(); searcher.exit();                return 0;
 
             // Non Standard
-            case PRINT      : printBoard(board);                          break;
-            case EVAL       : UCIEvaluate(board);                         break;
-            case BENCH      : bench(searcher);                            break;
-            case DATAGEN    : BeginDatagen(str, board.chess960());        break;
-            case WAIT       : searcher.waitForSearchFinished();           break;
-            case CONFIG     : printOBConfig();                            break;
+            case PRINT      : printBoard(board);                                        break;
+            case EVAL       : UCIEvaluate(board);                                       break;
+            case BENCH      : bench(searcher);                                          break;
+            case DATAGEN    : BeginDatagen(str, board.chess960());                      break;
+            case WAIT       : searcher.waitForSearchFinished();                         break;
+            case CONFIG     : printOBConfig();                                          break;
+            case NETSCALE   : network.computeScale("data/lichess-big3-resolved.book");  break;
 
         }
     }
