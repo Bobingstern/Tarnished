@@ -307,6 +307,9 @@ namespace Search {
                                 ? ttData.staticEval
                                 : evaluate(thread.board, ss, thread.bucketCache);
             eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
+            
+            if (!ttHit)
+                thread.TT.store(thread.board.hash(), Move::NO_MOVE, -EVAL_INF, rawStaticEval, TTFlag::NO_BOUND, 0, ply, ttPV);
         }
 
         if (eval >= beta)
