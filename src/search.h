@@ -265,7 +265,7 @@ namespace Search {
 
             // Butterfly history
             void updateHistory(Stack* ss, Board& board, Move m, int bonus) {
-                int clamped = std::clamp(int(bonus), int(-MAX_HISTORY), int(MAX_HISTORY));
+                int clamped = std::clamp(int(bonus), int(-MAX_HISTORY_BONUS), int(MAX_HISTORY_BONUS));
                 int& entry = history[(int)board.sideToMove()][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
             }
@@ -273,7 +273,7 @@ namespace Search {
             // Capture History
             void updateCapthist(Stack* ss, Board& board, Move m, int depth, bool b) {
                 int bonus = b ? historyBonusCapt(depth) : historyMalus(depth);
-                int clamped = std::clamp(int(bonus), int(-MAX_HISTORY), int(MAX_HISTORY));
+                int clamped = std::clamp(int(bonus), int(-MAX_HISTORY_BONUS), int(MAX_HISTORY_BONUS));
                 int& entry = capthist[board.sideToMove()][board.at<PieceType>(m.from())][board.at<PieceType>(m.to())]
                                      [m.to().index()][threatIndex(m, ss->threats[6])];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
@@ -282,7 +282,7 @@ namespace Search {
             // Continuation History
             void updateConthist(Stack* ss, Board& board, Move m, int base, int bonus) {
                 auto updateEntry = [&](int16_t& entry) {
-                    int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+                    int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY_BONUS), int(MAX_HISTORY_BONUS));
                     entry += clamped - base * std::abs(clamped) / MAX_HISTORY;
                     entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
                 };
@@ -296,7 +296,7 @@ namespace Search {
 
             // Pawn History
             void updatePawnhist(Stack* ss, Board& board, Move m, int16_t bonus) {
-                int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
+                int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY_BONUS), int(MAX_HISTORY_BONUS));
                 int16_t& entry = 
                     pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;

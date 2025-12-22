@@ -34,7 +34,8 @@ struct TunableParam {
 };
 
 // History Constants
-constexpr int16_t MAX_HISTORY = 16383;
+constexpr int16_t MAX_HISTORY = 16384;
+constexpr int16_t MAX_HISTORY_BONUS = 4096;
 const int16_t DEFAULT_HISTORY = 0;
 constexpr int CORR_HIST_ENTRIES = 16384;
 constexpr int PAWN_HIST_ENTRIES = 1024;
