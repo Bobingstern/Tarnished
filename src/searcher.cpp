@@ -46,25 +46,6 @@ void Search::ThreadInfo::startSearching() {
         searcher->stopSearching();
         searcher->waitForWorkersFinished();
         ThreadInfo* bestSearcher = this;
-        for (auto& thread : searcher->threads) {
-            if (thread.get()->type == ThreadType::MAIN)
-                continue;
-
-            // This should never happen but saftey
-            if (!isLegal(searcher->board, thread.get()->bestMove))
-                continue;
-
-            int bestDepth = bestSearcher->completed;
-            int bestScore = bestSearcher->bestRootScore;
-            int currentDepth = thread->completed;
-            int currentScore = thread->bestRootScore;
-            if ((bestDepth == currentDepth && currentScore > bestScore) ||
-                (Search::isWin(currentScore) && currentScore > bestScore))
-                bestSearcher = thread.get();
-            if (currentDepth > bestDepth &&
-                (currentScore > bestScore || !Search::isWin(bestScore)))
-                bestSearcher = thread.get();
-        }
         searcher->TT.incAge();
         searcher->bestScore = bestSearcher->bestRootScore;
         if (searcher->printInfo)
