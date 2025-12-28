@@ -33,27 +33,27 @@ void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::St
     (ss + 1)->nonPawnKey[1] = ss->nonPawnKey[1];
 
     // Accumulator copy
-    (ss + 1)->accumulator.featureDeltas[0].clear();
-    (ss + 1)->accumulator.featureDeltas[1].clear();
+    (ss + 1)->accumulator->featureDeltas[0].clear();
+    (ss + 1)->accumulator->featureDeltas[1].clear();
 
     if (move == Move::NULL_MOVE) {
-        (ss + 1)->accumulator.white = ss->accumulator.white;
-        (ss + 1)->accumulator.black = ss->accumulator.black;
+        (ss + 1)->accumulator->white = ss->accumulator->white;
+        (ss + 1)->accumulator->black = ss->accumulator->black;
 
-        (ss + 1)->accumulator.computed[0] = ss->accumulator.computed[0];
-        (ss + 1)->accumulator.computed[1] = ss->accumulator.computed[1];
+        (ss + 1)->accumulator->computed[0] = ss->accumulator->computed[0];
+        (ss + 1)->accumulator->computed[1] = ss->accumulator->computed[1];
 
-        (ss + 1)->accumulator.needsRefresh[0] = ss->accumulator.needsRefresh[0];
-        (ss + 1)->accumulator.needsRefresh[1] = ss->accumulator.needsRefresh[1];
+        (ss + 1)->accumulator->needsRefresh[0] = ss->accumulator->needsRefresh[0];
+        (ss + 1)->accumulator->needsRefresh[1] = ss->accumulator->needsRefresh[1];
 
         board.makeNullMove();
         return;
     }
 
-    (ss + 1)->accumulator.needsRefresh[0] = ss->accumulator.needsRefresh[0];
-    (ss + 1)->accumulator.needsRefresh[1] = ss->accumulator.needsRefresh[1];
+    (ss + 1)->accumulator->needsRefresh[0] = ss->accumulator->needsRefresh[0];
+    (ss + 1)->accumulator->needsRefresh[1] = ss->accumulator->needsRefresh[1];
 
-    (ss + 1)->accumulator.computed[0] = (ss + 1)->accumulator.computed[1] = false;
+    (ss + 1)->accumulator->computed[0] = (ss + 1)->accumulator->computed[1] = false;
 
     if (from == PieceType::PAWN) {
         // Update pawn zobrist key
@@ -117,42 +117,42 @@ void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::St
 
     if (from == PieceType::KING)
         if (Accumulator::needRefresh(move, stm)){
-            (ss + 1)->accumulator.needsRefresh[int(stm)] = true;
-            //(ss + 1)->accumulator.refresh(board, stm, bucketCache);
+            (ss + 1)->accumulator->needsRefresh[int(stm)] = true;
+            //(ss + 1)->accumulator->refresh(board, stm, bucketCache);
             // Take care of updates for other accumulator
             // This includes, king quiet, capture, and castle
             if (move.typeOf() != Move::CASTLING) {
-                (ss + 1)->accumulator.subPiece(board, stm, ~stm, move.from(), from);
-                (ss + 1)->accumulator.addPiece(board, stm, ~stm, move.to(), from);
+                (ss + 1)->accumulator->subPiece(board, stm, ~stm, move.from(), from);
+                (ss + 1)->accumulator->addPiece(board, stm, ~stm, move.to(), from);
             }
             if (move.typeOf() == Move::CASTLING) {
                 Square standardKing = stm == Color::WHITE ? Square::SQ_E1 : Square::SQ_E8; // For chess960
                 Square kingTo = (move.from() > move.to()) ? standardKing - 2 : standardKing + 2;
                 Square rookTo = (move.from() > move.to()) ? kingTo + 1 : kingTo - 1;
 
-                (ss + 1)->accumulator.subPiece(board, stm, ~stm, move.to(), PieceType::ROOK);
-                (ss + 1)->accumulator.addPiece(board, stm, ~stm, rookTo, PieceType::ROOK);
+                (ss + 1)->accumulator->subPiece(board, stm, ~stm, move.to(), PieceType::ROOK);
+                (ss + 1)->accumulator->addPiece(board, stm, ~stm, rookTo, PieceType::ROOK);
 
-                (ss + 1)->accumulator.subPiece(board, stm, ~stm, move.from(), from);
-                (ss + 1)->accumulator.addPiece(board, stm, ~stm, kingTo, from);
+                (ss + 1)->accumulator->subPiece(board, stm, ~stm, move.from(), from);
+                (ss + 1)->accumulator->addPiece(board, stm, ~stm, kingTo, from);
             }
             if (to != PieceType::NONE && move.typeOf() != Move::CASTLING){
                 // Remove captured piece 
-                (ss + 1)->accumulator.subPiece(board, ~stm, ~stm, move.to(), to);
+                (ss + 1)->accumulator->subPiece(board, ~stm, ~stm, move.to(), to);
                 
             }
             return;
         }
 
     if (move.typeOf() == Move::ENPASSANT) {
-        (ss + 1)->accumulator.quiet(board, stm, move.to(), from, move.from(), from);
-        (ss + 1)->accumulator.subPiece(board, ~stm, move.to().ep_square(), PieceType::PAWN);
+        (ss + 1)->accumulator->quiet(board, stm, move.to(), from, move.from(), from);
+        (ss + 1)->accumulator->subPiece(board, ~stm, move.to().ep_square(), PieceType::PAWN);
 
     } else if (move.typeOf() == Move::PROMOTION) {
-        (ss + 1)->accumulator.subPiece(board, stm, move.from(), from);
-        (ss + 1)->accumulator.addPiece(board, stm, move.to(), move.promotionType());
+        (ss + 1)->accumulator->subPiece(board, stm, move.from(), from);
+        (ss + 1)->accumulator->addPiece(board, stm, move.to(), move.promotionType());
         if (to != PieceType::NONE)
-            (ss + 1)->accumulator.subPiece(board, ~stm, move.to(), to);
+            (ss + 1)->accumulator->subPiece(board, ~stm, move.to(), to);
     } else if (move.typeOf() == Move::CASTLING) {
 
         Square king = move.from();
@@ -179,12 +179,12 @@ void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::St
         // There are basically just 2 quiet moves now for the accumulator
         // Move king and move rook
         // Since moves are encoded as king takes rook, its very easy
-        (ss + 1)->accumulator.quiet(board, stm, kingTo, PieceType::KING, move.from(), PieceType::KING);
-        (ss + 1)->accumulator.quiet(board, stm, rookTo, PieceType::ROOK, move.to(), PieceType::ROOK);
+        (ss + 1)->accumulator->quiet(board, stm, kingTo, PieceType::KING, move.from(), PieceType::KING);
+        (ss + 1)->accumulator->quiet(board, stm, rookTo, PieceType::ROOK, move.to(), PieceType::ROOK);
     } else if (to != PieceType::NONE) {
-        (ss + 1)->accumulator.capture(board, stm, move.to(), from, move.from(), from, move.to(), to);
+        (ss + 1)->accumulator->capture(board, stm, move.to(), from, move.from(), from, move.to(), to);
     } else
-        (ss + 1)->accumulator.quiet(board, stm, move.to(), from, move.from(), from);
+        (ss + 1)->accumulator->quiet(board, stm, move.to(), from, move.from(), from);
 
     
 
@@ -217,30 +217,30 @@ namespace Search {
 
         // Apply lazy updates
         for (Color persp : {Color::WHITE, Color::BLACK}) {
-            if (ss->accumulator.computed[int(persp)])
+            if (ss->accumulator->computed[int(persp)])
                 continue;
             
-            if (ss->accumulator.needsRefresh[int(persp)]) {
-                ss->accumulator.refresh(board, persp, bucketCache);
+            if (ss->accumulator->needsRefresh[int(persp)]) {
+                ss->accumulator->refresh(board, persp, bucketCache);
                 continue;
             }
 
             int c = 1;
-            while (!(ss - c)->accumulator.computed[int(persp)] && !(ss - c)->accumulator.needsRefresh[int(persp)])
+            while (!(ss - c)->accumulator->computed[int(persp)] && !(ss - c)->accumulator->needsRefresh[int(persp)])
                 c++;
 
-            if ((ss - c)->accumulator.needsRefresh[int(persp)])
-                ss->accumulator.refresh(board, persp, bucketCache);
+            if ((ss - c)->accumulator->needsRefresh[int(persp)])
+                ss->accumulator->refresh(board, persp, bucketCache);
             else {
                 while (c != 0) {
-                    (ss - c + 1)->accumulator.applyDelta(persp, (ss - c)->accumulator);
+                    (ss - c + 1)->accumulator->applyDelta(persp, *(ss - c)->accumulator);
                     c--;
                 }
             }
 
         }
 
-        int eval = network.inference(board, ss->accumulator);
+        int eval = network.inference(board, *ss->accumulator);
 
         eval = eval * (MAT_SCALE_BASE() + materialOffset) / 32768; // Calvin yoink
         return std::clamp(eval, GETTING_MATED + 1, FOUND_MATE - 1);
@@ -742,9 +742,12 @@ namespace Search {
 
         bool isMain = threadInfo.type == ThreadType::MAIN;
 
-        auto stack = std::make_unique<std::array<Stack, MAX_PLY + 6 + 3>>();
-        Stack* ss = reinterpret_cast<Stack*>(stack->data() + 3); // Saftey for conthist
-        std::memset(stack.get(), 0, sizeof(Stack) * (MAX_PLY + 6 + 3));
+        std::vector<Stack> stack(MAX_PLY + 6 + 3);
+        for (int i = 0; i < stack.size(); ++i)
+            stack[i].accumulator = &threadInfo.accStack[i];
+
+        Stack* ss = &stack[3];
+
 
         PVList lastPV{};
         int score = -EVAL_INF;
@@ -767,7 +770,7 @@ namespace Search {
             ss->minorKey = resetMinorHash(threadInfo.board);
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
-            ss->accumulator = baseAcc;
+            ss->accumulator = &baseAcc;
             int eval = evaluate(threadInfo.board, ss, threadInfo.bucketCache);
 
             if (limit.softNodes(threadInfo.loadNodes())){

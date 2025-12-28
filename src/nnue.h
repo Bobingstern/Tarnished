@@ -150,4 +150,6 @@ struct NNUE {
         int inference(Board& board, Accumulator& accumulator);
 };
 
+static_assert(sizeof(Accumulator) % 64 == 0);
+
 extern NNUE network;

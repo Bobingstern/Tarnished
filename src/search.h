@@ -119,8 +119,7 @@ namespace Search {
             MultiArray<int16_t, 2, 6, 64>* conthist;
             MultiArray<int16_t, 2, 6, 64>* contCorrhist;
 
-            Accumulator accumulator;
-            std::array<bool, LMR_ONE_COUNT> lmrFeatures = {0};
+            Accumulator* accumulator;
     };
 
     struct Limit {
@@ -215,6 +214,7 @@ namespace Search {
             Board board;
             Limit limit;
             InputBucketCache bucketCache;
+            std::vector<Accumulator> accStack;
 
             Searcher* searcher;
             int threadId;
@@ -396,6 +396,8 @@ namespace Search {
                 searchData.bestRootScore = -EVAL_INF;
                 searchData.rootDepth = 0;
                 searchData.completed = 0;
+
+                accStack.resize(MAX_PLY + 6 + 3);
             }
     };
 

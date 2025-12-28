@@ -76,6 +76,7 @@ struct TTEntry {
     }
 };
 
+
 struct ProbedTTEntry {
     int score;
     int staticEval;
@@ -89,6 +90,10 @@ struct alignas(32) TTCluster {
     TTEntry entries[ENTRY_COUNT];
     char padding[2];
 };
+
+static_assert(sizeof(TTEntry) == 10);
+static_assert(sizeof(TTCluster) == 32);
+static_assert(alignof(TTEntry) == 2);
 
 class TTable {
 
