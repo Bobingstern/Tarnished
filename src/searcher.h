@@ -39,9 +39,9 @@ struct Searcher {
             this->board = board;
             this->limit = limit;
             for (auto& thread : threads) {
-                thread.get()->stopped.store(false);
+                thread.get()->stops.stopped.store(false);
                 std::lock_guard<std::mutex> lock(thread.get()->mutex);
-                thread.get()->searching.store(true);
+                thread.get()->control.searching.store(true);
             }
 
             for (auto& thread : threads) {
@@ -55,7 +55,7 @@ struct Searcher {
         }
         void stopSearching() {
             for (auto& thread : threads) {
-                thread.get()->stopped.store(true);
+                thread.get()->stops.stopped.store(true);
             }
         }
         void waitForSearchFinished() {

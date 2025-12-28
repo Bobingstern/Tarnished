@@ -26,8 +26,8 @@ Search::ThreadInfo::ThreadInfo(int id, TTable& tt, Searcher* s)
 void Search::ThreadInfo::exit() {
     {
         std::lock_guard<std::mutex> lock(mutex);
-        searching.store(true);
-        exiting.store(true);
+        control.searching.store(true);
+        stops.exiting.store(true);
     }
     cv.notify_all();
     if (thread.joinable())
@@ -35,9 +35,9 @@ void Search::ThreadInfo::exit() {
 }
 
 void Search::ThreadInfo::startSearching() {
-    nodes = 0;
-    bestMove = Move::NO_MOVE;
-    bestRootScore = -EVAL_INF;
+    searchData.nodes = 0;
+    searchData.bestMove = Move::NO_MOVE;
+    searchData.bestRootScore = -EVAL_INF;
     
     Search::iterativeDeepening(searcher->board, *this, searcher->limit,
                                searcher);
@@ -47,10 +47,10 @@ void Search::ThreadInfo::startSearching() {
         searcher->waitForWorkersFinished();
         ThreadInfo* bestSearcher = this;
         searcher->TT.incAge();
-        searcher->bestScore = bestSearcher->bestRootScore;
+        searcher->bestScore = bestSearcher->searchData.bestRootScore;
         if (searcher->printInfo)
             std::cout << "\nbestmove "
-                      << uci::moveToUci(bestSearcher->bestMove,
+                      << uci::moveToUci(bestSearcher->searchData.bestMove,
                                         searcher->board.chess960())
                       << std::endl;
     }
@@ -58,19 +58,19 @@ void Search::ThreadInfo::startSearching() {
 
 void Search::ThreadInfo::waitForSearchFinished() {
     std::unique_lock<std::mutex> lock(mutex);
-    cv.wait(lock, [&] { return !searching.load(); });
+    cv.wait(lock, [&] { return !control.searching.load(); });
 }
 
 void Search::ThreadInfo::idle() {
-    while (!exiting.load()) {
+    while (!stops.exiting.load()) {
         std::unique_lock<std::mutex> lock(mutex);
-        cv.wait(lock, [&] { return searching.load(); });
+        cv.wait(lock, [&] { return control.searching.load(); });
 
-        if (exiting.load())
+        if (stops.exiting.load())
             return;
 
         startSearching();
-        searching.store(false);
+        control.searching.store(false);
 
         cv.notify_all();
     }

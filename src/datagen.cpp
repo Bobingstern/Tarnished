@@ -239,7 +239,7 @@ void runThread(int ti, bool isDFRC) {
     TTable TT;
     std::unique_ptr<Search::ThreadInfo> thread =
         std::make_unique<Search::ThreadInfo>(ThreadType::SECONDARY, TT, nullptr);
-    thread->stopped = false;
+    thread->stops.stopped = false;
     moveScoreBuffer.reserve(256);
     gameBuffer.clear();
     // Play a game
@@ -273,17 +273,17 @@ void runThread(int ti, bool isDFRC) {
             limit.softnodes = SOFT_NODE_COUNT;
             limit.maxnodes = HARD_NODE_COUNT;
             limit.start();
-            thread->nodes = 0;
-            thread->bestMove = Move::NO_MOVE;
+            thread->searchData.nodes = 0;
+            thread->searchData.bestMove = Move::NO_MOVE;
             
             int eval = Search::iterativeDeepening(board, *thread, limit, nullptr);
             TT.incAge();
             
             eval = std::clamp(eval, -EVAL_INF, EVAL_INF);
             eval = board.sideToMove() == Color::WHITE ? eval : -eval;
-            Move m = thread->bestMove;
+            Move m = thread->searchData.bestMove;
             moveScoreBuffer.emplace_back(packMove(m), (int16_t)eval);
-            board.makeMove(thread->bestMove);
+            board.makeMove(thread->searchData.bestMove);
             end = board.isGameOver();
             poses++;
             cached++;

@@ -185,8 +185,26 @@ namespace Search {
                 return (static_cast<int64_t>(timer.elapsed()) >= softtime * scale * compScale);
             }
     };
-
+    struct alignas(64) SearchData {
+        std::atomic<uint64_t> nodes;
+        Move bestMove;
+        int bestRootScore;
+        int minNmpPly;
+        int rootDepth;
+        int completed;
+    };
+    struct alignas(64) StopFlags {
+        std::atomic<bool> stopped = false;
+        std::atomic<bool> exiting = false;
+    };
+    struct alignas(64) Control {
+        std::atomic<bool> searching;
+    };
     struct alignas(128) ThreadInfo {
+            SearchData searchData;
+            StopFlags stops;
+            Control control;
+
             std::thread thread;
             ThreadType type;
             TTable& TT;
@@ -194,21 +212,9 @@ namespace Search {
             std::mutex mutex;
             std::condition_variable cv;
 
-
-            std::atomic<bool> searching;;
-            std::atomic<bool> stopped = false;
-            std::atomic<bool> exiting = false;
-
             Board board;
             Limit limit;
             InputBucketCache bucketCache;
-            std::atomic<uint64_t> nodes;
-
-            Move bestMove;
-            int bestRootScore;
-            int minNmpPly;
-            int rootDepth;
-            int completed;
 
             Searcher* searcher;
             int threadId;
@@ -231,27 +237,12 @@ namespace Search {
 
             ThreadInfo(ThreadType t, TTable& tt, Searcher* s);
             ThreadInfo(int id, TTable& tt, Searcher* s);
-            ThreadInfo(const ThreadInfo& other)
-                : type(other.type), TT(other.TT), history(other.history), bestMove(other.bestMove),
-                  minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), bestRootScore(other.bestRootScore) {
-                this->board = other.board;
-                nodes.store(other.nodes.load());
-                conthist = other.conthist;
-                pawnHistory = other.pawnHistory;
-                contCorrhist = other.contCorrhist;
-                capthist = other.capthist;
-                pawnCorrhist = other.pawnCorrhist;
-                majorCorrhist = other.majorCorrhist;
-                minorCorrhist = other.minorCorrhist;
-                whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
-                blackNonPawnCorrhist = other.blackNonPawnCorrhist;
-            }
             void exit();
             void startSearching();
             void waitForSearchFinished();
             void idle();
             size_t loadNodes() {
-                return nodes.load(std::memory_order::relaxed);
+                return searchData.nodes.load(std::memory_order::relaxed);
             }
 
             int threatIndex(Move move, Bitboard threats){
@@ -390,8 +381,8 @@ namespace Search {
                 return std::clamp(corrected, GETTING_MATED + 1, FOUND_MATE - 1);
             }
             void reset() {
-                nodes = 0;
-                bestMove = Move::NO_MOVE;
+                searchData.nodes = 0;
+                searchData.bestMove = Move::NO_MOVE;
                 history.fill((int)DEFAULT_HISTORY);
                 conthist.fill(DEFAULT_HISTORY);
                 pawnHistory.fill(DEFAULT_HISTORY);
@@ -402,9 +393,9 @@ namespace Search {
                 minorCorrhist.fill(DEFAULT_HISTORY);
                 whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
                 blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
-                bestRootScore = -EVAL_INF;
-                rootDepth = 0;
-                completed = 0;
+                searchData.bestRootScore = -EVAL_INF;
+                searchData.rootDepth = 0;
+                searchData.completed = 0;
             }
     };
 

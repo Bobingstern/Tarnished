@@ -275,7 +275,7 @@ namespace Search {
             ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes()))) {
             thread.searcher->stopSearching();
         }
-        if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
+        if (thread.stops.stopped.load() || thread.stops.exiting.load() || ply >= MAX_PLY - 1) {
             return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? evaluate(thread.board, ss, thread.bucketCache)
                                                                    : 0;
         }
@@ -330,7 +330,7 @@ namespace Search {
         MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped.load() || thread.exiting.load())
+            if (thread.stops.stopped.load() || thread.stops.exiting.load())
                 return bestScore;
 
             if (!isLoss(bestScore) && move.to() != (ss - 1)->toSquare) {
@@ -346,7 +346,7 @@ namespace Search {
                 ss->toSquare = move.to();
             MakeMove(thread.board, move, thread.bucketCache, ss);
 
-            thread.nodes.fetch_add(1, std::memory_order::relaxed);
+            thread.searchData.nodes.fetch_add(1, std::memory_order::relaxed);
             moveCount++;
             int score = -qsearch<isPV>(ply + 1, -beta, -alpha, ss + 1, thread, limit);
 
@@ -389,10 +389,10 @@ namespace Search {
 
             if (thread.type == ThreadType::MAIN &&
                 ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes())) &&
-                thread.rootDepth != 1) {
+                thread.searchData.rootDepth != 1) {
                 thread.searcher->stopSearching();
             }
-            if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
+            if (thread.stops.stopped.load() || thread.stops.exiting.load() || ply >= MAX_PLY - 1) {
                 return (ply >= MAX_PLY - 1 && !thread.board.inCheck())
                            ? evaluate(thread.board, ss, thread.bucketCache)
                            : 0;
@@ -471,7 +471,7 @@ namespace Search {
             // Null Move Pruning
             Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^
                                 thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
-            if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty() && ttData.bound != TTFlag::FAIL_LOW) {
+            if (depth >= 2 && ss->eval >= beta && ply > thread.searchData.minNmpPly && !nonPawns.empty() && ttData.bound != TTFlag::FAIL_LOW) {
                 // Sirius formula
                 const int reduction = NMP_BASE_REDUCTION() + depth / NMP_REDUCTION_SCALE() +
                                       std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE());
@@ -492,12 +492,12 @@ namespace Search {
                     // All "real" moves are bad, so doing a null causes a cutoff
                     // do a reduced search to verify and if that also fails high
                     // then all is well, else dont prune
-                    if (depth <= 15 || thread.minNmpPly > 0)
+                    if (depth <= 15 || thread.searchData.minNmpPly > 0)
                         return isWin(nmpScore) ? beta : nmpScore;
-                    thread.minNmpPly = ply + (depth - reduction) * 3 / 4;
+                    thread.searchData.minNmpPly = ply + (depth - reduction) * 3 / 4;
                     int verification =
                         search<false>(depth - NMP_BASE_REDUCTION(), ply + 1, beta - 1, beta, true, ss, thread, limit);
-                    thread.minNmpPly = 0;
+                    thread.searchData.minNmpPly = 0;
                     if (verification >= beta)
                         return verification;
                 }
@@ -527,7 +527,7 @@ namespace Search {
         bool skipQuiets = false;
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped.load() || thread.exiting.load())
+            if (thread.stops.stopped.load() || thread.stops.exiting.load())
                 return bestScore;
 
             bool isQuiet = !thread.board.isCapture(move);
@@ -621,7 +621,7 @@ namespace Search {
 
             MakeMove(thread.board, move, thread.bucketCache, ss);
             moveCount++;
-            thread.nodes.fetch_add(1, std::memory_order::relaxed);
+            thread.searchData.nodes.fetch_add(1, std::memory_order::relaxed);
 
             int newDepth = depth - 1 + extension;
             // Late Move Reduction
@@ -753,15 +753,15 @@ namespace Search {
         int64_t avgnps = 0;
         for (int depth = 1; depth <= limit.depth; depth++) {
             auto aborted = [&](bool canSoft) {
-                if (threadInfo.stopped.load())
+                if (threadInfo.stops.stopped.load())
                     return true;
                 // Only check soft node limit outside of aspiration
                 if (isMain)
-                    return limit.outOfTime() || limit.outOfNodes(threadInfo.nodes) || (limit.softNodes(threadInfo.nodes) && canSoft);
+                    return limit.outOfTime() || limit.outOfNodes(threadInfo.loadNodes()) || (limit.softNodes(threadInfo.loadNodes()) && canSoft);
                 else
-                    return limit.softNodes(threadInfo.nodes) && canSoft;
+                    return limit.softNodes(threadInfo.loadNodes()) && canSoft;
             };
-            threadInfo.rootDepth = depth;
+            threadInfo.searchData.rootDepth = depth;
             ss->pawnKey = resetPawnHash(threadInfo.board);
             ss->majorKey = resetMajorHash(threadInfo.board);
             ss->minorKey = resetMinorHash(threadInfo.board);
@@ -770,7 +770,7 @@ namespace Search {
             ss->accumulator = baseAcc;
             int eval = evaluate(threadInfo.board, ss, threadInfo.bucketCache);
 
-            if (limit.softNodes(threadInfo.nodes)){
+            if (limit.softNodes(threadInfo.loadNodes())){
                 break;
             }
             // Aspiration Windows
@@ -805,9 +805,9 @@ namespace Search {
             lastPV = ss->pv;
 
             // Save best scores
-            threadInfo.completed = depth;
-            threadInfo.bestMove = ss->bestMove;
-            threadInfo.bestRootScore = score;
+            threadInfo.searchData.completed = depth;
+            threadInfo.searchData.bestMove = ss->bestMove;
+            threadInfo.searchData.bestRootScore = score;
 
             if (!isMain) {
                 continue;
@@ -887,7 +887,7 @@ namespace Search {
 
                     }
                     
-                    std::cout << COLORS::GREY << "Best Move: " << COLORS::WHITE << uci::moveToUci(threadInfo.bestMove, searcher->board.chess960()) << "\n" << std::endl;
+                    std::cout << COLORS::GREY << "Best Move: " << COLORS::WHITE << uci::moveToUci(threadInfo.searchData.bestMove, searcher->board.chess960()) << "\n" << std::endl;
                     std::cout << COLORS::GREY << "Main Line: " << COLORS::WHITE << pvss.str() << std::endl;
                 }
             }
@@ -895,7 +895,7 @@ namespace Search {
             double complexity = 0;
             if (!isMateScore(score))
                 complexity = (COMPLEXITY_TM_SCALE() / 100.0) * std::abs(eval - score) * std::log(static_cast<double>(depth));
-            if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes, complexity))
+            if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.loadNodes(), complexity))
                 break;
         }
 
