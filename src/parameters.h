@@ -10,6 +10,7 @@
 #include <vector>
 
 const int MAX_PLY = 125;
+const int STACK_OVERHEAD = 6;
 #define BENCH_DEPTH 13
 
 // Random big num

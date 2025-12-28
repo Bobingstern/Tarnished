@@ -95,7 +95,7 @@ namespace Search {
 
     struct Stack {
             PVList pv;
-            chess::Move killer;
+            Move killer;
             int staticEval;
             int eval;
             int historyScore;
@@ -120,6 +120,29 @@ namespace Search {
             MultiArray<int16_t, 2, 6, 64>* contCorrhist;
 
             Accumulator* accumulator;
+
+            void reset() {
+                killer = Move::NO_MOVE;
+                staticEval = EVAL_NONE;
+                eval = 0;
+                historyScore = 0;
+                ply = 0;
+                failHighs = 0;
+                reduction = 0;
+                pawnKey = 0;
+                majorKey = 0;
+                minorKey = 0;
+                nonPawnKey.fill(0);
+                threats.fill(Bitboard());
+                move = Move::NO_MOVE;
+                toSquare = Square::NO_SQ;
+                excluded = Move::NO_MOVE;
+                bestMove = Move::NO_MOVE;
+                conthist = nullptr;
+                contCorrhist = nullptr;
+                movedPiece = PieceType::NONE;
+                accumulator = nullptr;
+            }
     };
 
     struct Limit {
@@ -215,6 +238,7 @@ namespace Search {
             Limit limit;
             InputBucketCache bucketCache;
             std::vector<Accumulator> accStack;
+            std::vector<Stack> searchStack;
 
             Searcher* searcher;
             int threadId;
@@ -397,7 +421,8 @@ namespace Search {
                 searchData.rootDepth = 0;
                 searchData.completed = 0;
 
-                accStack.resize(MAX_PLY + 6 + 3);
+                accStack.resize(MAX_PLY + STACK_OVERHEAD + 3);
+                searchStack.resize(MAX_PLY + STACK_OVERHEAD + 3);
             }
     };
 

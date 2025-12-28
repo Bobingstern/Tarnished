@@ -742,12 +742,7 @@ namespace Search {
 
         bool isMain = threadInfo.type == ThreadType::MAIN;
 
-        std::vector<Stack> stack(MAX_PLY + 6 + 3);
-        for (int i = 0; i < stack.size(); ++i)
-            stack[i].accumulator = &threadInfo.accStack[i];
-
-        Stack* ss = &stack[3];
-
+        Stack* ss = &threadInfo.searchStack[STACK_OVERHEAD];
 
         PVList lastPV{};
         int score = -EVAL_INF;
@@ -765,12 +760,19 @@ namespace Search {
                     return limit.softNodes(threadInfo.loadNodes()) && canSoft;
             };
             threadInfo.searchData.rootDepth = depth;
+
+            for (int i = 0; i < threadInfo.searchStack.size(); ++i) {
+                threadInfo.searchStack[i].reset();
+                threadInfo.searchStack[i].accumulator = &threadInfo.accStack[i];
+            }
+
             ss->pawnKey = resetPawnHash(threadInfo.board);
             ss->majorKey = resetMajorHash(threadInfo.board);
             ss->minorKey = resetMinorHash(threadInfo.board);
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
             ss->accumulator = &baseAcc;
+
             int eval = evaluate(threadInfo.board, ss, threadInfo.bucketCache);
 
             if (limit.softNodes(threadInfo.loadNodes())){
