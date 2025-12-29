@@ -48,6 +48,27 @@ void Search::ThreadInfo::startSearching() {
     if (type == ThreadType::MAIN) {
         searcher.stopSearching();
         ThreadInfo* bestSearcher = this;
+
+        for (auto& thread : searcher.threads) {
+            if (thread.get()->type == ThreadType::MAIN)
+                continue;
+
+            // In case thread exits early without a move
+            if (!isLegal(searcher.board, thread.get()->bestMove))
+                continue;
+
+            int bestDepth = bestSearcher->completed;
+            int bestScore = bestSearcher->bestRootScore;
+            int currentDepth = thread->completed;
+            int currentScore = thread->bestRootScore;
+            if ((bestDepth == currentDepth && currentScore > bestScore) ||
+                (Search::isWin(currentScore) && currentScore > bestScore))
+                bestSearcher = thread.get();
+            if (currentDepth > bestDepth &&
+                (currentScore > bestScore || !Search::isWin(bestScore)))
+                bestSearcher = thread.get();
+        }
+
         searcher.bestScore = bestSearcher->bestRootScore;
         if (searcher.printInfo)
             std::cout << "\nbestmove "
