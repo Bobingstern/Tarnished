@@ -275,7 +275,7 @@ namespace Search {
             ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes()))) {
             thread.searcher->stopSearching();
         }
-        if (thread.stops.stopped.load() || thread.stops.exiting.load() || ply >= MAX_PLY - 1) {
+        if (thread.stops.stopped.load() || thread.stops.exiting || ply >= MAX_PLY - 1) {
             return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? evaluate(thread.board, ss, thread.bucketCache)
                                                                    : 0;
         }
@@ -330,7 +330,7 @@ namespace Search {
         MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stops.stopped.load() || thread.stops.exiting.load())
+            if (thread.stops.stopped.load() || thread.stops.exiting)
                 return bestScore;
 
             if (!isLoss(bestScore) && move.to() != (ss - 1)->toSquare) {
@@ -392,7 +392,7 @@ namespace Search {
                 thread.searchData.rootDepth != 1) {
                 thread.searcher->stopSearching();
             }
-            if (thread.stops.stopped.load() || thread.stops.exiting.load() || ply >= MAX_PLY - 1) {
+            if (thread.stops.stopped.load() || thread.stops.exiting || ply >= MAX_PLY - 1) {
                 return (ply >= MAX_PLY - 1 && !thread.board.inCheck())
                            ? evaluate(thread.board, ss, thread.bucketCache)
                            : 0;
@@ -527,7 +527,7 @@ namespace Search {
         bool skipQuiets = false;
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stops.stopped.load() || thread.stops.exiting.load())
+            if (thread.stops.stopped.load() || thread.stops.exiting)
                 return bestScore;
 
             bool isQuiet = !thread.board.isCapture(move);
@@ -734,12 +734,7 @@ namespace Search {
         return bestScore;
     }
 
-    int iterativeDeepening(Board board, ThreadInfo& threadInfo, Limit limit, Searcher* searcher) {
-        threadInfo.board = board;
-        Accumulator baseAcc;
-        baseAcc.refresh(threadInfo.board);
-        threadInfo.bucketCache = InputBucketCache();
-
+    int iterativeDeepening(ThreadInfo& threadInfo, Limit limit, Searcher* searcher) {
         bool isMain = threadInfo.type == ThreadType::MAIN;
 
         Stack* ss = &threadInfo.searchStack[STACK_OVERHEAD];
@@ -749,9 +744,10 @@ namespace Search {
         int lastScore = -EVAL_INF;
 
         int64_t avgnps = 0;
+
         for (int depth = 1; depth <= limit.depth; depth++) {
             auto aborted = [&](bool canSoft) {
-                if (threadInfo.stops.stopped.load())
+                if (threadInfo.stops.stopped.load() || threadInfo.stops.exiting)
                     return true;
                 // Only check soft node limit outside of aspiration
                 if (isMain)
@@ -763,7 +759,6 @@ namespace Search {
 
             for (int i = 0; i < threadInfo.searchStack.size(); ++i) {
                 threadInfo.searchStack[i].reset();
-                threadInfo.searchStack[i].accumulator = &threadInfo.accStack[i];
             }
 
             ss->pawnKey = resetPawnHash(threadInfo.board);
@@ -771,7 +766,6 @@ namespace Search {
             ss->minorKey = resetMinorHash(threadInfo.board);
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
-            ss->accumulator = &baseAcc;
 
             int eval = evaluate(threadInfo.board, ss, threadInfo.bucketCache);
 
@@ -900,8 +894,10 @@ namespace Search {
             double complexity = 0;
             if (!isMateScore(score))
                 complexity = (COMPLEXITY_TM_SCALE() / 100.0) * std::abs(eval - score) * std::log(static_cast<double>(depth));
-            if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.loadNodes(), complexity))
+            if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.loadNodes(), complexity)) {
+                searcher->stopSearching();
                 break;
+            }
         }
 
         return lastScore;

@@ -223,7 +223,6 @@ void UCIEvaluate(Board& board) {
 
 void UCIGo(Searcher& searcher, Board& board, char* str) {
     // searcher.stop();
-
     Search::Limit limit = Search::Limit();
     ParseTimeControl(str, board.sideToMove(), limit, searcher.useSoft);
 

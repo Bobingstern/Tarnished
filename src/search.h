@@ -93,7 +93,7 @@ namespace Search {
             }
     };
 
-    struct Stack {
+    struct alignas(64) Stack {
             PVList pv;
             Move killer;
             int staticEval;
@@ -141,7 +141,6 @@ namespace Search {
                 conthist = nullptr;
                 contCorrhist = nullptr;
                 movedPiece = PieceType::NONE;
-                accumulator = nullptr;
             }
     };
 
@@ -217,22 +216,12 @@ namespace Search {
     };
     struct alignas(64) StopFlags {
         std::atomic<bool> stopped = false;
-        std::atomic<bool> exiting = false;
-    };
-    struct alignas(64) Control {
-        std::atomic<bool> searching;
+        bool exiting = false;
+        bool searching = false;
     };
     struct alignas(128) ThreadInfo {
             SearchData searchData;
             StopFlags stops;
-            Control control;
-
-            std::thread thread;
-            ThreadType type;
-            TTable& TT;
-
-            std::mutex mutex;
-            std::condition_variable cv;
 
             Board board;
             Limit limit;
@@ -241,6 +230,12 @@ namespace Search {
             std::vector<Stack> searchStack;
 
             Searcher* searcher;
+            std::thread thread;
+            ThreadType type;
+            TTable& TT;
+            std::mutex mutex;
+            std::condition_variable cv;
+
             int threadId;
 
             // indexed by [stm][from][to][threat]
@@ -423,8 +418,10 @@ namespace Search {
 
                 accStack.resize(MAX_PLY + STACK_OVERHEAD + 3);
                 searchStack.resize(MAX_PLY + STACK_OVERHEAD + 3);
-            }
+                for (int i = 0; i < searchStack.size(); ++i)
+                    searchStack[i].accumulator = &accStack[i];
+                }
     };
 
-    int iterativeDeepening(Board board, ThreadInfo& threadInfo, Limit limit, Searcher* searcher);
+    int iterativeDeepening(ThreadInfo& threadInfo, Limit limit, Searcher* searcher);
 }

@@ -26,8 +26,8 @@ Search::ThreadInfo::ThreadInfo(int id, TTable& tt, Searcher* s)
 void Search::ThreadInfo::exit() {
     {
         std::lock_guard<std::mutex> lock(mutex);
-        control.searching.store(true);
-        stops.exiting.store(true);
+        stops.searching = true;
+        stops.exiting = true;
     }
     cv.notify_all();
     if (thread.joinable())
@@ -38,8 +38,11 @@ void Search::ThreadInfo::startSearching() {
     searchData.nodes = 0;
     searchData.bestMove = Move::NO_MOVE;
     searchData.bestRootScore = -EVAL_INF;
+    board = searcher->board;
+    searchStack[STACK_OVERHEAD].accumulator->refresh(board);
+    bucketCache = InputBucketCache();
     
-    Search::iterativeDeepening(searcher->board, *this, searcher->limit,
+    Search::iterativeDeepening(*this, searcher->limit,
                                searcher);
 
     if (type == ThreadType::MAIN) {
@@ -58,19 +61,19 @@ void Search::ThreadInfo::startSearching() {
 
 void Search::ThreadInfo::waitForSearchFinished() {
     std::unique_lock<std::mutex> lock(mutex);
-    cv.wait(lock, [&] { return !control.searching.load(); });
+    cv.wait(lock, [&] { return !stops.searching; });
 }
 
 void Search::ThreadInfo::idle() {
-    while (!stops.exiting.load()) {
+    while (!stops.exiting) {
         std::unique_lock<std::mutex> lock(mutex);
-        cv.wait(lock, [&] { return control.searching.load(); });
+        cv.wait(lock, [&] { return stops.searching; });
 
-        if (stops.exiting.load())
+        if (stops.exiting)
             return;
 
         startSearching();
-        control.searching.store(false);
+        stops.searching = false;
 
         cv.notify_all();
     }
