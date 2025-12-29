@@ -339,8 +339,6 @@ namespace Search {
         MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped)
-                return bestScore;
 
             if (!isLoss(bestScore) && move.to() != (ss - 1)->toSquare) {
                 if (moveCount >= 3)
@@ -360,6 +358,9 @@ namespace Search {
             int score = -qsearch<isPV>(ply + 1, -beta, -alpha, ss + 1, thread, limit);
 
             UnmakeMove(thread.board, move);
+
+            if (thread.stopped)
+                return bestScore;
 
             if (score > bestScore) {
                 bestScore = score;
@@ -551,8 +552,6 @@ namespace Search {
         bool skipQuiets = false;
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped)
-                return bestScore;
 
             bool isQuiet = !thread.board.isCapture(move);
             if (move == ss->excluded)
@@ -690,6 +689,9 @@ namespace Search {
                 score = -search<isPV>(newDepth, ply + 1, -beta, -alpha, false, ss + 1, thread, limit);
             }
             UnmakeMove(thread.board, move);
+
+            if (thread.stopped)
+                return bestScore;
 
             if (root && thread.type == ThreadType::MAIN)
                 limit.updateNodes(move, thread.loadNodes() - previousNodes);
