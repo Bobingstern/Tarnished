@@ -271,21 +271,30 @@ namespace Search {
         }
     }
     template <bool isPV> int qsearch(int ply, int alpha, const int beta, Stack* ss, ThreadInfo& thread, Limit& limit) {
-        if (thread.type == ThreadType::MAIN &&
-            ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes()))) {
-            thread.searcher->stopSearching();
+
+        if (thread.stopped)
+            return 0;
+
+        if (thread.type == ThreadType::MAIN && 
+            ((thread.loadNodes() & 2047) == 0) && limit.outOfTime() && thread.rootDepth != 1) {
+            thread.stopped = true;
+            return 0;
         }
-        if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
-            return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? evaluate(thread.board, ss, thread.bucketCache)
-                                                                   : 0;
+        if (thread.type == ThreadType::MAIN && limit.outOfNodes(thread.loadNodes())) {
+            thread.stopped = true;
+            return 0;
         }
+        // if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
+        //     return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? evaluate(thread.board, ss, thread.bucketCache)
+        //                                                            : 0;
+        // }
 
         ss->ply = ply;
 
         ProbedTTEntry ttData = {};
         bool ttHit = false;
 
-        ttHit = thread.TT.probe(thread.board.hash(), ply, ttData);
+        ttHit = thread.searcher.TT.probe(thread.board.hash(), ply, ttData);
         
         bool ttPV = isPV || (ttHit && ttData.pv);
 
@@ -309,7 +318,7 @@ namespace Search {
             eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
             
             if (!ttHit)
-                thread.TT.store(thread.board.hash(), Move::NO_MOVE, -EVAL_INF, rawStaticEval, TTFlag::NO_BOUND, 0, ply, ttPV);
+                thread.searcher.TT.store(thread.board.hash(), Move::NO_MOVE, -EVAL_INF, rawStaticEval, TTFlag::NO_BOUND, 0, ply, ttPV);
         }
 
         if (eval >= beta)
@@ -330,7 +339,7 @@ namespace Search {
         MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped.load() || thread.exiting.load())
+            if (thread.stopped)
                 return bestScore;
 
             if (!isLoss(bestScore) && move.to() != (ss - 1)->toSquare) {
@@ -341,7 +350,7 @@ namespace Search {
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
                 continue;
 
-            thread.TT.prefetch(prefetchKey(thread.board, move));
+            thread.searcher.TT.prefetch(prefetchKey(thread.board, move));
             if (thread.board.isCapture(move))
                 ss->toSquare = move.to();
             MakeMove(thread.board, move, thread.bucketCache, ss);
@@ -367,7 +376,7 @@ namespace Search {
         if (!moveCount && inCheck)
             return -MATE + ply;
 
-        thread.TT.store(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ply, ttPV);
+        thread.searcher.TT.store(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ply, ttPV);
 
         return bestScore;
     }
@@ -379,31 +388,46 @@ namespace Search {
 
         if (isPV)
             ss->pv.length = 0;
+
+        if (thread.stopped)
+            return 0;
+
         if (depth <= 0) {
             return qsearch<isPV>(ply, alpha, beta, ss, thread, limit);
         }
+
+        if (thread.type == ThreadType::MAIN && 
+            ((thread.loadNodes() & 2047) == 0) && limit.outOfTime() && thread.rootDepth != 1) {
+            thread.stopped = true;
+            return 0;
+        }
+        if (thread.type == ThreadType::MAIN && limit.outOfNodes(thread.loadNodes())) {
+            thread.stopped = true;
+            return 0;
+        }
+
         // Terminal Conditions (and checkmate)
         if (!root) {
             if (thread.board.isRepetition(1) || thread.board.isHalfMoveDraw())
                 return 0;
 
-            if (thread.type == ThreadType::MAIN &&
-                ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes())) &&
-                thread.rootDepth != 1) {
-                thread.searcher->stopSearching();
-            }
-            if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
-                return (ply >= MAX_PLY - 1 && !thread.board.inCheck())
-                           ? evaluate(thread.board, ss, thread.bucketCache)
-                           : 0;
-            }
+            // if (thread.type == ThreadType::MAIN &&
+            //     ( (thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes())) &&
+            //     thread.rootDepth != 1) {
+            //     thread.searcher.stopSearching();
+            // }
+            // if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
+            //     return (ply >= MAX_PLY - 1 && !thread.board.inCheck())
+            //                ? evaluate(thread.board, ss, thread.bucketCache)
+            //                : 0;
+            // }
         }
 
         ProbedTTEntry ttData = {};
         bool ttHit = false;
 
         if (moveIsNull(ss->excluded)) {
-            ttHit = thread.TT.probe(thread.board.hash(), ply, ttData);
+            ttHit = thread.searcher.TT.probe(thread.board.hash(), ply, ttData);
         }
 
         bool ttPV = isPV || (ttHit && ttData.pv);
@@ -438,7 +462,7 @@ namespace Search {
             corrplexity = rawStaticEval - ss->staticEval;
 
             if (!ttHit)
-                thread.TT.store(thread.board.hash(), Move::NO_MOVE, -EVAL_INF, rawStaticEval, TTFlag::NO_BOUND, 0, ply, ttPV);
+                thread.searcher.TT.store(thread.board.hash(), Move::NO_MOVE, -EVAL_INF, rawStaticEval, TTFlag::NO_BOUND, 0, ply, ttPV);
         }
         // Improving heurstic
         // We are better than 2 plies ago
@@ -480,7 +504,7 @@ namespace Search {
                 ss->contCorrhist = nullptr;
 
                 // Null move prefetch is just flip color
-                thread.TT.prefetch(thread.board.hash() ^ Zobrist::sideToMove());
+                thread.searcher.TT.prefetch(thread.board.hash() ^ Zobrist::sideToMove());
 
                 MakeMove(thread.board, Move(Move::NULL_MOVE), thread.bucketCache, ss);
                 int nmpScore =
@@ -527,7 +551,7 @@ namespace Search {
         bool skipQuiets = false;
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped.load() || thread.exiting.load())
+            if (thread.stopped)
                 return bestScore;
 
             bool isQuiet = !thread.board.isCapture(move);
@@ -617,7 +641,7 @@ namespace Search {
 
             uint64_t previousNodes = thread.loadNodes();
 
-            thread.TT.prefetch(prefetchKey(thread.board, move));
+            thread.searcher.TT.prefetch(prefetchKey(thread.board, move));
 
             MakeMove(thread.board, move, thread.bucketCache, ss);
             moveCount++;
@@ -728,23 +752,23 @@ namespace Search {
             }
 
             // Update TT
-            thread.TT.store(thread.board.hash(), bestMove, bestScore, rawStaticEval, ttFlag, depth, ply, ttPV);
+            thread.searcher.TT.store(thread.board.hash(), bestMove, bestScore, rawStaticEval, ttFlag, depth, ply, ttPV);
         }
 
         return bestScore;
     }
 
-    int iterativeDeepening(Board board, ThreadInfo& threadInfo, Limit limit, Searcher* searcher) {
-        threadInfo.board = board;
+    int iterativeDeepening(ThreadInfo& threadInfo, Limit limit) {
+
         Accumulator baseAcc;
         baseAcc.refresh(threadInfo.board);
         threadInfo.bucketCache = InputBucketCache();
 
         bool isMain = threadInfo.type == ThreadType::MAIN;
 
-        auto stack = std::make_unique<std::array<Stack, MAX_PLY + 6 + 3>>();
-        Stack* ss = reinterpret_cast<Stack*>(stack->data() + 3); // Saftey for conthist
-        std::memset(stack.get(), 0, sizeof(Stack) * (MAX_PLY + 6 + 3));
+        std::vector<Stack> stack;
+        stack.resize(MAX_PLY + 6 + 3);
+        Stack* ss = &stack[3];
 
         PVList lastPV{};
         int score = -EVAL_INF;
@@ -753,7 +777,7 @@ namespace Search {
         int64_t avgnps = 0;
         for (int depth = 1; depth <= limit.depth; depth++) {
             auto aborted = [&](bool canSoft) {
-                if (threadInfo.stopped.load())
+                if (threadInfo.stopped)
                     return true;
                 // Only check soft node limit outside of aspiration
                 if (isMain)
@@ -814,7 +838,7 @@ namespace Search {
             }
 
             // Reporting
-            uint64_t nodecnt = searcher->nodeCount();
+            uint64_t nodecnt = threadInfo.searcher.nodeCount();
 
             std::stringstream pvss;           // String stream for the mainline
             Board pvBoard = threadInfo.board; // Test board for WDL and eval normalization since we need the final board
@@ -823,20 +847,20 @@ namespace Search {
                 pvss << uci::moveToUci(lastPV.moves[i], pvBoard.chess960()) << " ";
                 pvBoard.makeMove(lastPV.moves[i]);
             }
-            if (searcher->printInfo) {
+            if (threadInfo.searcher.printInfo) {
                 if (!PRETTY_PRINT) {
                     std::cout << "info depth " << depth << " score ";
                     if (score >= FOUND_MATE || score <= GETTING_MATED) {
                         std::cout << "mate " << ((score < 0) ? "-" : "") << (MATE - std::abs(score)) / 2 + 1;
                     } else {
-                        int s = searcher->normalizeEval ? scaleEval(score, threadInfo.board) : score; // Only scale if WDL enabled
+                        int s = threadInfo.searcher.normalizeEval ? scaleEval(score, threadInfo.board) : score; // Only scale if WDL enabled
                         std::cout << "cp " << s;
-                        if (searcher->showWDL) {
+                        if (threadInfo.searcher.showWDL) {
                             WDL wdl = computeWDL(score, threadInfo.board);
                             std::cout << " wdl " << wdl.w << " " << wdl.d << " " << wdl.l;
                         }
                     }
-                    std::cout << " hashfull " << searcher->TT.hashfull();
+                    std::cout << " hashfull " << threadInfo.searcher.TT.hashfull();
                     std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " time " << limit.timer.elapsed() << " pv ";
                     std::cout << pvss.str() << std::endl;
                 }
@@ -853,8 +877,8 @@ namespace Search {
                     WDL wdl = computeWDL(score, threadInfo.board);
                     Color stm = threadInfo.board.sideToMove();
 
-                    std::cout << COLORS::GREY << "Hash size:  " << COLORS::WHITE << searcher->TT.mbSize << "MB" << std::endl;
-                    std::cout << COLORS::GREY << "Hash usage: " << COLORS::WHITE << searcher->TT.hashfull() / 10.0 << "%\n" << std::endl;
+                    std::cout << COLORS::GREY << "Hash size:  " << COLORS::WHITE << threadInfo.searcher.TT.mbSize << "MB" << std::endl;
+                    std::cout << COLORS::GREY << "Hash usage: " << COLORS::WHITE << threadInfo.searcher.TT.hashfull() / 10.0 << "%\n" << std::endl;
 
                     std::cout << COLORS::GREY << "Nodes:            " << COLORS::WHITE << nodecnt << std::endl;
                     std::cout << COLORS::GREY << "Nodes per second: " << COLORS::WHITE << nodecnt / (limit.timer.elapsed() + 1) * 1000 << std::endl;
@@ -887,7 +911,7 @@ namespace Search {
 
                     }
                     
-                    std::cout << COLORS::GREY << "Best Move: " << COLORS::WHITE << uci::moveToUci(threadInfo.bestMove, searcher->board.chess960()) << "\n" << std::endl;
+                    std::cout << COLORS::GREY << "Best Move: " << COLORS::WHITE << uci::moveToUci(threadInfo.bestMove, threadInfo.searcher.board.chess960()) << "\n" << std::endl;
                     std::cout << COLORS::GREY << "Main Line: " << COLORS::WHITE << pvss.str() << std::endl;
                 }
             }

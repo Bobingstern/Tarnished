@@ -187,30 +187,24 @@ namespace Search {
     };
 
     struct alignas(128) ThreadInfo {
+            std::atomic<uint64_t> nodes;
+            std::atomic<bool> stopped;
+            std::atomic<bool> exiting;
+
             std::thread thread;
             ThreadType type;
-            TTable& TT;
-
-            std::mutex mutex;
-            std::condition_variable cv;
-
-
-            std::atomic<bool> searching;;
-            std::atomic<bool> stopped = false;
-            std::atomic<bool> exiting = false;
-
+    
             Board board;
             Limit limit;
             InputBucketCache bucketCache;
-            std::atomic<uint64_t> nodes;
-
+            
             Move bestMove;
             int bestRootScore;
             int minNmpPly;
             int rootDepth;
             int completed;
 
-            Searcher* searcher;
+            Searcher& searcher;
             int threadId;
 
             // indexed by [stm][from][to][threat]
@@ -229,29 +223,24 @@ namespace Search {
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
 
-            ThreadInfo(ThreadType t, TTable& tt, Searcher* s);
-            ThreadInfo(int id, TTable& tt, Searcher* s);
-            ThreadInfo(const ThreadInfo& other)
-                : type(other.type), TT(other.TT), history(other.history), bestMove(other.bestMove),
-                  minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), bestRootScore(other.bestRootScore) {
-                this->board = other.board;
-                nodes.store(other.nodes.load());
-                conthist = other.conthist;
-                pawnHistory = other.pawnHistory;
-                contCorrhist = other.contCorrhist;
-                capthist = other.capthist;
-                pawnCorrhist = other.pawnCorrhist;
-                majorCorrhist = other.majorCorrhist;
-                minorCorrhist = other.minorCorrhist;
-                whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
-                blackNonPawnCorrhist = other.blackNonPawnCorrhist;
-            }
+            ThreadInfo(ThreadType t, Searcher& s);
+            ThreadInfo(int id, Searcher& s);
+            ~ThreadInfo();
             void exit();
             void startSearching();
             void waitForSearchFinished();
             void idle();
+
             size_t loadNodes() {
                 return nodes.load(std::memory_order::relaxed);
+            }
+
+            void setStopped() {
+                stopped = true;
+            }
+            void prepare() {
+                stopped = false;
+                nodes = 0;
             }
 
             int threatIndex(Move move, Bitboard threats){
@@ -408,5 +397,5 @@ namespace Search {
             }
     };
 
-    int iterativeDeepening(Board board, ThreadInfo& threadInfo, Limit limit, Searcher* searcher);
+    int iterativeDeepening(ThreadInfo& threadInfo, Limit limit);
 }
