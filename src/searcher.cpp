@@ -40,6 +40,8 @@ void Search::ThreadInfo::startSearching() {
     bestMove = Move::NO_MOVE;
     bestRootScore = -EVAL_INF;
     board = searcher.board;
+    searchStack[STACK_OVERHEAD].accumulator->refresh(board);
+    bucketCache = InputBucketCache();
     
     Search::iterativeDeepening(*this, searcher.limit);
 

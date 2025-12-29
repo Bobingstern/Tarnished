@@ -93,7 +93,7 @@ namespace Search {
             }
     };
 
-    struct Stack {
+    struct alignas(64) Stack {
             PVList pv;
             chess::Move killer;
             int staticEval;
@@ -119,8 +119,29 @@ namespace Search {
             MultiArray<int16_t, 2, 6, 64>* conthist;
             MultiArray<int16_t, 2, 6, 64>* contCorrhist;
 
-            Accumulator accumulator;
-            std::array<bool, LMR_ONE_COUNT> lmrFeatures = {0};
+            Accumulator* accumulator;
+            
+            void reset() {
+                killer = Move::NO_MOVE;
+                staticEval = EVAL_NONE;
+                eval = 0;
+                historyScore = 0;
+                ply = 0;
+                failHighs = 0;
+                reduction = 0;
+                pawnKey = 0;
+                majorKey = 0;
+                minorKey = 0;
+                nonPawnKey.fill(0);
+                threats.fill(Bitboard());
+                move = Move::NO_MOVE;
+                toSquare = Square::NO_SQ;
+                excluded = Move::NO_MOVE;
+                bestMove = Move::NO_MOVE;
+                conthist = nullptr;
+                contCorrhist = nullptr;
+                movedPiece = PieceType::NONE;
+            }
     };
 
     struct Limit {
@@ -197,6 +218,8 @@ namespace Search {
             Board board;
             Limit limit;
             InputBucketCache bucketCache;
+            std::vector<Accumulator> accStack;
+            std::vector<Stack> searchStack;
             
             Move bestMove;
             int bestRootScore;
@@ -394,6 +417,12 @@ namespace Search {
                 bestRootScore = -EVAL_INF;
                 rootDepth = 0;
                 completed = 0;
+
+                accStack.resize(MAX_PLY + STACK_OVERHEAD + 3);
+                searchStack.resize(MAX_PLY + STACK_OVERHEAD + 3);
+                for (int i = 0; i < searchStack.size(); ++i)
+                    searchStack[i].accumulator = &accStack[i];
+                
             }
     };
 
