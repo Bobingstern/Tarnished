@@ -118,7 +118,6 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
     // Sets the size of the transposition table
     if (OptionName(str, "Hash")) {
         searcher.TT.resize((uint64_t)atoi(OptionValue(str)));
-        std::cout << "Hash Table successfully resized" << std::endl;
         // Sets number of threads to use for searching
     } else if (OptionName(str, "Threads")) {
         searcher.initialize(atoi(OptionValue(str)));
