@@ -361,7 +361,7 @@ namespace Search {
             UnmakeMove(thread.board, move);
 
             if (thread.stopped)
-                return bestScore;
+                return 0;
 
             if (score > bestScore) {
                 bestScore = score;
@@ -687,7 +687,7 @@ namespace Search {
             UnmakeMove(thread.board, move);
 
             if (thread.stopped)
-                return bestScore;
+                return 0;
 
             if (root && thread.type == ThreadType::MAIN)
                 limit.updateNodes(move, thread.loadNodes() - previousNodes);
