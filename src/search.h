@@ -225,6 +225,7 @@ namespace Search {
             int bestRootScore;
             int minNmpPly;
             int rootDepth;
+            int selDepth;
             int completed;
 
             Searcher& searcher;
@@ -417,6 +418,7 @@ namespace Search {
                 bestRootScore = -EVAL_INF;
                 rootDepth = 0;
                 completed = 0;
+                selDepth = 0;
 
                 accStack.resize(MAX_PLY + STACK_OVERHEAD + 3);
                 searchStack.resize(MAX_PLY + STACK_OVERHEAD + 3);

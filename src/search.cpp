@@ -292,6 +292,8 @@ namespace Search {
 
         ss->ply = ply;
 
+        thread.selDepth = std::max(ply + 1, thread.selDepth);
+
         ProbedTTEntry ttData = {};
         bool ttHit = false;
 
@@ -419,6 +421,8 @@ namespace Search {
                            ? evaluate(thread.board, ss, thread.bucketCache)
                            : 0;
         }
+
+        thread.selDepth = std::max(ply + 1, thread.selDepth);
 
         ProbedTTEntry ttData = {};
         bool ttHit = false;
@@ -777,6 +781,7 @@ namespace Search {
                     return limit.softNodes(threadInfo.nodes) && canSoft;
             };
             threadInfo.rootDepth = depth;
+            threadInfo.selDepth = 0;
 
             for (int i = 0; i < threadInfo.searchStack.size(); ++i) {
                 threadInfo.searchStack[i].reset();
@@ -844,9 +849,9 @@ namespace Search {
             }
             if (threadInfo.searcher.printInfo) {
                 if (!PRETTY_PRINT) {
-                    std::cout << "info depth " << depth << " score ";
+                    std::cout << "info depth " << depth << " seldepth " << threadInfo.selDepth << " score ";
                     if (score >= FOUND_MATE || score <= GETTING_MATED) {
-                        std::cout << "mate " << ((score < 0) ? "-" : "") << (MATE - std::abs(score)) / 2 + 1;
+                        std::cout << "mate " << (score > 0 ? (MATE - score + 1) / 2 : -(MATE + score) / 2);
                     } else {
                         int s = threadInfo.searcher.normalizeEval ? scaleEval(score, threadInfo.board) : score; // Only scale if WDL enabled
                         std::cout << "cp " << s;
@@ -878,12 +883,13 @@ namespace Search {
                     std::cout << COLORS::GREY << "Nodes:            " << COLORS::WHITE << nodecnt << std::endl;
                     std::cout << COLORS::GREY << "Nodes per second: " << COLORS::WHITE << nodecnt / (limit.timer.elapsed() + 1) * 1000 << std::endl;
                     std::cout << COLORS::GREY << "Time:             " << COLORS::WHITE << (limit.timer.elapsed() / 1000.0) << "s " << std::endl;
-                    std::cout << COLORS::GREY << "Depth:            " << COLORS::WHITE << depth << "\n" << std::endl;
+                    std::cout << COLORS::GREY << "Depth:            " << COLORS::WHITE << depth << std::endl;
+                    std::cout << COLORS::GREY << "Selective Depth:  " << COLORS::WHITE << threadInfo.selDepth << "\n" << std::endl;
 
                     if (score >= FOUND_MATE || score <= GETTING_MATED) {
                         std::cout << COLORS::GREY << "Score:     ";
                         std::cout << (score < 0 ? COLORS::RED : COLORS::GREEN);
-                        std::cout << ((score < 0) ? "#-" : "#") << (MATE - std::abs(score)) / 2 + 1 << std::endl;
+                        std::cout << "#" << (score > 0 ? (MATE - score + 1) / 2 : -(MATE + score) / 2) << std::endl;
                     }
                     else {
                         RGB scoreRGB = scoreToRGB(normEval);
