@@ -93,7 +93,7 @@ namespace Search {
             }
     };
 
-    struct Stack {
+    struct alignas(64) Stack {
             PVList pv;
             chess::Move killer;
             int staticEval;
@@ -119,8 +119,29 @@ namespace Search {
             MultiArray<int16_t, 2, 6, 64>* conthist;
             MultiArray<int16_t, 2, 6, 64>* contCorrhist;
 
-            Accumulator accumulator;
-            std::array<bool, LMR_ONE_COUNT> lmrFeatures = {0};
+            Accumulator* accumulator;
+            
+            void reset() {
+                killer = Move::NO_MOVE;
+                staticEval = EVAL_NONE;
+                eval = 0;
+                historyScore = 0;
+                ply = 0;
+                failHighs = 0;
+                reduction = 0;
+                pawnKey = 0;
+                majorKey = 0;
+                minorKey = 0;
+                nonPawnKey.fill(0);
+                threats.fill(Bitboard());
+                move = Move::NO_MOVE;
+                toSquare = Square::NO_SQ;
+                excluded = Move::NO_MOVE;
+                bestMove = Move::NO_MOVE;
+                conthist = nullptr;
+                contCorrhist = nullptr;
+                movedPiece = PieceType::NONE;
+            }
     };
 
     struct Limit {
@@ -187,30 +208,26 @@ namespace Search {
     };
 
     struct alignas(128) ThreadInfo {
+            std::atomic<uint64_t> nodes;
+            std::atomic<bool> stopped;
+            std::atomic<bool> exiting;
+
             std::thread thread;
             ThreadType type;
-            TTable& TT;
-
-            std::mutex mutex;
-            std::condition_variable cv;
-
-
-            std::atomic<bool> searching;;
-            std::atomic<bool> stopped = false;
-            std::atomic<bool> exiting = false;
-
+    
             Board board;
             Limit limit;
             InputBucketCache bucketCache;
-            std::atomic<uint64_t> nodes;
-
+            std::vector<Accumulator> accStack;
+            std::vector<Stack> searchStack;
+            
             Move bestMove;
             int bestRootScore;
             int minNmpPly;
             int rootDepth;
             int completed;
 
-            Searcher* searcher;
+            Searcher& searcher;
             int threadId;
 
             // indexed by [stm][from][to][threat]
@@ -229,29 +246,24 @@ namespace Search {
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
 
-            ThreadInfo(ThreadType t, TTable& tt, Searcher* s);
-            ThreadInfo(int id, TTable& tt, Searcher* s);
-            ThreadInfo(const ThreadInfo& other)
-                : type(other.type), TT(other.TT), history(other.history), bestMove(other.bestMove),
-                  minNmpPly(other.minNmpPly), rootDepth(other.rootDepth), bestRootScore(other.bestRootScore) {
-                this->board = other.board;
-                nodes.store(other.nodes.load());
-                conthist = other.conthist;
-                pawnHistory = other.pawnHistory;
-                contCorrhist = other.contCorrhist;
-                capthist = other.capthist;
-                pawnCorrhist = other.pawnCorrhist;
-                majorCorrhist = other.majorCorrhist;
-                minorCorrhist = other.minorCorrhist;
-                whiteNonPawnCorrhist = other.whiteNonPawnCorrhist;
-                blackNonPawnCorrhist = other.blackNonPawnCorrhist;
-            }
+            ThreadInfo(ThreadType t, Searcher& s);
+            ThreadInfo(int id, Searcher& s);
+            ~ThreadInfo();
             void exit();
             void startSearching();
             void waitForSearchFinished();
             void idle();
+
             size_t loadNodes() {
                 return nodes.load(std::memory_order::relaxed);
+            }
+
+            void setStopped() {
+                stopped = true;
+            }
+            void prepare() {
+                stopped = false;
+                nodes = 0;
             }
 
             int threatIndex(Move move, Bitboard threats){
@@ -405,8 +417,14 @@ namespace Search {
                 bestRootScore = -EVAL_INF;
                 rootDepth = 0;
                 completed = 0;
+
+                accStack.resize(MAX_PLY + STACK_OVERHEAD + 3);
+                searchStack.resize(MAX_PLY + STACK_OVERHEAD + 3);
+                for (int i = 0; i < searchStack.size(); ++i)
+                    searchStack[i].accumulator = &accStack[i];
+                
             }
     };
 
-    int iterativeDeepening(Board board, ThreadInfo& threadInfo, Limit limit, Searcher* searcher);
+    int iterativeDeepening(ThreadInfo& threadInfo, Limit limit);
 }

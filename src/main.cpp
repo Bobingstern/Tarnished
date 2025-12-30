@@ -400,7 +400,7 @@ int main(int agrc, char* argv[]) {
             case SETOPTION  : UCISetOption(searcher, board, str);         break;
             case UCINEWGAME : searcher.reset();                           break;
             case STOP       : searcher.stopSearching();                   break;
-            case QUIT       : searcher.stopSearching(); searcher.exit();  return 0;
+            case QUIT       : searcher.exit();                            return 0;
 
             // Non Standard
             case PRINT      : printBoard(board);                          break;

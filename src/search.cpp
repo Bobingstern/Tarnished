@@ -33,27 +33,27 @@ void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::St
     (ss + 1)->nonPawnKey[1] = ss->nonPawnKey[1];
 
     // Accumulator copy
-    (ss + 1)->accumulator.featureDeltas[0].clear();
-    (ss + 1)->accumulator.featureDeltas[1].clear();
+    (ss + 1)->accumulator->featureDeltas[0].clear();
+    (ss + 1)->accumulator->featureDeltas[1].clear();
 
     if (move == Move::NULL_MOVE) {
-        (ss + 1)->accumulator.white = ss->accumulator.white;
-        (ss + 1)->accumulator.black = ss->accumulator.black;
+        (ss + 1)->accumulator->white = ss->accumulator->white;
+        (ss + 1)->accumulator->black = ss->accumulator->black;
 
-        (ss + 1)->accumulator.computed[0] = ss->accumulator.computed[0];
-        (ss + 1)->accumulator.computed[1] = ss->accumulator.computed[1];
+        (ss + 1)->accumulator->computed[0] = ss->accumulator->computed[0];
+        (ss + 1)->accumulator->computed[1] = ss->accumulator->computed[1];
 
-        (ss + 1)->accumulator.needsRefresh[0] = ss->accumulator.needsRefresh[0];
-        (ss + 1)->accumulator.needsRefresh[1] = ss->accumulator.needsRefresh[1];
+        (ss + 1)->accumulator->needsRefresh[0] = ss->accumulator->needsRefresh[0];
+        (ss + 1)->accumulator->needsRefresh[1] = ss->accumulator->needsRefresh[1];
 
         board.makeNullMove();
         return;
     }
 
-    (ss + 1)->accumulator.needsRefresh[0] = ss->accumulator.needsRefresh[0];
-    (ss + 1)->accumulator.needsRefresh[1] = ss->accumulator.needsRefresh[1];
+    (ss + 1)->accumulator->needsRefresh[0] = ss->accumulator->needsRefresh[0];
+    (ss + 1)->accumulator->needsRefresh[1] = ss->accumulator->needsRefresh[1];
 
-    (ss + 1)->accumulator.computed[0] = (ss + 1)->accumulator.computed[1] = false;
+    (ss + 1)->accumulator->computed[0] = (ss + 1)->accumulator->computed[1] = false;
 
     if (from == PieceType::PAWN) {
         // Update pawn zobrist key
@@ -117,42 +117,42 @@ void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::St
 
     if (from == PieceType::KING)
         if (Accumulator::needRefresh(move, stm)){
-            (ss + 1)->accumulator.needsRefresh[int(stm)] = true;
-            //(ss + 1)->accumulator.refresh(board, stm, bucketCache);
+            (ss + 1)->accumulator->needsRefresh[int(stm)] = true;
+            //(ss + 1)->accumulator->refresh(board, stm, bucketCache);
             // Take care of updates for other accumulator
             // This includes, king quiet, capture, and castle
             if (move.typeOf() != Move::CASTLING) {
-                (ss + 1)->accumulator.subPiece(board, stm, ~stm, move.from(), from);
-                (ss + 1)->accumulator.addPiece(board, stm, ~stm, move.to(), from);
+                (ss + 1)->accumulator->subPiece(board, stm, ~stm, move.from(), from);
+                (ss + 1)->accumulator->addPiece(board, stm, ~stm, move.to(), from);
             }
             if (move.typeOf() == Move::CASTLING) {
                 Square standardKing = stm == Color::WHITE ? Square::SQ_E1 : Square::SQ_E8; // For chess960
                 Square kingTo = (move.from() > move.to()) ? standardKing - 2 : standardKing + 2;
                 Square rookTo = (move.from() > move.to()) ? kingTo + 1 : kingTo - 1;
 
-                (ss + 1)->accumulator.subPiece(board, stm, ~stm, move.to(), PieceType::ROOK);
-                (ss + 1)->accumulator.addPiece(board, stm, ~stm, rookTo, PieceType::ROOK);
+                (ss + 1)->accumulator->subPiece(board, stm, ~stm, move.to(), PieceType::ROOK);
+                (ss + 1)->accumulator->addPiece(board, stm, ~stm, rookTo, PieceType::ROOK);
 
-                (ss + 1)->accumulator.subPiece(board, stm, ~stm, move.from(), from);
-                (ss + 1)->accumulator.addPiece(board, stm, ~stm, kingTo, from);
+                (ss + 1)->accumulator->subPiece(board, stm, ~stm, move.from(), from);
+                (ss + 1)->accumulator->addPiece(board, stm, ~stm, kingTo, from);
             }
             if (to != PieceType::NONE && move.typeOf() != Move::CASTLING){
                 // Remove captured piece 
-                (ss + 1)->accumulator.subPiece(board, ~stm, ~stm, move.to(), to);
+                (ss + 1)->accumulator->subPiece(board, ~stm, ~stm, move.to(), to);
                 
             }
             return;
         }
 
     if (move.typeOf() == Move::ENPASSANT) {
-        (ss + 1)->accumulator.quiet(board, stm, move.to(), from, move.from(), from);
-        (ss + 1)->accumulator.subPiece(board, ~stm, move.to().ep_square(), PieceType::PAWN);
+        (ss + 1)->accumulator->quiet(board, stm, move.to(), from, move.from(), from);
+        (ss + 1)->accumulator->subPiece(board, ~stm, move.to().ep_square(), PieceType::PAWN);
 
     } else if (move.typeOf() == Move::PROMOTION) {
-        (ss + 1)->accumulator.subPiece(board, stm, move.from(), from);
-        (ss + 1)->accumulator.addPiece(board, stm, move.to(), move.promotionType());
+        (ss + 1)->accumulator->subPiece(board, stm, move.from(), from);
+        (ss + 1)->accumulator->addPiece(board, stm, move.to(), move.promotionType());
         if (to != PieceType::NONE)
-            (ss + 1)->accumulator.subPiece(board, ~stm, move.to(), to);
+            (ss + 1)->accumulator->subPiece(board, ~stm, move.to(), to);
     } else if (move.typeOf() == Move::CASTLING) {
 
         Square king = move.from();
@@ -179,12 +179,12 @@ void MakeMove(Board& board, Move move, InputBucketCache& bucketCache, Search::St
         // There are basically just 2 quiet moves now for the accumulator
         // Move king and move rook
         // Since moves are encoded as king takes rook, its very easy
-        (ss + 1)->accumulator.quiet(board, stm, kingTo, PieceType::KING, move.from(), PieceType::KING);
-        (ss + 1)->accumulator.quiet(board, stm, rookTo, PieceType::ROOK, move.to(), PieceType::ROOK);
+        (ss + 1)->accumulator->quiet(board, stm, kingTo, PieceType::KING, move.from(), PieceType::KING);
+        (ss + 1)->accumulator->quiet(board, stm, rookTo, PieceType::ROOK, move.to(), PieceType::ROOK);
     } else if (to != PieceType::NONE) {
-        (ss + 1)->accumulator.capture(board, stm, move.to(), from, move.from(), from, move.to(), to);
+        (ss + 1)->accumulator->capture(board, stm, move.to(), from, move.from(), from, move.to(), to);
     } else
-        (ss + 1)->accumulator.quiet(board, stm, move.to(), from, move.from(), from);
+        (ss + 1)->accumulator->quiet(board, stm, move.to(), from, move.from(), from);
 
     
 
@@ -217,30 +217,30 @@ namespace Search {
 
         // Apply lazy updates
         for (Color persp : {Color::WHITE, Color::BLACK}) {
-            if (ss->accumulator.computed[int(persp)])
+            if (ss->accumulator->computed[int(persp)])
                 continue;
             
-            if (ss->accumulator.needsRefresh[int(persp)]) {
-                ss->accumulator.refresh(board, persp, bucketCache);
+            if (ss->accumulator->needsRefresh[int(persp)]) {
+                ss->accumulator->refresh(board, persp, bucketCache);
                 continue;
             }
 
             int c = 1;
-            while (!(ss - c)->accumulator.computed[int(persp)] && !(ss - c)->accumulator.needsRefresh[int(persp)])
+            while (!(ss - c)->accumulator->computed[int(persp)] && !(ss - c)->accumulator->needsRefresh[int(persp)])
                 c++;
 
-            if ((ss - c)->accumulator.needsRefresh[int(persp)])
-                ss->accumulator.refresh(board, persp, bucketCache);
+            if ((ss - c)->accumulator->needsRefresh[int(persp)])
+                ss->accumulator->refresh(board, persp, bucketCache);
             else {
                 while (c != 0) {
-                    (ss - c + 1)->accumulator.applyDelta(persp, (ss - c)->accumulator);
+                    (ss - c + 1)->accumulator->applyDelta(persp, *(ss - c)->accumulator);
                     c--;
                 }
             }
 
         }
 
-        int eval = network.inference(board, ss->accumulator);
+        int eval = network.inference(board, *ss->accumulator);
 
         eval = eval * (MAT_SCALE_BASE() + materialOffset) / 32768; // Calvin yoink
         return std::clamp(eval, GETTING_MATED + 1, FOUND_MATE - 1);
@@ -271,13 +271,23 @@ namespace Search {
         }
     }
     template <bool isPV> int qsearch(int ply, int alpha, const int beta, Stack* ss, ThreadInfo& thread, Limit& limit) {
-        if (thread.type == ThreadType::MAIN &&
-            ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes()))) {
-            thread.searcher->stopSearching();
+
+        if (thread.stopped)
+            return 0;
+
+        if (thread.type == ThreadType::MAIN && 
+            ((thread.loadNodes() & 2047) == 0) && limit.outOfTime() && thread.rootDepth != 1) {
+            thread.stopped = true;
+            return 0;
         }
-        if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
-            return (ply >= MAX_PLY - 1 && !thread.board.inCheck()) ? evaluate(thread.board, ss, thread.bucketCache)
-                                                                   : 0;
+        if (thread.type == ThreadType::MAIN && limit.outOfNodes(thread.loadNodes())) {
+            thread.stopped = true;
+            return 0;
+        }
+        if (ply >= MAX_PLY - 1) {
+            return (ply >= MAX_PLY - 1 && !thread.board.inCheck())
+                           ? evaluate(thread.board, ss, thread.bucketCache)
+                           : 0;
         }
 
         ss->ply = ply;
@@ -285,7 +295,7 @@ namespace Search {
         ProbedTTEntry ttData = {};
         bool ttHit = false;
 
-        ttHit = thread.TT.probe(thread.board.hash(), ply, ttData);
+        ttHit = thread.searcher.TT.probe(thread.board.hash(), ply, ttData);
         
         bool ttPV = isPV || (ttHit && ttData.pv);
 
@@ -309,7 +319,7 @@ namespace Search {
             eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
             
             if (!ttHit)
-                thread.TT.store(thread.board.hash(), Move::NO_MOVE, -EVAL_INF, rawStaticEval, TTFlag::NO_BOUND, 0, ply, ttPV);
+                thread.searcher.TT.store(thread.board.hash(), Move::NO_MOVE, -EVAL_INF, rawStaticEval, TTFlag::NO_BOUND, 0, ply, ttPV);
         }
 
         if (eval >= beta)
@@ -330,8 +340,6 @@ namespace Search {
         MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped.load() || thread.exiting.load())
-                return bestScore;
 
             if (!isLoss(bestScore) && move.to() != (ss - 1)->toSquare) {
                 if (moveCount >= 3)
@@ -341,7 +349,7 @@ namespace Search {
             if (bestScore > GETTING_MATED && !SEE(thread.board, move, QS_SEE_MARGIN()))
                 continue;
 
-            thread.TT.prefetch(prefetchKey(thread.board, move));
+            thread.searcher.TT.prefetch(prefetchKey(thread.board, move));
             if (thread.board.isCapture(move))
                 ss->toSquare = move.to();
             MakeMove(thread.board, move, thread.bucketCache, ss);
@@ -351,6 +359,9 @@ namespace Search {
             int score = -qsearch<isPV>(ply + 1, -beta, -alpha, ss + 1, thread, limit);
 
             UnmakeMove(thread.board, move);
+
+            if (thread.stopped)
+                return 0;
 
             if (score > bestScore) {
                 bestScore = score;
@@ -367,7 +378,7 @@ namespace Search {
         if (!moveCount && inCheck)
             return -MATE + ply;
 
-        thread.TT.store(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ply, ttPV);
+        thread.searcher.TT.store(thread.board.hash(), qBestMove, bestScore, rawStaticEval, ttFlag, 0, ply, ttPV);
 
         return bestScore;
     }
@@ -379,31 +390,41 @@ namespace Search {
 
         if (isPV)
             ss->pv.length = 0;
+
+        if (thread.stopped)
+            return 0;
+
         if (depth <= 0) {
             return qsearch<isPV>(ply, alpha, beta, ss, thread, limit);
         }
+
+        if (thread.type == ThreadType::MAIN && 
+            ((thread.loadNodes() & 2047) == 0) && limit.outOfTime() && thread.rootDepth != 1) {
+            thread.stopped = true;
+            return 0;
+        }
+        if (thread.type == ThreadType::MAIN && limit.outOfNodes(thread.loadNodes())) {
+            thread.stopped = true;
+            return 0;
+        }
+
         // Terminal Conditions (and checkmate)
         if (!root) {
             if (thread.board.isRepetition(1) || thread.board.isHalfMoveDraw())
                 return 0;
+        }
 
-            if (thread.type == ThreadType::MAIN &&
-                ((thread.loadNodes() & 2047) == 0 && limit.outOfTime() || limit.outOfNodes(thread.loadNodes())) &&
-                thread.rootDepth != 1) {
-                thread.searcher->stopSearching();
-            }
-            if (thread.stopped.load() || thread.exiting.load() || ply >= MAX_PLY - 1) {
-                return (ply >= MAX_PLY - 1 && !thread.board.inCheck())
+        if (ply >= MAX_PLY - 1) {
+            return (ply >= MAX_PLY - 1 && !thread.board.inCheck())
                            ? evaluate(thread.board, ss, thread.bucketCache)
                            : 0;
-            }
         }
 
         ProbedTTEntry ttData = {};
         bool ttHit = false;
 
         if (moveIsNull(ss->excluded)) {
-            ttHit = thread.TT.probe(thread.board.hash(), ply, ttData);
+            ttHit = thread.searcher.TT.probe(thread.board.hash(), ply, ttData);
         }
 
         bool ttPV = isPV || (ttHit && ttData.pv);
@@ -438,7 +459,7 @@ namespace Search {
             corrplexity = rawStaticEval - ss->staticEval;
 
             if (!ttHit)
-                thread.TT.store(thread.board.hash(), Move::NO_MOVE, -EVAL_INF, rawStaticEval, TTFlag::NO_BOUND, 0, ply, ttPV);
+                thread.searcher.TT.store(thread.board.hash(), Move::NO_MOVE, -EVAL_INF, rawStaticEval, TTFlag::NO_BOUND, 0, ply, ttPV);
         }
         // Improving heurstic
         // We are better than 2 plies ago
@@ -480,7 +501,7 @@ namespace Search {
                 ss->contCorrhist = nullptr;
 
                 // Null move prefetch is just flip color
-                thread.TT.prefetch(thread.board.hash() ^ Zobrist::sideToMove());
+                thread.searcher.TT.prefetch(thread.board.hash() ^ Zobrist::sideToMove());
 
                 MakeMove(thread.board, Move(Move::NULL_MOVE), thread.bucketCache, ss);
                 int nmpScore =
@@ -527,8 +548,6 @@ namespace Search {
         bool skipQuiets = false;
 
         while (!moveIsNull(move = picker.nextMove())) {
-            if (thread.stopped.load() || thread.exiting.load())
-                return bestScore;
 
             bool isQuiet = !thread.board.isCapture(move);
             if (move == ss->excluded)
@@ -617,7 +636,7 @@ namespace Search {
 
             uint64_t previousNodes = thread.loadNodes();
 
-            thread.TT.prefetch(prefetchKey(thread.board, move));
+            thread.searcher.TT.prefetch(prefetchKey(thread.board, move));
 
             MakeMove(thread.board, move, thread.bucketCache, ss);
             moveCount++;
@@ -666,6 +685,9 @@ namespace Search {
                 score = -search<isPV>(newDepth, ply + 1, -beta, -alpha, false, ss + 1, thread, limit);
             }
             UnmakeMove(thread.board, move);
+
+            if (thread.stopped)
+                return 0;
 
             if (root && thread.type == ThreadType::MAIN)
                 limit.updateNodes(move, thread.loadNodes() - previousNodes);
@@ -728,23 +750,16 @@ namespace Search {
             }
 
             // Update TT
-            thread.TT.store(thread.board.hash(), bestMove, bestScore, rawStaticEval, ttFlag, depth, ply, ttPV);
+            thread.searcher.TT.store(thread.board.hash(), bestMove, bestScore, rawStaticEval, ttFlag, depth, ply, ttPV);
         }
 
         return bestScore;
     }
 
-    int iterativeDeepening(Board board, ThreadInfo& threadInfo, Limit limit, Searcher* searcher) {
-        threadInfo.board = board;
-        Accumulator baseAcc;
-        baseAcc.refresh(threadInfo.board);
-        threadInfo.bucketCache = InputBucketCache();
-
+    int iterativeDeepening(ThreadInfo& threadInfo, Limit limit) {
         bool isMain = threadInfo.type == ThreadType::MAIN;
 
-        auto stack = std::make_unique<std::array<Stack, MAX_PLY + 6 + 3>>();
-        Stack* ss = reinterpret_cast<Stack*>(stack->data() + 3); // Saftey for conthist
-        std::memset(stack.get(), 0, sizeof(Stack) * (MAX_PLY + 6 + 3));
+        Stack* ss = &threadInfo.searchStack[6];
 
         PVList lastPV{};
         int score = -EVAL_INF;
@@ -753,7 +768,7 @@ namespace Search {
         int64_t avgnps = 0;
         for (int depth = 1; depth <= limit.depth; depth++) {
             auto aborted = [&](bool canSoft) {
-                if (threadInfo.stopped.load())
+                if (threadInfo.stopped)
                     return true;
                 // Only check soft node limit outside of aspiration
                 if (isMain)
@@ -762,12 +777,16 @@ namespace Search {
                     return limit.softNodes(threadInfo.nodes) && canSoft;
             };
             threadInfo.rootDepth = depth;
+
+            for (int i = 0; i < threadInfo.searchStack.size(); ++i) {
+                threadInfo.searchStack[i].reset();
+            }
+
             ss->pawnKey = resetPawnHash(threadInfo.board);
             ss->majorKey = resetMajorHash(threadInfo.board);
             ss->minorKey = resetMinorHash(threadInfo.board);
             ss->nonPawnKey[0] = resetNonPawnHash(threadInfo.board, Color::WHITE);
             ss->nonPawnKey[1] = resetNonPawnHash(threadInfo.board, Color::BLACK);
-            ss->accumulator = baseAcc;
             int eval = evaluate(threadInfo.board, ss, threadInfo.bucketCache);
 
             if (limit.softNodes(threadInfo.nodes)){
@@ -814,7 +833,7 @@ namespace Search {
             }
 
             // Reporting
-            uint64_t nodecnt = searcher->nodeCount();
+            uint64_t nodecnt = threadInfo.searcher.nodeCount();
 
             std::stringstream pvss;           // String stream for the mainline
             Board pvBoard = threadInfo.board; // Test board for WDL and eval normalization since we need the final board
@@ -823,20 +842,20 @@ namespace Search {
                 pvss << uci::moveToUci(lastPV.moves[i], pvBoard.chess960()) << " ";
                 pvBoard.makeMove(lastPV.moves[i]);
             }
-            if (searcher->printInfo) {
+            if (threadInfo.searcher.printInfo) {
                 if (!PRETTY_PRINT) {
                     std::cout << "info depth " << depth << " score ";
                     if (score >= FOUND_MATE || score <= GETTING_MATED) {
                         std::cout << "mate " << ((score < 0) ? "-" : "") << (MATE - std::abs(score)) / 2 + 1;
                     } else {
-                        int s = searcher->normalizeEval ? scaleEval(score, threadInfo.board) : score; // Only scale if WDL enabled
+                        int s = threadInfo.searcher.normalizeEval ? scaleEval(score, threadInfo.board) : score; // Only scale if WDL enabled
                         std::cout << "cp " << s;
-                        if (searcher->showWDL) {
+                        if (threadInfo.searcher.showWDL) {
                             WDL wdl = computeWDL(score, threadInfo.board);
                             std::cout << " wdl " << wdl.w << " " << wdl.d << " " << wdl.l;
                         }
                     }
-                    std::cout << " hashfull " << searcher->TT.hashfull();
+                    std::cout << " hashfull " << threadInfo.searcher.TT.hashfull();
                     std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " time " << limit.timer.elapsed() << " pv ";
                     std::cout << pvss.str() << std::endl;
                 }
@@ -853,8 +872,8 @@ namespace Search {
                     WDL wdl = computeWDL(score, threadInfo.board);
                     Color stm = threadInfo.board.sideToMove();
 
-                    std::cout << COLORS::GREY << "Hash size:  " << COLORS::WHITE << searcher->TT.mbSize << "MB" << std::endl;
-                    std::cout << COLORS::GREY << "Hash usage: " << COLORS::WHITE << searcher->TT.hashfull() / 10.0 << "%\n" << std::endl;
+                    std::cout << COLORS::GREY << "Hash size:  " << COLORS::WHITE << threadInfo.searcher.TT.mbSize << "MB" << std::endl;
+                    std::cout << COLORS::GREY << "Hash usage: " << COLORS::WHITE << threadInfo.searcher.TT.hashfull() / 10.0 << "%\n" << std::endl;
 
                     std::cout << COLORS::GREY << "Nodes:            " << COLORS::WHITE << nodecnt << std::endl;
                     std::cout << COLORS::GREY << "Nodes per second: " << COLORS::WHITE << nodecnt / (limit.timer.elapsed() + 1) * 1000 << std::endl;
@@ -887,7 +906,7 @@ namespace Search {
 
                     }
                     
-                    std::cout << COLORS::GREY << "Best Move: " << COLORS::WHITE << uci::moveToUci(threadInfo.bestMove, searcher->board.chess960()) << "\n" << std::endl;
+                    std::cout << COLORS::GREY << "Best Move: " << COLORS::WHITE << uci::moveToUci(threadInfo.bestMove, threadInfo.searcher.board.chess960()) << "\n" << std::endl;
                     std::cout << COLORS::GREY << "Main Line: " << COLORS::WHITE << pvss.str() << std::endl;
                 }
             }
