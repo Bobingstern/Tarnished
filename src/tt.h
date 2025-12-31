@@ -173,7 +173,7 @@ public:
 
         auto entry = *entryPtr;
 
-        if ( !(bound == TTFlag::EXACT || key16 != entry.key16 || entry.gen() != currAge || depth + 4 + pv * 2 > entry.depth) )
+        if ( !(bound == TTFlag::EXACT || key16 != entry.key16 || entry.gen() != currAge || depth + 2 + pv * 2 > entry.depth) )
             return;
 
         if (!moveIsNull(move) || key16 != entry.key16)
