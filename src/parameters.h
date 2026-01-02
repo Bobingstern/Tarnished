@@ -65,6 +65,8 @@ const std::array<int, 64> BUCKET_LAYOUT = {
 const int LMR_ONE_COUNT = 8;
 const int LMR_TWO_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) / 2;
 const int LMR_THREE_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) * (LMR_ONE_COUNT - 2) / 6;
+const int TOTAL_LMR_FEATURES = 1 << LMR_ONE_COUNT;
+
 extern std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR;
 extern std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR;
 extern std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR;

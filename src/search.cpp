@@ -200,6 +200,7 @@ void UnmakeMove(Board& board, Move move) {
 
 namespace Search {
     std::array<std::array<std::array<int, 219>, MAX_PLY + 1>, 2> lmrTable;
+    std::array<int, TOTAL_LMR_FEATURES> factoredLmrTable;
 
     bool isWin(int score) {
         return score >= FOUND_MATE;
@@ -268,6 +269,13 @@ namespace Search {
                     }
                 }
             }
+        }
+        for (uint32_t i = 0; i < factoredLmrTable.size(); i++) {
+            std::array<bool, LMR_ONE_COUNT> f = {0};
+            for (int j = 0; j < LMR_ONE_COUNT; j++) {
+                f[j] = i & (1 << j);
+            }
+            factoredLmrTable[i] = lmrConvolution(f);
         }
     }
     template <bool isPV> int qsearch(int ply, int alpha, const int beta, Stack* ss, ThreadInfo& thread, Limit& limit) {
@@ -661,7 +669,16 @@ namespace Search {
                 // | table of 6, two table of 6x5/2=15, and three way of         |
                 // | 6x5x3/3!=20. Thanks to AGE for this idea                    |
                 // ---------------------------------------------------------------
-                reduction += lmrConvolution({isQuiet, !isPV, improving, cutnode, ttPV, ttHit, ((ss + 1)->failHighs > 2), corrplexity > LMR_CORR_MARGIN()});
+                uint32_t feature = isQuiet;
+                feature |= uint32_t(!isPV) << 1;
+                feature |= uint32_t(improving) << 2;
+                feature |= uint32_t(cutnode) << 3;
+                feature |= uint32_t(ttPV) << 4;
+                feature |= uint32_t(ttHit) << 5;
+                feature |= uint32_t((ss + 1)->failHighs > 2) << 6;
+                feature |= uint32_t(corrplexity > LMR_CORR_MARGIN()) << 7;
+
+                reduction += factoredLmrTable[feature];
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
                 
