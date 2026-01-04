@@ -247,6 +247,10 @@ namespace Search {
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> whiteNonPawnCorrhist;
             MultiArray<int16_t, 2, CORR_HIST_ENTRIES> blackNonPawnCorrhist;
 
+            // Meta correction history
+            // indexed by [corrhist type][pawn hash]
+            MultiArray<int16_t, 6, CORR_HIST_ENTRIES> metaCorrhist;
+
             ThreadInfo(ThreadType t, Searcher& s);
             ThreadInfo(int id, Searcher& s);
             ~ThreadInfo();
@@ -333,7 +337,21 @@ namespace Search {
                     int16_t clamped = std::clamp(bonus, -MAX_CORR_HIST / 4, MAX_CORR_HIST / 4);
                     entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
                 };
-                updateEntry(pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES]);
+                auto metaUpdateEntry = [&](int16_t& entry, int16_t corr) {
+                    int metaBonus = corr * bonus / 256;
+                    int16_t clamped = std::clamp(metaBonus, -64, 64);
+                    entry += clamped - entry * std::abs(clamped) / 256;
+                    entry = std::clamp<int16_t>(entry, 1, 256);
+                };
+                int pawnIndex = ss->pawnKey % CORR_HIST_ENTRIES;
+                // Meta correction history
+                metaUpdateEntry(metaCorrhist[0][pawnIndex], pawnCorrhist[board.sideToMove()][pawnIndex]);
+                metaUpdateEntry(metaCorrhist[1][pawnIndex], majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES]);
+                metaUpdateEntry(metaCorrhist[2][pawnIndex], minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES]);
+                metaUpdateEntry(metaCorrhist[3][pawnIndex], whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
+                metaUpdateEntry(metaCorrhist[4][pawnIndex], blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
+
+                updateEntry(pawnCorrhist[board.sideToMove()][pawnIndex]);
                 updateEntry(majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES]);
                 updateEntry(minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES]);
                 updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
@@ -343,6 +361,9 @@ namespace Search {
                     auto &table = *(ss - 2)->contCorrhist;
                     updateEntry(
                         table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()]
+                    );
+                    metaUpdateEntry(
+                        metaCorrhist[5][pawnIndex], table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()]
                     );
                 }
             }
@@ -384,19 +405,20 @@ namespace Search {
 
             int correctStaticEval(Stack* ss, Board& board, int eval) {
                 int correction = 0;
-                correction += PAWN_CORR_WEIGHT() * pawnCorrhist[board.sideToMove()][ss->pawnKey % CORR_HIST_ENTRIES];
-                correction += MAJOR_CORR_WEIGHT() * majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES];
-                correction += MINOR_CORR_WEIGHT() * minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES];
-                correction += NON_PAWN_STM_CORR_WEIGHT() *
+                int pawnIndex = ss->pawnKey % CORR_HIST_ENTRIES;
+                correction += metaCorrhist[0][pawnIndex] * pawnCorrhist[board.sideToMove()][pawnIndex];
+                correction += metaCorrhist[1][pawnIndex] * majorCorrhist[board.sideToMove()][ss->majorKey % CORR_HIST_ENTRIES];
+                correction += metaCorrhist[2][pawnIndex] * minorCorrhist[board.sideToMove()][ss->minorKey % CORR_HIST_ENTRIES];
+                correction += metaCorrhist[3][pawnIndex] *
                               whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES];
-                correction += NON_PAWN_NSTM_CORR_WEIGHT() *
+                correction += metaCorrhist[4][pawnIndex] *
                               blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
 
                 // Continuation Correction History
                 if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
                     auto &table = *(ss - 2)->contCorrhist;
                     correction += 
-                        CONT_CORR_WEIGHT() * table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()];
+                        metaCorrhist[5][pawnIndex] * table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()];
                 }
 
                 int corrected = eval + correction / 2048;
@@ -415,6 +437,7 @@ namespace Search {
                 minorCorrhist.fill(DEFAULT_HISTORY);
                 whiteNonPawnCorrhist.fill(DEFAULT_HISTORY);
                 blackNonPawnCorrhist.fill(DEFAULT_HISTORY);
+                metaCorrhist.fill((int16_t)128);
                 bestRootScore = -EVAL_INF;
                 rootDepth = 0;
                 completed = 0;
