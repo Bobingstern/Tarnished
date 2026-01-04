@@ -41,7 +41,7 @@ constexpr int CORR_HIST_ENTRIES = 16384;
 constexpr int PAWN_HIST_ENTRIES = 1024;
 constexpr int MAX_CORR_HIST = 1024;
 // NNUE Parameters
-constexpr int16_t HL_N = 1536;
+constexpr int16_t HL_N = 8192;
 constexpr int16_t QA = 255;
 constexpr int16_t QB = 64;
 constexpr int16_t NNUE_SCALE = 400;
