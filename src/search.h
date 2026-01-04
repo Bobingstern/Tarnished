@@ -338,7 +338,7 @@ namespace Search {
                     entry += clamped - entry * std::abs(clamped) / MAX_CORR_HIST;
                 };
                 auto metaUpdateEntry = [&](int16_t& entry, int16_t corr) {
-                    int metaBonus = corr * bonus / 256;
+                    int metaBonus = corr * bonus / 512;
                     int16_t clamped = std::clamp(metaBonus, -64, 64);
                     entry += clamped - entry * std::abs(clamped) / 256;
                     entry = std::clamp<int16_t>(entry, 1, 256);
