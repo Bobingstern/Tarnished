@@ -333,7 +333,7 @@ namespace Search {
         }
 
         if (eval >= beta)
-            return eval;
+            return (eval + beta) / 2;
         if (eval > alpha)
             alpha = eval;
 
