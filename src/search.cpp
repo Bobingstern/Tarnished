@@ -587,7 +587,8 @@ namespace Search {
                     continue;
                 }
 
-                int futility = ss->staticEval + FP_SCALE() * depth + FP_OFFSET() + ss->historyScore / FP_HIST_DIVISOR();
+                int futility = ss->staticEval + FP_SCALE() * depth + FP_OFFSET() 
+                                + ss->historyScore / FP_HIST_DIVISOR() + (move == ss->killer) * 25;
                 if (!inCheck && isQuiet && lmrDepth <= 8 && std::abs(alpha) < 2000 && futility <= alpha) {
                     skipQuiets = true;
                     continue;
@@ -601,7 +602,8 @@ namespace Search {
                     break;
                 }
 
-                int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth - ss->historyScore / SEE_QUIET_HIST_DIVISOR() : SEE_NOISY_SCALE() * lmrDepth;
+                int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth - ss->historyScore / SEE_QUIET_HIST_DIVISOR() 
+                                        : SEE_NOISY_SCALE() * lmrDepth;
                 if (!SEE(thread.board, move, seeMargin))
                     continue;
 
