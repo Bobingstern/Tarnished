@@ -39,9 +39,10 @@ bool PRETTY_PRINT = true;
 // Thanks Weiss
 // I will eventaully C++ify the UCI code
 // For now it's a weird mix of C and C++ xd
-void ParseTimeControl(char* str, Color color, Search::Limit& limit, bool onlySoft) {
+void ParseTimeControl(char* str, Board& board, Search::Limit& limit, bool onlySoft) {
 
     // Read in relevant search constraints
+    Color color = board.sideToMove();
     int64_t mtime = 0;
     int64_t ctime = 0;
     int64_t depth = 0;
@@ -77,7 +78,7 @@ void ParseTimeControl(char* str, Color color, Search::Limit& limit, bool onlySof
         limit.maxnodes = -1;
         limit.softnodes = std::max(nodes, softnodes);
     }
-    limit.start();
+    limit.start(board.fullMoveNumber());
 }
 
 void UCIPosition(Board& board, char* str) {
@@ -224,7 +225,7 @@ void UCIGo(Searcher& searcher, Board& board, char* str) {
     // searcher.stop();
 
     Search::Limit limit = Search::Limit();
-    ParseTimeControl(str, board.sideToMove(), limit, searcher.useSoft);
+    ParseTimeControl(str, board, limit, searcher.useSoft);
 
     searcher.startSearching(board, limit);
     // searcher.stop();
@@ -311,7 +312,7 @@ void bench(Searcher& searcher) {
         limit.depth = (int64_t)BENCH_DEPTH;
         limit.movetime = 0;
         limit.ctime = 0;
-        limit.start();
+        limit.start(board.fullMoveNumber());
 
         searcher.startSearching(board, limit);
         searcher.waitForSearchFinished();

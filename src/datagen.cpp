@@ -207,7 +207,7 @@ void handleGenfens(Searcher& searcher, std::string params) {
             limit.depth = (int64_t)BENCH_DEPTH;
             limit.movetime = 0;
             limit.ctime = 0;
-            limit.start();
+            limit.start(board.fullMoveNumber());
 
             
             searcher.reset();

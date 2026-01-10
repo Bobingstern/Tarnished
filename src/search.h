@@ -171,7 +171,7 @@ namespace Search {
             Limit(int64_t depth, int64_t ctime, int64_t movetime, Color color)
                 : depth(depth), ctime(ctime), movetime(movetime), color(color) {}
             // I will eventually fix this ugly code
-            void start() {
+            void start(int fm) {
                 enableClock = movetime != 0 || ctime != 0;
                 if (depth == 0)
                     depth = MAX_PLY - 5;
@@ -179,8 +179,11 @@ namespace Search {
                     softtime = 0;
                 if (ctime != 0) {
                     // Calculate movetime and softime
-                    movetime = ctime * 0.5 - 50;
-                    softtime = static_cast<double>(SOFT_TM_SCALE()) / 100.0 * (ctime / 20 + inc * 3 / 4);
+                    double softScale = 0.024 + 0.042 * (1.0 - std::exp(-0.045 * fm));
+                    movetime = 0.742 * std::max<int64_t>(ctime - 50, 0) + 0.75 * inc;
+                    softtime = softScale * std::max<int64_t>(ctime - 50, 0) + 0.75 * inc;
+                    //movetime = ctime * 0.5 - 50;
+                    //softtime = static_cast<double>(SOFT_TM_SCALE()) / 100.0 * (ctime / 20 + inc * 3 / 4);
                 }
                 timer.start();
             }
