@@ -541,10 +541,9 @@ namespace Search {
         if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;
 
-        // Thought
-        // What if we arrange a vector C = {....} of weights and input of say {alpha, beta, eval...}
-        // and use some sort of data generation method to create a pruning heuristic
-        // with something like sigmoid(C dot I) >= 0.75 ?
+        // Cutnode TT Reduction
+        if (moveIsNull(ss->excluded) && cutnode && depth >= 8 && (!ttData.move || (!ttHit || ttData.depth + 4 <= depth)))
+            depth--;
 
         // Calculuate Threats
         ss->threats = calculateThreats(thread.board);
