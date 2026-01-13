@@ -38,36 +38,46 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
     const nativeVector VEC_QA = set1_epi16(QA);
     const nativeVector VEC_ZERO = set1_epi16(0);
 
-    nativeVector accumulator{};
-    for (size_t i = 0; i < HL_N; i += VECTOR_SIZE) {
+    nativeVector eval{};
+    for (size_t i = 0; i < HL_N / 2; i += VECTOR_SIZE) {
         // load a SIMD vector of inputs, x
         const nativeVector stmAccumValues =
             load_epi16(reinterpret_cast<const nativeVector*>(&STM[i]));
+        const nativeVector stmAccumValues2 =
+            load_epi16(reinterpret_cast<const nativeVector*>(&STM[i + HL_N / 2]));
+
         const nativeVector nstmAccumValues =
             load_epi16(reinterpret_cast<const nativeVector*>(&OPP[i]));
+        const nativeVector nstmAccumValues2 =
+            load_epi16(reinterpret_cast<const nativeVector*>(&OPP[i + HL_N / 2]));
 
         // compute the clipped ReLU of the inputs, v
         const nativeVector stmClamped =
             min_epi16(VEC_QA, max_epi16(stmAccumValues, VEC_ZERO));
+        const nativeVector stmClamped2 =
+            min_epi16(VEC_QA, max_epi16(stmAccumValues2, VEC_ZERO));
+
         const nativeVector nstmClamped =
             min_epi16(VEC_QA, max_epi16(nstmAccumValues, VEC_ZERO));
+        const nativeVector nstmClamped2 =
+            min_epi16(VEC_QA, max_epi16(nstmAccumValues2, VEC_ZERO));
 
         // load the weights, w
         const nativeVector stmWeights =
             load_epi16(reinterpret_cast<const nativeVector*>(&OW[bucket][i]));
-        const nativeVector nstmWeights = load_epi16(
-            reinterpret_cast<const nativeVector*>(&OW[bucket][i + HL_N]));
+        const nativeVector nstmWeights = 
+            load_epi16(reinterpret_cast<const nativeVector*>(&OW[bucket][i + HL_N / 2]));
 
         // SCReLU it
-        const nativeVector stmActivated =
-            madd_epi16(stmClamped, mullo_epi16(stmClamped, stmWeights));
-        const nativeVector nstmActivated =
-            madd_epi16(nstmClamped, mullo_epi16(nstmClamped, nstmWeights));
+        const nativeVector stmActivated = 
+            madd_epi16(mullo_epi16(stmClamped, stmWeights), stmClamped2);
+        const nativeVector nstmActivated = 
+            madd_epi16(mullo_epi16(nstmClamped, nstmWeights), nstmClamped2);
 
-        accumulator = add_epi32(accumulator, stmActivated);
-        accumulator = add_epi32(accumulator, nstmActivated);
+        eval = add_epi32(eval, stmActivated);
+        eval = add_epi32(eval, nstmActivated);
     }
-    return reduce_epi32(accumulator);
+    return reduce_epi32(eval);
 }
 
 #else
@@ -76,9 +86,9 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
                               const std::array<int16_t, HL_N>& OPP, Color col,
                               size_t bucket) {
     int32_t eval = 0;
-    for (int i = 0; i < HL_N; i++) {
-        eval += SCReLU_(STM[i]) * OW[bucket][i];
-        eval += SCReLU_(OPP[i]) * OW[bucket][HL_N + i];
+    for (int i = 0; i < HL_N / 2; i++) {
+        eval += CReLU_(STM[i]) * CReLU_(STM[i + HL_N / 2]) * OW[bucket][i];
+        eval += CReLU_(OPP[i]) * CReLU_(OPP[i + HL_N / 2]) * OW[bucket][i + HL_N / 2];
     }
     return eval;
 }
