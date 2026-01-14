@@ -452,6 +452,7 @@ namespace Search {
         int rawStaticEval = EVAL_NONE;
         int score = bestScore;
         int moveCount = 0;
+        int initialDepth = depth;
         bool inCheck = thread.board.inCheck();
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
@@ -578,7 +579,7 @@ namespace Search {
             if (!root && bestScore > GETTING_MATED) {
                 int lmrDepth = std::max(depth - baseLMR / 1024, 0);
                 // Late Move Pruning
-                if (!isPV && !inCheck && moveCount >= 2 + depth * depth / (2 - improving))
+                if (!isPV && !inCheck && moveCount >= 2 + initialDepth * initialDepth / (2 - improving))
                     break;
 
                 if (!isPV && isQuiet && depth <= 4 && thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth) {
