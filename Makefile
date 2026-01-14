@@ -36,7 +36,7 @@ else
 	STACK_FLAGS :=
 endif
 
-CXXFLAGS := -O3 $(ARCH) -fno-finite-math-only -funroll-loops -flto -fuse-ld=lld -std=c++20 -DNDEBUG -pthread -DEVALFILE=\"$(EVALFILE)\"
+CXXFLAGS := -O3 $(ARCH) -fno-stack-protector -fno-math-errno -funroll-loops -flto -fuse-ld=lld -std=c++20 -DNDEBUG -pthread -DEVALFILE=\"$(EVALFILE)\"
 
 ifdef NO_EVALFILE_SET
 $(EVALFILE):

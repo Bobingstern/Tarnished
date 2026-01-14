@@ -38,44 +38,28 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
     const nativeVector VEC_QA = set1_epi16(QA);
     const nativeVector VEC_ZERO = set1_epi16(0);
 
+
     nativeVector eval{};
-    for (size_t i = 0; i < HL_N / 2; i += VECTOR_SIZE) {
-        // load a SIMD vector of inputs, x
-        const nativeVector stmAccumValues =
-            load_epi16(reinterpret_cast<const nativeVector*>(&STM[i]));
-        const nativeVector stmAccumValues2 =
-            load_epi16(reinterpret_cast<const nativeVector*>(&STM[i + HL_N / 2]));
 
-        const nativeVector nstmAccumValues =
-            load_epi16(reinterpret_cast<const nativeVector*>(&OPP[i]));
-        const nativeVector nstmAccumValues2 =
-            load_epi16(reinterpret_cast<const nativeVector*>(&OPP[i + HL_N / 2]));
+    for (int c = 0; c <= 1; ++c) {
+        const nativeVector* __restrict__ acc =
+            reinterpret_cast<const nativeVector*>(
+                (c == 0 ? STM.data() : OPP.data())
+            );
 
-        // compute the clipped ReLU of the inputs, v
-        const nativeVector stmClamped =
-            min_epi16(VEC_QA, max_epi16(stmAccumValues, VEC_ZERO));
-        const nativeVector stmClamped2 =
-            min_epi16(VEC_QA, max_epi16(stmAccumValues2, VEC_ZERO));
+        const nativeVector* __restrict__ w =
+            reinterpret_cast<const nativeVector*>(
+                OW[bucket].data() + c * HL_N / 2
+            );
+        for (int i = 0; i < (HL_N / VECTOR_SIZE) / 2; ++i) {
+            // compute the clipped ReLU of the inputs, v
+            const nativeVector clamped = min_epi16(max_epi16(acc[i], VEC_ZERO), VEC_QA);
+            const nativeVector clamped2 = min_epi16(max_epi16(acc[i + (HL_N / VECTOR_SIZE) / 2], VEC_ZERO), VEC_QA);
+            // Pairwise Mult
+            const nativeVector activated = madd_epi16(mullo_epi16(clamped, w[i]), clamped2);
 
-        const nativeVector nstmClamped =
-            min_epi16(VEC_QA, max_epi16(nstmAccumValues, VEC_ZERO));
-        const nativeVector nstmClamped2 =
-            min_epi16(VEC_QA, max_epi16(nstmAccumValues2, VEC_ZERO));
-
-        // load the weights, w
-        const nativeVector stmWeights =
-            load_epi16(reinterpret_cast<const nativeVector*>(&OW[bucket][i]));
-        const nativeVector nstmWeights = 
-            load_epi16(reinterpret_cast<const nativeVector*>(&OW[bucket][i + HL_N / 2]));
-
-        // SCReLU it
-        const nativeVector stmActivated = 
-            madd_epi16(mullo_epi16(stmClamped, stmWeights), stmClamped2);
-        const nativeVector nstmActivated = 
-            madd_epi16(mullo_epi16(nstmClamped, nstmWeights), nstmClamped2);
-
-        eval = add_epi32(eval, stmActivated);
-        eval = add_epi32(eval, nstmActivated);
+            eval = add_epi32(eval, activated);
+        }
     }
     return reduce_epi32(eval);
 }
@@ -113,7 +97,7 @@ void NNUE::load(const std::string& file) {
         H1Bias[i] = readLittleEndian<int16_t>(stream);
     }
     for (int i = 0; i < OW.size(); ++i) {
-        for (int j = 0; j < OW[i].size(); j++)
+        for (int j = 0; j < HL_N; j++)
             OW[i][j] = readLittleEndian<int16_t>(stream);
     }
     for (int i = 0; i < OUTPUT_BUCKETS; i++)
@@ -136,20 +120,9 @@ int NNUE::inference(Board& board, Accumulator& accumulator) {
         (board.occ().count() - 2) / (32 / OUTPUT_BUCKETS);
 
     int64_t eval = 0;
-
-    if (ACTIVATION != SCReLU) {
-
-        for (int i = 0; i < HL_N; i++) {
-            if (ACTIVATION == CReLU) {
-                eval += CReLU_(accumulatorSTM[i]) * OW[outputBucket][i];
-                eval += CReLU_(accumulatorOPP[i]) * OW[outputBucket][HL_N + i];
-            }
-        }
-    } else {
-        eval =
-            optimizedSCReLU(accumulatorSTM, accumulatorOPP, stm, outputBucket);
-        eval /= QA;
-    }
+    eval = optimizedSCReLU(accumulatorSTM, accumulatorOPP, stm, outputBucket);
+    eval /= QA;
+    
 
     eval += outputBias[outputBucket];
     return (eval * NNUE_SCALE) / (QA * QB);

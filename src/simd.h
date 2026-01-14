@@ -37,9 +37,9 @@ using nativeVector = __m256i;
                 __m128i xmm1 = _mm256_extracti128_si256(vec, 1);               \
                 __m128i xmm0 = _mm256_castsi256_si128(vec);                    \
                 xmm0 = _mm_add_epi32(xmm0, xmm1);                              \
-                xmm1 = _mm_shuffle_epi32(xmm0, 238);                           \
+                xmm1 = _mm_unpackhi_epi64(xmm0, xmm0);                         \
                 xmm0 = _mm_add_epi32(xmm0, xmm1);                              \
-                xmm1 = _mm_shuffle_epi32(xmm0, 85);                            \
+                xmm1 = _mm_shuffle_epi32(xmm0, _MM_SHUFFLE(2, 3, 0, 1));       \
                 xmm0 = _mm_add_epi32(xmm0, xmm1);                              \
                 return _mm_cvtsi128_si32(xmm0);                                \
             }
