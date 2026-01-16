@@ -586,7 +586,9 @@ namespace Search {
                     continue;
                 }
 
-                int futility = ss->staticEval + FP_SCALE() * depth + FP_OFFSET() + ss->historyScore / FP_HIST_DIVISOR();
+                int futility = ss->staticEval + FP_SCALE() * depth 
+                                + FP_OFFSET() + ss->historyScore / FP_HIST_DIVISOR()
+                                - (ttHit && ttFlag == TTFlag::FAIL_LOW) * 20;
                 if (!inCheck && isQuiet && lmrDepth <= 8 && std::abs(alpha) < 2000 && futility <= alpha) {
                     skipQuiets = true;
                     continue;
