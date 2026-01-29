@@ -40,9 +40,8 @@ static WinRateParams winRateParams(Board& board) {
     double m = std::clamp(material, 17, 78) / 58.0;
 
     // Return a = p_a(material) and b = p_b(material), see github.com/official-stockfish/WDL_model
-    // Stockfish values for now, I will compute WDL when I generate enough data
-    constexpr double as[] = {-20.63598875, 6.25340832, -96.78922561, 352.88451344};
-    constexpr double bs[] = {-45.21618763, 105.19725901, -36.49509268, 73.62537026};
+    constexpr double as[] = {-16.38125064, 76.45866827, -144.99867462, 427.95700056};
+    constexpr double bs[] = {10.50524139, -36.41364758, 58.42143332, 31.12168161};
 
     double a = (((as[0] * m + as[1]) * m + as[2]) * m) + as[3];
     double b = (((bs[0] * m + bs[1]) * m + bs[2]) * m) + bs[3];
