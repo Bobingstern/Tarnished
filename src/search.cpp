@@ -545,6 +545,12 @@ namespace Search {
         if (moveIsNull(ss->excluded) && cutnode && depth >= 8 && (!ttData.move || (!ttHit || ttData.depth + 4 <= depth)))
             depth--;
 
+        // Small Probcut
+        int spcBeta = beta + SPROBCUT_MARGIN();
+        if (moveIsNull(ss->excluded) && !isPV && ttData.bound == TTFlag::BETA_CUT && ttData.depth >= depth - 4 && 
+            ttData.score >= spcBeta && !isMateScore(ttData.score) && !isMateScore(beta))
+            return spcBeta;
+
         // Calculuate Threats
         ss->threats = calculateThreats(thread.board);
 
