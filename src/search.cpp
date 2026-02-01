@@ -540,10 +540,9 @@ namespace Search {
         ss->threats = calculateThreats(thread.board);
 
         // ProbCut
-        int pcBeta = beta + 300;
+        int pcBeta = beta + 250;
         if (!inCheck && !isPV && moveIsNull(ss->excluded) && depth >= 7 && !isMateScore(beta) && (!ttHit || ttData.depth + 3 < depth || ttData.score >= pcBeta)) {
-            int pcSEE = pcBeta - ss->staticEval;
-            MovePicker picker = MovePicker(&thread, ss, ttData.move, MPType::PROBCUT, pcSEE);
+            MovePicker picker = MovePicker(&thread, ss, ttData.move, MPType::PROBCUT, 100);
 
             int moveCount = 0;
             Move move;
@@ -573,7 +572,7 @@ namespace Search {
                     return 0;
 
                 if (score >= pcBeta) {
-                    thread.searcher.TT.store(thread.board.hash(), Move::NO_MOVE, score, rawStaticEval, TTFlag::BETA_CUT, pcDepth, ply, isPV);
+                    thread.searcher.TT.store(thread.board.hash(), move, score, rawStaticEval, TTFlag::BETA_CUT, pcDepth, ply, isPV);
                     return score;
                 }
             }
