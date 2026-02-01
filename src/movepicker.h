@@ -6,8 +6,8 @@
 #include "search.h"
 #include "util.h"
 
-enum class MPStage { TTMOVE, GEN_NOISY, NOISY_GOOD, KILLER, GEN_QUIET, QUIET, BAD_NOISY };
-enum MPType: uint8_t {DEFAULT, QSEARCH, PROBCUT = QSEARCH};
+enum class MPStage { TTMOVE, GEN_NOISY, NOISY_GOOD, KILLER, GEN_QUIET, QUIET, BAD_NOISY, END };
+enum MPType: uint8_t {DEFAULT, QSEARCH, PROBCUT};
 
 inline MPStage operator++(MPStage& stage) {
     stage = static_cast<MPStage>(static_cast<int>(stage) + 1);

@@ -545,7 +545,7 @@ namespace Search {
 
             int moveCount = 0;
             Move move;
-            
+
             while (!moveIsNull(move = picker.nextMove())) {
                 if (move == ss->excluded)
                     continue;

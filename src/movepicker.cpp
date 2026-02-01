@@ -67,7 +67,7 @@ Move MovePicker::nextMove() {
             ++stage;
             // Only return ttMove if in QS if we're in check or if its a capture
             if (isLegal(thread->board, ttMove)) {
-                if (type != MPType::QSEARCH || thread->board.isCapture(ttMove) || thread->board.inCheck())
+                if (!(type == MPType::QSEARCH || type == MPType::PROBCUT) || thread->board.isCapture(ttMove) || thread->board.inCheck())
                     return ttMove;
             }
         case GEN_NOISY:
@@ -79,15 +79,21 @@ Move MovePicker::nextMove() {
         case NOISY_GOOD:
             while (currMove < movesList.size()) {
                 Move move = selectHighest(movesList);
+                int thresh = type == MPType::PROBCUT ? seeThreshold : -move.score() / 4 + 15;
                 if (move == ttMove) {
                     continue;
                 }
-                if (!SEE(thread->board, move, seeThreshold - move.score() / 4 + 15))
+                if (!SEE(thread->board, move, thresh))
                     badNoises.add(move);
                 else
                     return move;
             }
-            ++stage;
+            if (type == MPType::PROBCUT){
+                stage = END;
+                return Move(Move::NO_MOVE);
+            }
+            else
+                ++stage;
 
         case KILLER:
             ++stage;
@@ -123,6 +129,7 @@ Move MovePicker::nextMove() {
                 return move;
             }
             ++stage;
+        case END:
             return Move(Move::NO_MOVE);
     }
 
