@@ -85,7 +85,7 @@ void initLookups();
 int oppDir(int dir);
 Bitboard attackersTo(Board& board, Square s, Bitboard occ);
 void pinnersBlockers(Board& board, Color c, StateInfo sti);
-bool SEE(Board& board, Move& move, int margin);
+bool SEE(Board& board, Move move, int margin);
 
 // Util Move
 static bool moveIsNull(Move m) {

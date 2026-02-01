@@ -288,7 +288,7 @@ void pinnersBlockers(Board& board, Color stm, StateInfo* sti) {
     }
 }
 // Stockfish and Sirius
-bool SEE(Board& board, Move& move, int margin) {
+bool SEE(Board& board, Move move, int margin) {
 
     if (move.typeOf() != Move::NORMAL)
         return 0 >= margin;

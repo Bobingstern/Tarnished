@@ -347,7 +347,7 @@ namespace Search {
         
         // This will do evasions as well
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
+        MovePicker picker = MovePicker(&thread, ss, ttData.move, MPType::QSEARCH);
 
         while (!moveIsNull(move = picker.nextMove())) {
 
@@ -451,7 +451,6 @@ namespace Search {
         int oldAlpha = alpha;
         int rawStaticEval = EVAL_NONE;
         int score = bestScore;
-        int moveCount = 0;
         bool inCheck = thread.board.inCheck();
         ss->conthist = nullptr;
         ss->eval = EVAL_NONE;
@@ -537,6 +536,49 @@ namespace Search {
             }
         }
 
+        // ProbCut
+        int pcBeta = beta + 250;
+        if (depth >= 5 && !isMateScore(beta) && (!ttHit || ttData.depth + 3 < depth || ttData.score >= pcBeta)) {
+            int pcSEE = pcBeta - ss->staticEval;
+            Move pcTTMove = SEE(thread.board, Move(ttData.move), pcSEE) ? Move(ttData.move) : Move::NO_MOVE;
+            MovePicker picker = MovePicker(&thread, ss, ttData.move, MPType::PROBCUT, pcSEE);
+
+            int moveCount = 0;
+            Move move;
+            
+            while (!moveIsNull(move = picker.nextMove())) {
+                if (move == ss->excluded)
+                    continue;
+
+                ss->move = move;
+                ss->movedPiece = thread.board.at<PieceType>(move.from());
+                ss->conthist = thread.getConthistSegment(thread.board, move);
+                ss->contCorrhist = thread.getContCorrhistSegment(thread.board, move);
+
+                thread.searcher.TT.prefetch(prefetchKey(thread.board, move));
+
+                MakeMove(thread.board, move, thread.bucketCache, ss);
+                moveCount++;
+                thread.nodes.fetch_add(1, std::memory_order::relaxed);
+
+                int pcDepth = depth - 3;
+                int score = -qsearch<isPV>(ply + 1, -pcBeta, -pcBeta + 1, ss + 1, thread, limit);
+
+                if (score >= pcBeta)
+                    score = -search<isPV>(pcDepth - 1, ply + 1, -pcBeta, -pcBeta + 1, !cutnode, ss + 1, thread, limit);
+
+                UnmakeMove(thread.board, move);
+
+                if (thread.stopped)
+                    return 0;
+
+                if (score >= pcBeta) {
+                    thread.searcher.TT.store(thread.board.hash(), Move::NO_MOVE, score, rawStaticEval, TTFlag::BETA_CUT, pcDepth, ply, isPV);
+                    return score;
+                }
+            }
+        }
+
         // Internal Iterative Reduction
         if (depth >= 3 && moveIsNull(ss->excluded) && (isPV || cutnode) && (!ttData.move || ttData.depth + 3 < depth))
             depth--;
@@ -554,12 +596,12 @@ namespace Search {
         // Calculuate Threats
         ss->threats = calculateThreats(thread.board);
 
-
+        int moveCount = 0;
         Move bestMove = Move::NO_MOVE;
         Move move;
-        MovePicker picker = MovePicker(&thread, ss, ttData.move, false);
+        MovePicker picker = MovePicker(&thread, ss, ttData.move, MPType::DEFAULT);
 
-        Movelist seenQuiets;
+        Movelist seenQuiets;    
         Movelist seenCaptures;
 
         bool skipQuiets = false;

@@ -16,8 +16,7 @@
 
 using namespace chess;
 
-// Sirius values
-constexpr int MVV_VALUES[6] = {800, 2400, 2400, 4800, 7200};
+const int MVV_VALUES[6] = {MVV_PAWN_VALUE(), MVV_KNIGHT_VALUE(), MVV_BISHOP_VALUE(), MVV_ROOK_VALUE(), MVV_QUEEN_VALUE()};
 
 enum ThreadType { MAIN = 1, SECONDARY = 0 };
 

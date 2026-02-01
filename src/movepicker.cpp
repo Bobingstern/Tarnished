@@ -66,10 +66,9 @@ Move MovePicker::nextMove() {
         case TTMOVE:
             ++stage;
             // Only return ttMove if in QS if we're in check or if its a capture
-            if (isLegal(thread->board, ttMove) &&
-                (!isQS || thread->board.isCapture(ttMove) ||
-                 thread->board.inCheck())) {
-                return ttMove;
+            if (isLegal(thread->board, ttMove)) {
+                if (type != MPType::QSEARCH || thread->board.isCapture(ttMove) || thread->board.inCheck())
+                    return ttMove;
             }
         case GEN_NOISY:
             movegen::legalmoves<movegen::MoveGenType::CAPTURE>(movesList,
@@ -83,7 +82,7 @@ Move MovePicker::nextMove() {
                 if (move == ttMove) {
                     continue;
                 }
-                if (!SEE(thread->board, move, -move.score() / 4 + 15))
+                if (!SEE(thread->board, move, seeThreshold - move.score() / 4 + 15))
                     badNoises.add(move);
                 else
                     return move;
@@ -92,14 +91,14 @@ Move MovePicker::nextMove() {
 
         case KILLER:
             ++stage;
-            if (ss->killer != ttMove && !isQS &&
+            if (ss->killer != ttMove && type != MPType::QSEARCH &&
                 isLegal(thread->board, ss->killer))
                 return ss->killer;
 
         case GEN_QUIET:
             movesList.clear();
             currMove = 0;
-            if (thread->board.inCheck() || !isQS) {
+            if (thread->board.inCheck() || type != MPType::QSEARCH) {
                 movegen::legalmoves<movegen::MoveGenType::QUIET>(movesList,
                                                                  thread->board);
                 scoreMoves(movesList);
