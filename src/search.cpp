@@ -537,8 +537,8 @@ namespace Search {
         }
 
         // ProbCut
-        int pcBeta = beta + 250;
-        if (depth >= 5 && !isMateScore(beta) && (!ttHit || ttData.depth + 3 < depth || ttData.score >= pcBeta)) {
+        int pcBeta = beta + 300;
+        if (!inCheck && !isPV && depth >= 7 && !isMateScore(beta) && (!ttHit || ttData.depth + 3 < depth || ttData.score >= pcBeta)) {
             int pcSEE = pcBeta - ss->staticEval;
             Move pcTTMove = SEE(thread.board, Move(ttData.move), pcSEE) ? Move(ttData.move) : Move::NO_MOVE;
             MovePicker picker = MovePicker(&thread, ss, ttData.move, MPType::PROBCUT, pcSEE);
