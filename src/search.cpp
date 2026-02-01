@@ -536,19 +536,19 @@ namespace Search {
             }
         }
 
+        // Calculuate Threats
+        ss->threats = calculateThreats(thread.board);
+
         // ProbCut
         int pcBeta = beta + 300;
-        if (!inCheck && !isPV && depth >= 7 && !isMateScore(beta) && (!ttHit || ttData.depth + 3 < depth || ttData.score >= pcBeta)) {
+        if (!inCheck && !isPV && moveIsNull(ss->excluded) && depth >= 7 && !isMateScore(beta) && (!ttHit || ttData.depth + 3 < depth || ttData.score >= pcBeta)) {
             int pcSEE = pcBeta - ss->staticEval;
-            Move pcTTMove = SEE(thread.board, Move(ttData.move), pcSEE) ? Move(ttData.move) : Move::NO_MOVE;
             MovePicker picker = MovePicker(&thread, ss, ttData.move, MPType::PROBCUT, pcSEE);
 
             int moveCount = 0;
             Move move;
 
             while (!moveIsNull(move = picker.nextMove())) {
-                if (move == ss->excluded)
-                    continue;
 
                 ss->move = move;
                 ss->movedPiece = thread.board.at<PieceType>(move.from());
@@ -593,8 +593,6 @@ namespace Search {
             ttData.score >= spcBeta && !isMateScore(ttData.score) && !isMateScore(beta))
             return spcBeta;
 
-        // Calculuate Threats
-        ss->threats = calculateThreats(thread.board);
 
         int moveCount = 0;
         Move bestMove = Move::NO_MOVE;
