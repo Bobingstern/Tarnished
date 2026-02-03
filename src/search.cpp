@@ -540,9 +540,9 @@ namespace Search {
         ss->threats = calculateThreats(thread.board);
 
         // ProbCut
-        int pcBeta = beta + 300;
+        int pcBeta = beta + 300 - 50 * improving;
         if (!inCheck && !isPV && moveIsNull(ss->excluded) && depth >= 5 && !isMateScore(beta) && (!ttHit || ttData.depth + 3 < depth || ttData.score >= pcBeta)) {
-            MovePicker picker = MovePicker(&thread, ss, ttData.move, MPType::PROBCUT, 100);
+            MovePicker picker = MovePicker(&thread, ss, Move::NO_MOVE, MPType::PROBCUT, pcBeta - ss->staticEval);
 
             int moveCount = 0;
             Move move;

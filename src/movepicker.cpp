@@ -68,7 +68,7 @@ Move MovePicker::nextMove() {
             // Only return ttMove if in QS if we're in check or if its a capture
             if (isLegal(thread->board, ttMove)) {
                 if (!(type == MPType::QSEARCH || type == MPType::PROBCUT) || thread->board.isCapture(ttMove) || thread->board.inCheck()) {
-                    if (type != MPType::PROBCUT || SEE(thread->board, ttMove, seeThreshold))
+                    if (type != MPType::PROBCUT || SEE(thread->board, ttMove, -1))
                         return ttMove;
                 }
             }
