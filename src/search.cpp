@@ -504,7 +504,7 @@ namespace Search {
             // Null Move Pruning
             Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^
                                 thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
-            if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty() && ttData.bound != TTFlag::FAIL_LOW) {
+            if (depth >= 2 && ss->eval >= beta - 9 * depth + 286 && ply > thread.minNmpPly && !nonPawns.empty() && ttData.bound != TTFlag::FAIL_LOW) {
                 // Sirius formula
                 const int reduction = NMP_BASE_REDUCTION() + depth / NMP_REDUCTION_SCALE() +
                                       std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE());
@@ -621,7 +621,7 @@ namespace Search {
             int extension = 0;
 
             if (doSE) {
-                int sBeta = std::max(-MATE, ttData.score - SE_BETA_SCALE() * depth / 16);
+                int sBeta = std::max(-MATE, ttData.score - SE_BETA_SCALE() * depth / 16 - depth * (ttPV && !isPV));
                 int sDepth = (depth - 1) / 2;
                 // How good are we without this move
                 ss->excluded = Move(ttData.move);
