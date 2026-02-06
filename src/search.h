@@ -196,14 +196,15 @@ namespace Search {
             bool outOfTime() {
                 return (enableClock && static_cast<int64_t>(timer.elapsed()) >= movetime);
             }
-            bool outOfTimeSoft(Move bestMove, uint64_t totalNodes, double complexity) {
+            bool outOfTimeSoft(Move bestMove, uint64_t totalNodes, double complexity, int bmStability) {
                 if (!enableClock || softtime == 0)
                     return false;
 
                 double prop = static_cast<double>(nodeCounts[bestMove.move() & 4095]) / static_cast<double>(totalNodes);
                 double scale = (NODE_TM_BASE() / 100.0 - prop) * (NODE_TM_SCALE() / 100.0);
                 double compScale = std::max((COMPLEXITY_TM_BASE() / 100.0) + std::clamp(complexity, 0.0, 200.0) / static_cast<double>(COMPLEXITY_TM_DIVISOR()), 1.0);
-                return (static_cast<int64_t>(timer.elapsed()) >= softtime * scale * compScale);
+                double bmScale = std::max<double>(1.8 - 0.1 * static_cast<double>(bmStability), 0.9);
+                return (static_cast<int64_t>(timer.elapsed()) >= softtime * scale * compScale * bmScale);
             }
     };
 

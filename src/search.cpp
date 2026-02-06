@@ -790,8 +790,9 @@ namespace Search {
         PVList lastPV{};
         int score = -EVAL_INF;
         int lastScore = -EVAL_INF;
+        int bmStability = 0;
+        Move prevMove = Move::NO_MOVE;
 
-        int64_t avgnps = 0;
         for (int depth = 1; depth <= limit.depth; depth++) {
             auto aborted = [&](bool canSoft) {
                 if (threadInfo.stopped)
@@ -942,7 +943,15 @@ namespace Search {
             double complexity = 0;
             if (!isMateScore(score))
                 complexity = (COMPLEXITY_TM_SCALE() / 100.0) * std::abs(eval - score) * std::log(static_cast<double>(depth));
-            if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes, complexity))
+
+            // Best Move Stability
+            if (threadInfo.bestMove == prevMove)
+                bmStability++;
+            else
+                bmStability = 0;
+            prevMove = threadInfo.bestMove;
+
+            if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes, complexity, bmStability))
                 break;
         }
 
