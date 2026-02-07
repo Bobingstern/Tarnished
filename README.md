@@ -17,6 +17,7 @@
 | 2.1 | 2025-05-24 | 3375 | -
 | 3.0 | 2025-06-29 | 3495 | 3605
 | 4.0 | 2025-08-22 | 3571 | 3663
+| 5.0 | 2026-02-07 | -    | 3700*
 
 </div>
 
@@ -35,9 +36,13 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
     - Self generated training data
     - `(piece, square, color)` input features, 16 king buckets, 8 output buckets
     - Horizontal Mirroring
+    - Finny Tables
+    - Lazy Updates
+    - Fused Refresh
     - 5000/20000 soft nodes for self play
     - 8 random plies for opening
-    - ~16b positions
+    - Relabeled with (768x8hm->4096)->(96->192->192->1)x8
+    - ~22b positions
 - Search
     - Principle Variation Search
     - Quiescence Search
