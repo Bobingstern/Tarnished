@@ -168,7 +168,7 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
 }
 void UCIInfo() {
     PRETTY_PRINT = false;
-    std::cout << "id name Tarnished v4.0 (Consort)\n";
+    std::cout << "id name Tarnished v5.0 (Hero)\n";
     std::cout << "id author Anik Patel\n";
     std::cout << "option name Hash type spin default 16 min 2 max 16777216\n";
     std::cout << "option name Threads type spin default 1 min 1 max 1024\n";
