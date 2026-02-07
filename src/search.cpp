@@ -505,7 +505,7 @@ namespace Search {
             Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^
                                 thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
             if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty() && ttData.bound != TTFlag::FAIL_LOW) {
-                // Sirius formula
+
                 const int reduction = NMP_BASE_REDUCTION() + depth / NMP_REDUCTION_SCALE() +
                                       std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE());
 
@@ -613,8 +613,6 @@ namespace Search {
             }
 
             // Singular Extensions
-            // Sirius conditions
-            // https://github.com/mcthouacbb/Sirius/blob/15501c19650f53f0a10973695a6d284bc243bf7d/Sirius/src/search.cpp#L620
             bool doSE = !root && moveIsNull(ss->excluded) && depth >= 6 + ttPV && Move(ttData.move) == move &&
                         ttData.depth >= depth - 3 && ttData.bound != TTFlag::FAIL_LOW && !isMateScore(ttData.score);
 
