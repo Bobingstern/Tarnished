@@ -606,7 +606,7 @@ namespace Search {
                     break;
                 }
 
-                int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth - ss->historyScore / SEE_QUIET_HIST_DIVISOR() : SEE_NOISY_SCALE() * lmrDepth;
+                int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth - ss->historyScore / SEE_QUIET_HIST_DIVISOR() : SEE_NOISY_SCALE() * lmrDepth - ss->historyScore / SEE_NOISY_HIST_DIVISOR();
                 if (!SEE(thread.board, move, seeMargin))
                     continue;
 
