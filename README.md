@@ -1,4 +1,5 @@
 
+
 <div align="center">
 
 <img
@@ -9,6 +10,10 @@
 <h1>Tarnished</h1>
 
 <p>Strong UCI Chess Engine written in C++ featuring NNUE evaluation trained from scratch. </p>
+
+## Strength
+
+As of `2026-02-13`, Tarnished places at **#14** on [SP-CC](https://www.sp-cc.de/index.htm). It can be found playing at [TCEC](https://tcec-chess.com/#) and [CCC](https://www.chess.com/computer-chess-championship)
 
 | Version | Release Date | [CCRL 40/15](https://www.computerchess.org.uk/ccrl/4040/cgi/compare_engines.cgi?family=Tarnished&print=Rating+list&print=Results+table&print=LOS+table&print=Ponder+hit+table&print=Eval+difference+table&print=Comopp+gamenum+table&print=Overlap+table&print=Score+with+common+opponents) | [CCRL Blitz](https://www.computerchess.org.uk/ccrl/404/cgi/compare_engines.cgi?class=Single-CPU+engines&only_best_in_class=on&num_best_in_class=1&print=Rating+list) |
 | --- | --- | --- | --- |
@@ -41,7 +46,7 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
     - Fused Refresh
     - 5000/20000 soft nodes for self play
     - 8 random plies for opening
-    - Relabeled with (768x8hm->4096)->(96->192->192->1)x8
+    - Relabeled with `(768x8hm->4096)x2->(96->192->192->1)x8` network
     - ~22b positions
 - Search
     - Principle Variation Search
@@ -55,8 +60,7 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
         - TT Move
         - Killer Move Heuristic 
         - Butterfly History Heuristic
-        - 1 ply Continuation History
-        - 2 ply Continuation History
+        - 1/2/4 ply Continuation History
         - Pawn History
         - Capture History
         - SEE Move Ordering
@@ -73,20 +77,21 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
         - Forward Futility Pruning
         - Bad Noisy Futility Pruning
         - Singular Extensions
-            - Double Extensions
+            - Double and Triple Extensions
             - Negative Extensions
             - MultiCut
-        - Terminal Conditions (Mate, Stalemate, 3fold...)
         - Internal Iterative Reductions
+  - Time Management
+      - Soft Time Limit
+      - Node Fraction
+      - Complexity Estimate
+      - Best Move Stability
  - Misc
      - Static Evaluation Correction History (Pawn, Non-Pawn, Major, Minor Hashes, Continuation)
      - TT Static Evaluation
      - TT Clusters
      - TT Aging
      - PVS Fail Firm
-     - Soft time management
-     - Node time management
-     - Complexity time management
      - Lazy SMP
      - SPSA Parameter Tuning
      - Supports FRC (Chess960)
