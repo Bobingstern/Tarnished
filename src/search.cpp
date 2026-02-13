@@ -504,7 +504,8 @@ namespace Search {
             // Null Move Pruning
             Bitboard nonPawns = thread.board.us(thread.board.sideToMove()) ^
                                 thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
-            if (depth >= 2 && ss->eval >= beta && ply > thread.minNmpPly && !nonPawns.empty() && ttData.bound != TTFlag::FAIL_LOW) {
+            if (depth >= 2 && ss->staticEval >= beta + NMP_BETA_M_OFFSET() - NMP_BETA_M_SCALE() * depth 
+                            && ply > thread.minNmpPly && !nonPawns.empty() && ttData.bound != TTFlag::FAIL_LOW) {
 
                 const int reduction = NMP_BASE_REDUCTION() + depth / NMP_REDUCTION_SCALE() +
                                       std::min(2, (ss->eval - beta) / NMP_EVAL_SCALE());
