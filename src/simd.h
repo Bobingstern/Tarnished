@@ -8,6 +8,11 @@
         #define USE_AVX512
         #pragma message("Using AVX512 NNUE inference")
 using nativeVector = __m512i;
+using vepi8  = __m512i;
+using vepi16 = __m512i;
+using vepi32 = __m512i;
+using vps32  = __m512;
+using v128i  = __m128i;
         #define set1_epi16 _mm512_set1_epi16
         #define load_epi16 _mm512_load_si512
         #define store_epi16 _mm512_store_si512
@@ -22,6 +27,11 @@ using nativeVector = __m512i;
     #elif defined(__AVX2__)
         #pragma message("Using AVX2 NNUE inference")
 using nativeVector = __m256i;
+using vepi8  = __m256i;
+using vepi16 = __m256i;
+using vepi32 = __m256i;
+using vps32  = __m256;
+using v128i  = __m128i;
         #define set1_epi16 _mm256_set1_epi16
         #define load_epi16 _mm256_load_si256
         #define store_epi16 _mm256_store_si256

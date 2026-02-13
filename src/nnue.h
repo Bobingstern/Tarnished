@@ -13,10 +13,51 @@ using namespace chess;
 constexpr int ReLU = 0;
 constexpr int CReLU = 1;
 constexpr int SCReLU = 2;
-
 constexpr int ACTIVATION = SCReLU;
-
 const bool IS_LITTLE_ENDIAN = true;
+
+
+struct UnquantisedNetwork {
+    float Factoriser[L1_SIZE * 768];
+    float FTWeights[INPUT_BUCKETS * L1_SIZE * 768];
+    float FTBiases[L1_SIZE];
+    float L1Weights[L1_SIZE][OUTPUT_BUCKETS][L2_SIZE];
+    float L1Biases[OUTPUT_BUCKETS][L2_SIZE];
+    float L2Weights[L2_SIZE][OUTPUT_BUCKETS][L3_SIZE];
+    float L2Biases[OUTPUT_BUCKETS][L3_SIZE];
+    float L3Weights[L3_SIZE][OUTPUT_BUCKETS];
+    float L3Biases[OUTPUT_BUCKETS];
+};
+
+struct QuantisedNetwork {
+    int16_t FTWeights[INPUT_BUCKETS * L1_SIZE * 768];
+    int16_t FTBiases [L1_SIZE];
+    int8_t  L1Weights[L1_SIZE][OUTPUT_BUCKETS][L2_SIZE];
+    float   L1Biases [OUTPUT_BUCKETS][L2_SIZE];
+    float   L2Weights[L2_SIZE][OUTPUT_BUCKETS][L3_SIZE];
+    float   L2Biases [OUTPUT_BUCKETS][L3_SIZE];
+    float   L3Weights[L3_SIZE][OUTPUT_BUCKETS];
+    float   L3Biases [OUTPUT_BUCKETS];
+};
+
+struct NNZEntry {
+    uint16_t indices[8];
+    int count;
+};
+
+struct NNZTable {
+    NNZEntry table[256];
+
+    NNZTable() {
+        for (uint16_t i = 0; i <= 255; ++i) {
+            this->table[i].count = CountBits(i);
+            Bitboard j = Bitboard(i);
+            uint16_t k = 0;
+            while (j)
+                this->table[i].indices[k++] = j.pop();
+        }
+    };
+};
 
 // stole from sf
 template <typename IntType> inline IntType readLittleEndian(std::istream& stream) {
@@ -131,6 +172,15 @@ struct Accumulator {
 };
 
 struct NNUE {
+        // alignas(64) int16_t FTWeights[INPUT_BUCKETS * L1_SIZE * 768];
+        // alignas(64) int16_t FTBiases [L1_SIZE];
+        // alignas(64) int8_t  L1Weights[OUTPUT_BUCKETS][L1_SIZE * L2_SIZE];
+        // alignas(64) float   L1Biases [OUTPUT_BUCKETS][L2_SIZE];
+        // alignas(64) float   L2Weights[OUTPUT_BUCKETS][L2_SIZE * L3_SIZE];
+        // alignas(64) float   L2Biases [OUTPUT_BUCKETS][L3_SIZE];
+        // alignas(64) float   L3Weights[OUTPUT_BUCKETS][L3_SIZE];
+        // alignas(64) float   L3Biases [OUTPUT_BUCKETS];
+
         alignas(64) std::array<int16_t, HL_N * 768 * INPUT_BUCKETS> H1;
         alignas(64) std::array<int16_t, HL_N> H1Bias;
         alignas(64) std::array<std::array<int16_t, HL_N * 2>, OUTPUT_BUCKETS> OW;
@@ -151,3 +201,4 @@ struct NNUE {
 };
 
 extern NNUE network;
+extern NNZEntry nnzTable;
