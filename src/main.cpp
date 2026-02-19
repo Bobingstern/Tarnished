@@ -408,6 +408,7 @@ int main(int agrc, char* argv[]) {
             case DATAGEN    : BeginDatagen(str, board.chess960());        break;
             case WAIT       : searcher.waitForSearchFinished();           break;
             case CONFIG     : printOBConfig();                            break;
+            case QUANT      : quantise_raw();                             break;
 
         }
     }

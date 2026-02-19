@@ -1,10 +1,13 @@
 #include "nnue.h"
 #include "search.h"
-#include "simd.h"
+#include "parameters.h"
 
 #include <algorithm>
 #include <fstream>
 #include <random>
+
+QuantisedNetwork quantisedNet;
+UnquantisedNetwork unquantisedNet;
 
 int16_t NNUE::ReLU_(int16_t x) {
     return x < 0 ? 0 : x;
@@ -22,6 +25,63 @@ int32_t NNUE::SCReLU_(int16_t x) {
     else if (x > QA)
         return QA * QA;
     return x * x;
+}
+
+
+void quantise_raw() {
+    // https://github.com/PGG106/Alexandria/blob/fdf5dbd744ea601f9d7dbedcc9dfe1c391aba37c/src/nnue.cpp#L32
+    std::ifstream stream{"raw.bin", std::ios::binary};
+
+    stream.read(reinterpret_cast<char *>(&unquantisedNet), sizeof(UnquantisedNetwork));
+
+    // // Merge factoriser  + quantise FT weights
+    for (int bucket = 0; bucket < INPUT_BUCKETS; ++bucket) {
+        int bucket_offset = bucket * (768 * L1_SIZE);
+
+        for (int i = 0; i < 768 * L1_SIZE; ++i) {
+            float w = unquantisedNet.FTWeights[bucket_offset + i] + unquantisedNet.Factoriser[i];
+
+            quantisedNet.FTWeights[bucket_offset + i] = static_cast<int16_t>(std::round(w * QA));
+        }
+    }
+
+    // // Quantise FT Biases
+    for (int i = 0; i < L1_SIZE; ++i)
+        quantisedNet.FTBiases[i] = static_cast<int16_t>(std::round(unquantisedNet.FTBiases[i] * QA));
+
+    // // Quantise L1, L2 and L3 weights and biases
+    for (int bucket = 0; bucket < OUTPUT_BUCKETS; ++bucket) {
+        // Quantise L1 Weights
+        for (int i = 0; i < L1_SIZE; ++i)
+            for (int j = 0; j < L2_SIZE; ++j)
+                quantisedNet.L1Weights[i][bucket][j] = static_cast<int8_t>(std::round(
+                    unquantisedNet.L1Weights[i][bucket][j] * 64));
+
+        // Quantise L1 Biases
+        for (int i = 0; i < L2_SIZE; ++i) {
+            quantisedNet.L1Biases[bucket][i] = unquantisedNet.L1Biases[bucket][i];
+        }
+
+        // Quantise L2 Weights
+        for (int i = 0; i < L2_SIZE; ++i)
+            for (int j = 0; j < L3_SIZE; ++j)
+                quantisedNet.L2Weights[i][bucket][j] = unquantisedNet.L2Weights[i][bucket][j];
+
+        // Quantise L2 Biases
+        for (int i = 0; i < L3_SIZE; ++i)
+            quantisedNet.L2Biases[bucket][i] = unquantisedNet.L2Biases[bucket][i];
+
+        // Quantise L3 Weights
+        for (int i = 0; i < L3_SIZE; ++i)
+            quantisedNet.L3Weights[i][bucket] = unquantisedNet.L3Weights[i][bucket];
+
+        // Quantise L3 Biases
+        quantisedNet.L3Biases[bucket] = unquantisedNet.L3Biases[bucket];
+    }
+
+    std::ofstream out{"quatnnet.bin", std::ios::binary};
+    out.write(reinterpret_cast<const char *>(&quantisedNet), sizeof(QuantisedNetwork));
+    std::cout << "Successfully Quantised" << std::endl;
 }
 
 // https://github.com/official-stockfish/nnue-pytorch/blob/master/docs/nnue.md

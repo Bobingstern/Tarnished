@@ -1,5 +1,5 @@
+#pragma once
 #include <cstdint>
-
 
 #if defined(__x86_64__) || defined(__amd64__) ||                               \
     (defined(_WIN64) && (defined(_M_X64) || defined(_M_AMD64)))
@@ -54,27 +54,7 @@ using v128i  = __m128i;
                 return _mm_cvtsi128_si32(xmm0);                                \
             }
     #else
-        #pragma message("Using SSE NNUE inference")
-// Assumes SSE support here
-using nativeVector = __m128i;
-        #define set1_epi16 _mm_set1_epi16
-        #define load_epi16 _mm_load_si128
-        #define store_epi16 _mm128_store_si128
-        #define min_epi16 _mm_min_epi16
-        #define max_epi16 _mm_max_epi16
-        #define madd_epi16 _mm_madd_epi16
-        #define mullo_epi16 _mm_mullo_epi16
-        #define add_epi16 _mm_add_epi16
-        #define add_epi32 _mm_add_epi32
-        #define sub_epi16 _mm_sub_epi16
-        #define reduce_epi32                                                   \
-            [](nativeVector vec) {                                             \
-                __m128i xmm1 = _mm_shuffle_epi32(vec, 238);                    \
-                vec = _mm_add_epi32(vec, xmm1);                                \
-                xmm1 = _mm_shuffle_epi32(vec, 85);                             \
-                vec = _mm_add_epi32(vec, xmm1);                                \
-                return _mm_cvtsi128_si32(vec);                                 \
-            }
+        #define AUTOVEC
     #endif
 // POWER / VSX implementation (Power9)
 #elif defined(__powerpc64__) || defined(__PPC64__) || defined(__powerpc__)
