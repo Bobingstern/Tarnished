@@ -25,6 +25,7 @@ using v128i  = __m128i;
         #define sub_epi16 _mm512_sub_epi16
         #define reduce_epi32 _mm512_reduce_add_epi32
     #elif defined(__AVX2__)
+        #define USE_AVX2
         #pragma message("Using AVX2 NNUE inference")
 using nativeVector = __m256i;
 using vepi8  = __m256i;

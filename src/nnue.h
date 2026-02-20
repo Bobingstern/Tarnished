@@ -40,6 +40,17 @@ struct QuantisedNetwork {
     float   L3Biases [OUTPUT_BUCKETS];
 };
 
+struct Network {
+    alignas(64) int16_t FTWeights[INPUT_BUCKETS * L1_SIZE * 768];
+    alignas(64) int16_t FTBiases [L1_SIZE];
+    alignas(64) int8_t  L1Weights[OUTPUT_BUCKETS][L1_SIZE * L2_SIZE];
+    alignas(64) float   L1Biases [OUTPUT_BUCKETS][L2_SIZE];
+    alignas(64) float   L2Weights[OUTPUT_BUCKETS][L2_SIZE * L3_SIZE];
+    alignas(64) float   L2Biases [OUTPUT_BUCKETS][L3_SIZE];
+    alignas(64) float   L3Weights[OUTPUT_BUCKETS][L3_SIZE];
+    alignas(64) float   L3Biases [OUTPUT_BUCKETS];
+};
+
 void quantise_raw();
 
 // stole from sf
@@ -173,8 +184,14 @@ struct NNUE {
         int32_t optimizedSCReLU(const std::array<int16_t, HL_N>& STM, const std::array<int16_t, HL_N>& OPP, Color col,
                                 size_t bucket);
         int inference(Board& board, Accumulator& accumulator);
+
+        void activateL1(Accumulator& acc, Color stm, uint8_t* output);
+        void forwardL1(const uint8_t* inputs, const int8_t* weights, const float* biases, float* output);
+        void forwardL2(const float* inputs, const float* weights, const float* biases, float* output);
+        void forwardL3(const float* inputs, const float* weights, const float bias, float& output);
 };
 
 extern NNUE network;
 extern QuantisedNetwork quantisedNet;
 extern UnquantisedNetwork unquantisedNet;
+extern const Network* permutedNet;

@@ -339,14 +339,9 @@ int main(int agrc, char* argv[]) {
     // r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1
     initLookups();
     Board board = Board();
-// network.randomize();
-#if defined(_MSC_VER) && !defined(__clang__)
-    network.load(EVALFILE);
-    std::cerr << "WARNING: This file was compiled with MSVC, this means that an nnue was NOT embedded into the exe."
-              << std::endl;
-#else
-    network = *reinterpret_cast<const NNUE*>(gEVALData);
-#endif
+
+    //network = *reinterpret_cast<const NNUE*>(gEVALData);
+    permutedNet = reinterpret_cast<const Network*>(gEVALData);
 
     Console console; // Windows nonsense
 #if defined(_WIN32)
