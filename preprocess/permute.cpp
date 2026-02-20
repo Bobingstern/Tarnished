@@ -5,7 +5,6 @@
 // These will be populated from the input file
 QuantisedNetwork quantisedNet;
 Network net;
-
 void permute_transpose() {
     // Transform the quantised weights and biases into the form we want for optimal inference
     // FT Weights
@@ -56,7 +55,7 @@ void permute_transpose() {
     // Transpose L1, L2 and L3 weights and biases
     for (int bucket = 0; bucket < OUTPUT_BUCKETS; ++bucket) {
         // Transpose L1 weights
-#if defined(USE_SIMD)
+#ifndef AUTOVEC
         for (int i = 0; i < L1_SIZE / L1_CHUNK_PER_32; ++i)
             for (int j = 0; j < L2_SIZE; ++j)
                 for (int k = 0; k < L1_CHUNK_PER_32; ++k)

@@ -85,66 +85,6 @@ void quantise_raw() {
     std::cout << "Successfully Quantised" << std::endl;
 }
 
-// https://github.com/official-stockfish/nnue-pytorch/blob/master/docs/nnue.md
-// https://cosmo.tardis.ac/files/2024-06-01-nnue.html
-// https://github.com/ksw0518/Turbulence_v4/blob/96c9eaaa96afa0e16f16daec9f99cf6018f1e119/Turbulence_v4/Evaluation.cpp#L498
-#ifndef AUTOVEC
-int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
-                              const std::array<int16_t, HL_N>& OPP, Color col,
-                              size_t bucket) {
-    const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
-    static_assert(HL_N % VECTOR_SIZE == 0,
-                  "HL size must be divisible by the native register size of "
-                  "your CPU for vectorization to work");
-    const nativeVector VEC_QA = set1_epi16(QA);
-    const nativeVector VEC_ZERO = set1_epi16(0);
-
-    nativeVector accumulator{};
-    for (size_t i = 0; i < HL_N; i += VECTOR_SIZE) {
-        // load a SIMD vector of inputs, x
-        const nativeVector stmAccumValues =
-            load_epi16(reinterpret_cast<const nativeVector*>(&STM[i]));
-        const nativeVector nstmAccumValues =
-            load_epi16(reinterpret_cast<const nativeVector*>(&OPP[i]));
-
-        // compute the clipped ReLU of the inputs, v
-        const nativeVector stmClamped =
-            min_epi16(VEC_QA, max_epi16(stmAccumValues, VEC_ZERO));
-        const nativeVector nstmClamped =
-            min_epi16(VEC_QA, max_epi16(nstmAccumValues, VEC_ZERO));
-
-        // load the weights, w
-        const nativeVector stmWeights =
-            load_epi16(reinterpret_cast<const nativeVector*>(&OW[bucket][i]));
-        const nativeVector nstmWeights = load_epi16(
-            reinterpret_cast<const nativeVector*>(&OW[bucket][i + HL_N]));
-
-        // SCReLU it
-        const nativeVector stmActivated =
-            madd_epi16(stmClamped, mullo_epi16(stmClamped, stmWeights));
-        const nativeVector nstmActivated =
-            madd_epi16(nstmClamped, mullo_epi16(nstmClamped, nstmWeights));
-
-        accumulator = add_epi32(accumulator, stmActivated);
-        accumulator = add_epi32(accumulator, nstmActivated);
-    }
-    return reduce_epi32(accumulator);
-}
-
-#else
-
-int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
-                              const std::array<int16_t, HL_N>& OPP, Color col,
-                              size_t bucket) {
-    int32_t eval = 0;
-    for (int i = 0; i < HL_N; i++) {
-        eval += SCReLU_(STM[i]) * OW[bucket][i];
-        eval += SCReLU_(OPP[i]) * OW[bucket][HL_N + i];
-    }
-    return eval;
-}
-
-#endif
 
 int NNUE::feature(Color persp, Color color, PieceType p, Square sq, Square king) {
     int ci = persp == color ? 0 : 1;
@@ -161,6 +101,33 @@ void NNUE::activateL1(Accumulator& acc, Color col, uint8_t* output) {
     const std::array<int16_t, HL_N>& opp =
         col == Color::BLACK ? acc.white : acc.black;
 
+#ifndef AUTOVEC
+    const vepi16 vecOne = set1_epi16(QA);
+    const vepi16 vecZero = set1_epi16(0);
+    int offset = 0;
+    for (auto& side : {stm, opp}) {
+        for (int i = 0; i < L1_SIZE / 2; i += 2 * FT_CHUNK_SIZE) {
+            const vepi16 input0a = load_epi16(reinterpret_cast<const vepi16*>(&side[i]));
+            const vepi16 input0b = load_epi16(reinterpret_cast<const vepi16*>(&side[i + FT_CHUNK_SIZE]));
+            const vepi16 input1a = load_epi16(reinterpret_cast<const vepi16*>(&side[i + L1_SIZE / 2]));
+            const vepi16 input1b = load_epi16(reinterpret_cast<const vepi16*>(&side[i + FT_CHUNK_SIZE + L1_SIZE / 2]));
+
+            const vepi16 clipped0a = min_epi16(max_epi16(input0a, vecZero), vecOne);
+            const vepi16 clipped0b = min_epi16(max_epi16(input0b, vecZero), vecOne);
+            const vepi16 clipped1a = min_epi16(input1a, vecOne);
+            const vepi16 clipped1b = min_epi16(input1b, vecOne);
+
+            const vepi16 producta  = mulhi_epi16(slli_epi16(clipped0a, 16 - FT_SHIFT), clipped1a);
+            const vepi16 productb  = mulhi_epi16(slli_epi16(clipped0b, 16 - FT_SHIFT), clipped1b);
+
+            const vepi8  product   = packus_epi16(producta, productb);
+            store_epi16(reinterpret_cast<vepi8*>(&output[i + offset]), product);
+        }
+        offset += L1_SIZE / 2;
+    }
+
+#else
+
     for (int i = 0; i < L1_SIZE / 2; i++) {
         int16_t c0 = std::clamp<int16_t>(stm[i], 0, QA);
         int16_t c1 = std::clamp<int16_t>(stm[i + L1_SIZE / 2], 0, QA);
@@ -170,17 +137,47 @@ void NNUE::activateL1(Accumulator& acc, Color col, uint8_t* output) {
         c1 = std::clamp<int16_t>(opp[i + L1_SIZE / 2], 0, QA);
         output[i + L1_SIZE / 2] = static_cast<uint8_t>(c0 * c1 >> FT_SHIFT);
     }
-}
 
-inline float reduce_add(float *sums, const int length) {
-    if (length == 2) return sums[0] + sums[1];
-    for (int i = 0; i < length / 2; ++i)
-        sums[i] += sums[i + length / 2];
-
-    return reduce_add(sums, length / 2);
+#endif
 }
 
 void NNUE::forwardL1(const uint8_t* inputs, const int8_t* weights, const float* biases, float* output) {
+
+#ifndef AUTOVEC
+    vepi32 sums[L2_SIZE / L2_CHUNK_SIZE] = {};
+    const int32_t *inputs32 = reinterpret_cast<const int32_t*>(inputs);
+    int i = 0;
+    for (; i + 1 < L1_SIZE / L1_CHUNK_PER_32; i += 2){
+        const uint16_t indexa = i;
+        const uint16_t indexb = i + 1;
+        const vepi32 input32a = set1_epi32(inputs32[indexa]);
+        const vepi32 input32b = set1_epi32(inputs32[indexb]);
+        const vepi8 *weighta  = reinterpret_cast<const vepi8*>(&weights[indexa * L1_CHUNK_PER_32 * L2_SIZE]);
+        const vepi8 *weightb  = reinterpret_cast<const vepi8*>(&weights[indexb * L1_CHUNK_PER_32 * L2_SIZE]);
+        for (int j = 0; j < L2_SIZE / L2_CHUNK_SIZE; ++j)
+            sums[j] = dpbusdx2_epi32(sums[j], input32a, weighta[j], input32b, weightb[j]);
+    }
+
+    for (; i < L1_SIZE / L1_CHUNK_PER_32; ++i) {
+        const uint16_t index = i;
+        const vepi32 input32 = set1_epi32(inputs32[index]);
+        const vepi8 *weight  = reinterpret_cast<const vepi8*>(&weights[index * L1_CHUNK_PER_32 * L2_SIZE]);
+        for (int j = 0; j < L2_SIZE / L2_CHUNK_SIZE; ++j)
+            sums[j] = dpbusd_epi32(sums[j], input32, weight[j]);
+    }
+
+    for (i = 0; i < L2_SIZE / L2_CHUNK_SIZE; ++i) {
+        // Convert into floats, and activate L1
+        const vps32 biasVec = load_ps(&biases[i * L2_CHUNK_SIZE]);
+        const vps32 sumMul  = set1_ps(L1_MUL);
+        const vps32 sumPs   = mul_add_ps(cvtepi32_ps(sums[i]), sumMul, biasVec);
+        const vps32 Zero    = zero_ps();
+        const vps32 One     = set1_ps(1.0f);
+        const vps32 clipped = min_ps(max_ps(sumPs, Zero), One);
+        const vps32 squared = mul_ps(clipped, clipped);
+        store_ps(&output[i * L2_CHUNK_SIZE], squared);
+    }
+#else
     int sums[L2_SIZE] = {0};
     for (int i = 0; i < L1_SIZE; ++i) {
         for (int j = 0; j < L2_SIZE; ++j) {
@@ -192,9 +189,33 @@ void NNUE::forwardL1(const uint8_t* inputs, const int8_t* weights, const float* 
         float c = std::clamp(float(sums[i]) * L1_MUL + biases[i], 0.0f, 1.0f);
         output[i] = c * c;
     }
+#endif
 }
 
 void NNUE::forwardL2(const float* inputs, const float* weights, const float* biases, float* output) {
+
+#ifndef AUTOVEC
+    vps32 sumVecs[L3_SIZE / L3_CHUNK_SIZE];
+
+    for (int i = 0; i < L3_SIZE / L3_CHUNK_SIZE; ++i)
+        sumVecs[i] = load_ps(&biases[i * L3_CHUNK_SIZE]);
+
+    for (int i = 0; i < L2_SIZE; ++i) {
+        const vps32 inputVec = set1_ps(inputs[i]);
+        const vps32 *weight  = reinterpret_cast<const vps32*>(&weights[i * L3_SIZE]);
+        for (int j = 0; j < L3_SIZE / L3_CHUNK_SIZE; ++j)
+            sumVecs[j] = mul_add_ps(inputVec, weight[j], sumVecs[j]);
+    }
+
+    // Activate L2
+    for (int i = 0; i < L3_SIZE / L3_CHUNK_SIZE; ++i) {
+        const vps32 Zero    = zero_ps();
+        const vps32 One     = set1_ps(1.0f);
+        const vps32 clipped = min_ps(max_ps(sumVecs[i], Zero), One);
+        const vps32 squared = mul_ps(clipped, clipped);
+        store_ps(&output[i * L3_CHUNK_SIZE], squared);
+    }
+#else
     float sums[L3_SIZE];
 
     for (int i = 0; i < L3_SIZE; ++i)
@@ -211,10 +232,23 @@ void NNUE::forwardL2(const float* inputs, const float* weights, const float* bia
         float c = std::clamp(sums[i], 0.0f, 1.0f);
         output[i] = c * c;
     }
+#endif
 }
 
 void NNUE::forwardL3(const float* inputs, const float* weights, const float bias, float& output) {
     constexpr int avx512chunk = 512 / 32;
+    
+#ifndef AUTOVEC
+    constexpr int numSums = avx512chunk / (sizeof(vps32) / sizeof(float));
+    vps32 sumVecs[numSums] = {};
+    // Affine transform for L3
+    for (int i = 0; i < L3_SIZE / L3_CHUNK_SIZE; ++i) {
+        const vps32 weightVec = load_ps(&weights[i * L3_CHUNK_SIZE]);
+        const vps32 inputsVec = load_ps(&inputs[i * L3_CHUNK_SIZE]);
+        sumVecs[i % numSums] = mul_add_ps(inputsVec, weightVec, sumVecs[i % numSums]);
+    }
+    output = reduce_add_ps(sumVecs) + bias;
+#else
     constexpr int numSums = avx512chunk;
     float sums[numSums] = {0};
 
@@ -223,6 +257,7 @@ void NNUE::forwardL3(const float* inputs, const float* weights, const float bias
         sums[i % numSums] += inputs[i] * weights[i];
     }
     output = reduce_add(sums, numSums) + bias;
+#endif
 }
 
 int NNUE::inference(Board& board, Accumulator& accumulator) {
