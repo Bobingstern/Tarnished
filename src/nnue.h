@@ -10,36 +10,44 @@
 
 using namespace chess;
 
-constexpr int ReLU = 0;
-constexpr int CReLU = 1;
-constexpr int SCReLU = 2;
+struct UnquantisedNetwork {
+    float Factoriser[L1_SIZE * 768];
+    float FTWeights[INPUT_BUCKETS * L1_SIZE * 768];
+    float FTBiases[L1_SIZE];
+    float L1Weights[L1_SIZE][OUTPUT_BUCKETS][L2_SIZE];
+    float L1Biases[OUTPUT_BUCKETS][L2_SIZE];
+    float L2Weights[L2_SIZE][OUTPUT_BUCKETS][L3_SIZE];
+    float L2Biases[OUTPUT_BUCKETS][L3_SIZE];
+    float L3Weights[L3_SIZE][OUTPUT_BUCKETS];
+    float L3Biases[OUTPUT_BUCKETS];
+};
 
-constexpr int ACTIVATION = SCReLU;
+struct QuantisedNetwork {
+    int16_t FTWeights[INPUT_BUCKETS * L1_SIZE * 768];
+    int16_t FTBiases [L1_SIZE];
+    int8_t L1Weights[L1_SIZE][OUTPUT_BUCKETS][L2_SIZE];
+    float L1Biases [OUTPUT_BUCKETS][L2_SIZE];
+    float L2Weights[L2_SIZE][OUTPUT_BUCKETS][L3_SIZE];
+    float L2Biases [OUTPUT_BUCKETS][L3_SIZE];
+    float L3Weights[L3_SIZE][OUTPUT_BUCKETS];
+    float L3Biases [OUTPUT_BUCKETS];
+};
 
-const bool IS_LITTLE_ENDIAN = true;
+struct Network {
+    alignas(64) int16_t FTWeights[INPUT_BUCKETS * L1_SIZE * 768];
+    alignas(64) int16_t FTBiases [L1_SIZE];
+    alignas(64) int8_t L1Weights[OUTPUT_BUCKETS][L1_SIZE * L2_SIZE];
+    alignas(64) float L1Biases [OUTPUT_BUCKETS][L2_SIZE];
+    alignas(64) float L2Weights[OUTPUT_BUCKETS][L2_SIZE * L3_SIZE];
+    alignas(64) float L2Biases [OUTPUT_BUCKETS][L3_SIZE];
+    alignas(64) float L3Weights[OUTPUT_BUCKETS][L3_SIZE];
+    alignas(64) float L3Biases [OUTPUT_BUCKETS];
+};
 
-// stole from sf
-template <typename IntType> inline IntType readLittleEndian(std::istream& stream) {
-    IntType result;
-
-    if (IS_LITTLE_ENDIAN)
-        stream.read(reinterpret_cast<char*>(&result), sizeof(IntType));
-    else {
-        std::uint8_t u[sizeof(IntType)];
-        std::make_unsigned_t<IntType> v = 0;
-
-        stream.read(reinterpret_cast<char*>(u), sizeof(IntType));
-        for (int i = 0; i < sizeof(IntType); ++i)
-            v = (v << 8) | u[sizeof(IntType) - i - 1];
-
-        std::memcpy(&result, &v, sizeof(IntType));
-    }
-
-    return result;
-}
+void quantise_raw();
 
 struct BucketCacheEntry {
-    std::array<int16_t, HL_N> features;
+    std::array<int16_t, L1_SIZE> features;
     std::array<Bitboard, 8> cachedPieces;
     bool isInit;
 
@@ -49,7 +57,7 @@ struct BucketCacheEntry {
         isInit = false;
     }
 
-    void set(Board& board, std::array<int16_t, HL_N>& feats) {
+    void set(Board& board, std::array<int16_t, L1_SIZE>& feats) {
         for (PieceType pt : {PieceType::PAWN, PieceType::KNIGHT, PieceType::BISHOP, 
                         PieceType::ROOK, PieceType::QUEEN, PieceType::KING}) {
             cachedPieces[int(pt)] = board.pieces(pt);
@@ -95,8 +103,8 @@ struct FeatureDelta {
 };
 
 struct Accumulator {
-        alignas(64) std::array<int16_t, HL_N> white;
-        alignas(64) std::array<int16_t, HL_N> black;
+        alignas(64) std::array<int16_t, L1_SIZE> white;
+        alignas(64) std::array<int16_t, L1_SIZE> black;
 
         std::array<bool, 2> needsRefresh{};
         std::array<bool, 2> computed{};
@@ -116,8 +124,8 @@ struct Accumulator {
         void print();
 
         // addaddaddadd, subsubsubsub
-        void refreshAdd4(std::array<int16_t, HL_N>& acc, int add0, int add1, int add2, int add3);
-        void refreshSub4(std::array<int16_t, HL_N>& acc, int sub0, int sub1, int sub2, int sub3);
+        void refreshAdd4(std::array<int16_t, L1_SIZE>& acc, int add0, int add1, int add2, int add3);
+        void refreshSub4(std::array<int16_t, L1_SIZE>& acc, int sub0, int sub1, int sub2, int sub3);
         // addsub, addsubsub, addaddsubsub
         void addPiece(Board& board, Color stm, Square add, PieceType addPT);
         void subPiece(Board& board, Color stm, Square sub, PieceType subPT);
@@ -131,23 +139,17 @@ struct Accumulator {
 };
 
 struct NNUE {
-        alignas(64) std::array<int16_t, HL_N * 768 * INPUT_BUCKETS> H1;
-        alignas(64) std::array<int16_t, HL_N> H1Bias;
-        alignas(64) std::array<std::array<int16_t, HL_N * 2>, OUTPUT_BUCKETS> OW;
-        alignas(64) std::array<int16_t, OUTPUT_BUCKETS> outputBias;
-
-        int16_t ReLU_(int16_t x);
-        int16_t CReLU_(int16_t x);
-        int32_t SCReLU_(int16_t x);
 
         static int feature(Color persp, Color color, PieceType piece, Square square, Square king);
-
-        void load(const std::string& file);
-        void randomize();
-
-        int32_t optimizedSCReLU(const std::array<int16_t, HL_N>& STM, const std::array<int16_t, HL_N>& OPP, Color col,
-                                size_t bucket);
         int inference(Board& board, Accumulator& accumulator);
+
+        void activateL1(Accumulator& acc, Color stm, uint8_t* output);
+        void forwardL1(const uint8_t* inputs, const int8_t* weights, const float* biases, float* output);
+        void forwardL2(const float* inputs, const float* weights, const float* biases, float* output);
+        void forwardL3(const float* inputs, const float* weights, const float bias, float& output);
 };
 
 extern NNUE network;
+extern QuantisedNetwork quantisedNet;
+extern UnquantisedNetwork unquantisedNet;
+extern const Network* permutedNet;

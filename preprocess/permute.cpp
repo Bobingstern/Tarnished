@@ -1,0 +1,135 @@
+#include "../src/nnue.h"
+#include <fstream>
+#include <iostream>
+
+// Taken from Alexandria
+QuantisedNetwork quantisedNet;
+Network net;
+void permute_transpose() {
+    for (int i = 0; i < INPUT_BUCKETS * 768 * L1_SIZE; ++i)
+        net.FTWeights[i] = quantisedNet.FTWeights[i];
+
+    for (int i = 0; i < L1_SIZE; ++i)
+        net.FTBiases[i] = quantisedNet.FTBiases[i];
+
+#ifndef AUTOVEC
+    __m128i *weight = reinterpret_cast<__m128i*>(net.FTWeights);
+    __m128i *biases = reinterpret_cast<__m128i*>(net.FTBiases);
+    constexpr int numChunks = sizeof(__m128i) / sizeof(int16_t);
+
+#if defined(USE_AVX512)
+    constexpr int numRegi = 8;
+    constexpr int order[numRegi] = {0, 2, 4, 6, 1, 3, 5, 7};
+#elif defined(USE_AVX2)
+    constexpr int numRegi = 4;
+    constexpr int order[numRegi] = {0, 2, 1, 3};
+#endif
+
+    __m128i regi[numRegi];
+
+    for (int i = 0; i < INPUT_BUCKETS * 768 * L1_SIZE / numChunks; i += numRegi) {
+        for (int j = 0; j < numRegi; ++j)
+            regi[j] = weight[i + j];
+
+        for (int j = 0; j < numRegi; ++j)
+            weight[i + j] = regi[order[j]];
+    }
+
+    for (int i = 0; i < L1_SIZE / numChunks; i += numRegi) {
+        for (int j = 0; j < numRegi; ++j)
+            regi[j] = biases[i + j];
+
+        for (int j = 0; j < numRegi; ++j)
+            biases[i + j] = regi[order[j]];
+    }
+#endif
+
+    for (int bucket = 0; bucket < OUTPUT_BUCKETS; ++bucket) {
+#ifndef AUTOVEC
+        for (int i = 0; i < L1_SIZE / L1_CHUNK_PER_32; ++i)
+            for (int j = 0; j < L2_SIZE; ++j)
+                for (int k = 0; k < L1_CHUNK_PER_32; ++k)
+                    net.L1Weights[bucket][  i * L1_CHUNK_PER_32 * L2_SIZE
+                                          + j * L1_CHUNK_PER_32
+                                          + k] = quantisedNet.L1Weights[i * L1_CHUNK_PER_32 + k][bucket][j];
+#else
+        for (int i = 0; i < L1_SIZE; ++i)
+            for (int j = 0; j < L2_SIZE; ++j)
+                net.L1Weights[bucket][j * L1_SIZE + i] = quantisedNet.L1Weights[i][bucket][j];
+#endif
+
+        for (int i = 0; i < L2_SIZE; ++i)
+            net.L1Biases[bucket][i] = quantisedNet.L1Biases[bucket][i];
+
+        for (int i = 0; i < L2_SIZE; ++i)
+            for (int j = 0; j < L3_SIZE; ++j)
+                net.L2Weights[bucket][i * L3_SIZE + j] = quantisedNet.L2Weights[i][bucket][j];
+
+        for (int i = 0; i < L3_SIZE; ++i)
+            net.L2Biases[bucket][i] = quantisedNet.L2Biases[bucket][i];
+
+        for (int i = 0; i < L3_SIZE; ++i)
+            net.L3Weights[bucket][i] = quantisedNet.L3Weights[i][bucket];
+
+        net.L3Biases[bucket] = quantisedNet.L3Biases[bucket];
+    }
+}
+
+int main(int argc, char* argv[]) {
+
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <infile> <outfile>\n";
+        return -1;
+    }
+
+    std::string input_path = argv[1];
+    std::string output_path = argv[2];
+
+    std::cout << "Starting network preprocessing..." << std::endl;
+
+    std::ifstream input(input_path, std::ios::binary);
+    if (!input) {
+        std::cerr << "Error: Could not open input file: " << input_path << std::endl;
+        return 1;
+    }
+
+    std::cout << "Reading quantised network from " << input_path << "..." << std::endl;
+
+    input.read(reinterpret_cast<char*>(&quantisedNet), sizeof(QuantisedNetwork));
+
+    if (!input) {
+        std::cerr << "Error: Failed to read quantised network from input file" << std::endl;
+        std::cerr << "Expected to read " << sizeof(QuantisedNetwork) << " bytes" << std::endl;
+        input.close();
+        return 1;
+    }
+
+    input.close();
+    std::cout << "Successfully read " << sizeof(QuantisedNetwork) << " bytes" << std::endl;
+
+    std::cout << "Performing permutation and transposition..." << std::endl;
+    permute_transpose();
+    std::cout << "Permutation complete" << std::endl;
+
+    std::ofstream output(output_path, std::ios::binary);
+    if (!output) {
+        std::cerr << "Error: Could not open output file: " << output_path << std::endl;
+        return 1;
+    }
+
+    std::cout << "Writing permuted network to " << output_path << "..." << std::endl;
+
+    output.write(reinterpret_cast<const char*>(&net), sizeof(Network));
+
+    if (!output) {
+        std::cerr << "Error: Failed to write permuted network to output file" << std::endl;
+        output.close();
+        return 1;
+    }
+
+    output.close();
+
+    std::cout << "Successfully preprocessed " << input_path << " -> " << output_path << std::endl;
+    std::cout << "Output size: " << sizeof(Network) << " bytes" << std::endl;
+    return 0;
+}

@@ -1,89 +1,64 @@
 #include "nnue.h"
 #include "search.h"
-#include "simd.h"
+#include "parameters.h"
 
 #include <algorithm>
 #include <fstream>
 #include <random>
 
-int16_t NNUE::ReLU_(int16_t x) {
-    return x < 0 ? 0 : x;
-}
+QuantisedNetwork quantisedNet;
+UnquantisedNetwork unquantisedNet;
+const Network* permutedNet;
 
-int16_t NNUE::CReLU_(int16_t x) {
-    if (x < 0)
-        return 0;
-    return x > QA ? QA : x;
-}
+// Multilayer inference heavily based off Alexandria
+// Thanks Zuppa and CJ
+void quantise_raw() {
+    // https://github.com/PGG106/Alexandria/blob/fdf5dbd744ea601f9d7dbedcc9dfe1c391aba37c/src/nnue.cpp#L32
+    std::ifstream stream{"raw.bin", std::ios::binary};
 
-int32_t NNUE::SCReLU_(int16_t x) {
-    if (x < 0)
-        return 0;
-    else if (x > QA)
-        return QA * QA;
-    return x * x;
-}
+    stream.read(reinterpret_cast<char *>(&unquantisedNet), sizeof(UnquantisedNetwork));
 
-// https://github.com/official-stockfish/nnue-pytorch/blob/master/docs/nnue.md
-// https://cosmo.tardis.ac/files/2024-06-01-nnue.html
-// https://github.com/ksw0518/Turbulence_v4/blob/96c9eaaa96afa0e16f16daec9f99cf6018f1e119/Turbulence_v4/Evaluation.cpp#L498
-#ifndef AUTOVEC
-int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
-                              const std::array<int16_t, HL_N>& OPP, Color col,
-                              size_t bucket) {
-    const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
-    static_assert(HL_N % VECTOR_SIZE == 0,
-                  "HL size must be divisible by the native register size of "
-                  "your CPU for vectorization to work");
-    const nativeVector VEC_QA = set1_epi16(QA);
-    const nativeVector VEC_ZERO = set1_epi16(0);
+    for (int bucket = 0; bucket < INPUT_BUCKETS; ++bucket) {
+        int bucket_offset = bucket * (768 * L1_SIZE);
 
-    nativeVector accumulator{};
-    for (size_t i = 0; i < HL_N; i += VECTOR_SIZE) {
-        // load a SIMD vector of inputs, x
-        const nativeVector stmAccumValues =
-            load_epi16(reinterpret_cast<const nativeVector*>(&STM[i]));
-        const nativeVector nstmAccumValues =
-            load_epi16(reinterpret_cast<const nativeVector*>(&OPP[i]));
+        for (int i = 0; i < 768 * L1_SIZE; ++i) {
+            float w = unquantisedNet.FTWeights[bucket_offset + i] + unquantisedNet.Factoriser[i];
 
-        // compute the clipped ReLU of the inputs, v
-        const nativeVector stmClamped =
-            min_epi16(VEC_QA, max_epi16(stmAccumValues, VEC_ZERO));
-        const nativeVector nstmClamped =
-            min_epi16(VEC_QA, max_epi16(nstmAccumValues, VEC_ZERO));
-
-        // load the weights, w
-        const nativeVector stmWeights =
-            load_epi16(reinterpret_cast<const nativeVector*>(&OW[bucket][i]));
-        const nativeVector nstmWeights = load_epi16(
-            reinterpret_cast<const nativeVector*>(&OW[bucket][i + HL_N]));
-
-        // SCReLU it
-        const nativeVector stmActivated =
-            madd_epi16(stmClamped, mullo_epi16(stmClamped, stmWeights));
-        const nativeVector nstmActivated =
-            madd_epi16(nstmClamped, mullo_epi16(nstmClamped, nstmWeights));
-
-        accumulator = add_epi32(accumulator, stmActivated);
-        accumulator = add_epi32(accumulator, nstmActivated);
+            quantisedNet.FTWeights[bucket_offset + i] = static_cast<int16_t>(std::round(w * QA));
+        }
     }
-    return reduce_epi32(accumulator);
-}
 
-#else
+    for (int i = 0; i < L1_SIZE; ++i)
+        quantisedNet.FTBiases[i] = static_cast<int16_t>(std::round(unquantisedNet.FTBiases[i] * QA));
 
-int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
-                              const std::array<int16_t, HL_N>& OPP, Color col,
-                              size_t bucket) {
-    int32_t eval = 0;
-    for (int i = 0; i < HL_N; i++) {
-        eval += SCReLU_(STM[i]) * OW[bucket][i];
-        eval += SCReLU_(OPP[i]) * OW[bucket][HL_N + i];
+    for (int bucket = 0; bucket < OUTPUT_BUCKETS; ++bucket) {
+        for (int i = 0; i < L1_SIZE; ++i)
+            for (int j = 0; j < L2_SIZE; ++j)
+                quantisedNet.L1Weights[i][bucket][j] = 
+                        static_cast<int8_t>(std::round(unquantisedNet.L1Weights[i][bucket][j] * 64));
+
+        for (int i = 0; i < L2_SIZE; ++i) {
+            quantisedNet.L1Biases[bucket][i] = unquantisedNet.L1Biases[bucket][i];
+        }
+
+        for (int i = 0; i < L2_SIZE; ++i)
+            for (int j = 0; j < L3_SIZE; ++j)
+                quantisedNet.L2Weights[i][bucket][j] = unquantisedNet.L2Weights[i][bucket][j];
+
+        for (int i = 0; i < L3_SIZE; ++i)
+            quantisedNet.L2Biases[bucket][i] = unquantisedNet.L2Biases[bucket][i];
+
+        for (int i = 0; i < L3_SIZE; ++i)
+            quantisedNet.L3Weights[i][bucket] = unquantisedNet.L3Weights[i][bucket];
+
+        quantisedNet.L3Biases[bucket] = unquantisedNet.L3Biases[bucket];
     }
-    return eval;
+
+    std::ofstream out{"quantised.bin", std::ios::binary};
+    out.write(reinterpret_cast<const char *>(&quantisedNet), sizeof(QuantisedNetwork));
+    std::cout << "Successfully Quantised" << std::endl;
 }
 
-#endif
 
 int NNUE::feature(Color persp, Color color, PieceType p, Square sq, Square king) {
     int ci = persp == color ? 0 : 1;
@@ -93,56 +68,171 @@ int NNUE::feature(Color persp, Color color, PieceType p, Square sq, Square king)
     return Accumulator::kingBucket(king, persp) * 768 + ci * 64 * 6 + int(p) * 64 + sqi; // Index of the feature
 }
 
-void NNUE::load(const std::string& file) {
-    std::ifstream stream(file, std::ios::binary);
 
-    for (int i = 0; i < H1.size(); ++i) {
-        H1[i] = readLittleEndian<int16_t>(stream);
+void NNUE::activateL1(Accumulator& acc, Color col, uint8_t* output) {
+    const std::array<int16_t, L1_SIZE>& stm =
+        col == Color::WHITE ? acc.white : acc.black;
+    const std::array<int16_t, L1_SIZE>& opp =
+        col == Color::BLACK ? acc.white : acc.black;
+
+#ifndef AUTOVEC
+    const vepi16 vecOne = set1_epi16(QA);
+    const vepi16 vecZero = set1_epi16(0);
+    int offset = 0;
+    for (auto& side : {stm, opp}) {
+        for (int i = 0; i < L1_SIZE / 2; i += 2 * FT_CHUNK_SIZE) {
+            const vepi16 i0a = load_epi16(reinterpret_cast<const vepi16*>(&side[i]));
+            const vepi16 i0b = load_epi16(reinterpret_cast<const vepi16*>(&side[i + FT_CHUNK_SIZE]));
+            const vepi16 i1a = load_epi16(reinterpret_cast<const vepi16*>(&side[i + L1_SIZE / 2]));
+            const vepi16 i1b = load_epi16(reinterpret_cast<const vepi16*>(&side[i + FT_CHUNK_SIZE + L1_SIZE / 2]));
+
+            const vepi16 c0a = min_epi16(max_epi16(i0a, vecZero), vecOne);
+            const vepi16 c0b = min_epi16(max_epi16(i0b, vecZero), vecOne);
+            const vepi16 c1a = min_epi16(i1a, vecOne);
+            const vepi16 c1b = min_epi16(i1b, vecOne);
+
+            const vepi8  product = packus_epi16(mulhi_epi16(slli_epi16(c0a, 16 - FT_SHIFT), c1a), 
+                                                    mulhi_epi16(slli_epi16(c0b, 16 - FT_SHIFT), c1b));
+            store_epi16(reinterpret_cast<vepi8*>(&output[i + offset]), product);
+        }
+        offset += L1_SIZE / 2;
     }
-    for (int i = 0; i < H1Bias.size(); ++i) {
-        H1Bias[i] = readLittleEndian<int16_t>(stream);
+
+#else
+
+    for (int i = 0; i < L1_SIZE / 2; i++) {
+        int16_t c0 = std::clamp<int16_t>(stm[i], 0, QA);
+        int16_t c1 = std::clamp<int16_t>(stm[i + L1_SIZE / 2], 0, QA);
+        output[i] = static_cast<uint8_t>(c0 * c1 >> FT_SHIFT);
+
+        c0 = std::clamp<int16_t>(opp[i], 0, QA);
+        c1 = std::clamp<int16_t>(opp[i + L1_SIZE / 2], 0, QA);
+        output[i + L1_SIZE / 2] = static_cast<uint8_t>(c0 * c1 >> FT_SHIFT);
     }
-    for (int i = 0; i < OW.size(); ++i) {
-        for (int j = 0; j < OW[i].size(); j++)
-            OW[i][j] = readLittleEndian<int16_t>(stream);
-    }
-    for (int i = 0; i < OUTPUT_BUCKETS; i++)
-        outputBias[i] = readLittleEndian<int16_t>(stream);
+
+#endif
 }
 
+void NNUE::forwardL1(const uint8_t* inputs, const int8_t* weights, const float* biases, float* output) {
+
+#ifndef AUTOVEC
+    vepi32 sums[L2_SIZE / L2_CHUNK_SIZE] = {0};
+    const int32_t *inputs32 = reinterpret_cast<const int32_t*>(inputs);
+    int i = 0;
+    for (; i + 1 < L1_SIZE / L1_CHUNK_PER_32; i += 2){
+        const vepi32 ia = set1_epi32(inputs32[i]);
+        const vepi32 ib = set1_epi32(inputs32[i + 1]);
+        const vepi8 *wa = reinterpret_cast<const vepi8*>(&weights[i * L1_CHUNK_PER_32 * L2_SIZE]);
+        const vepi8 *wb = reinterpret_cast<const vepi8*>(&weights[(i + 1) * L1_CHUNK_PER_32 * L2_SIZE]);
+        for (int j = 0; j < L2_SIZE / L2_CHUNK_SIZE; ++j)
+            sums[j] = dpbusdx2_epi32(sums[j], ia, wa[j], ib, wb[j]);
+    }
+
+    for (; i < L1_SIZE / L1_CHUNK_PER_32; ++i) {
+        const vepi32 input32 = set1_epi32(inputs32[i]);
+        const vepi8 *weight = reinterpret_cast<const vepi8*>(&weights[i * L1_CHUNK_PER_32 * L2_SIZE]);
+        for (int j = 0; j < L2_SIZE / L2_CHUNK_SIZE; ++j)
+            sums[j] = dpbusd_epi32(sums[j], input32, weight[j]);
+    }
+
+    for (i = 0; i < L2_SIZE / L2_CHUNK_SIZE; ++i) {
+        const vps32 sumPs = mul_add_ps(cvtepi32_ps(sums[i]), 
+                                        set1_ps(L1_MUL), 
+                                        load_ps(&biases[i * L2_CHUNK_SIZE]));
+        const vps32 c = min_ps(max_ps(sumPs, zero_ps()), set1_ps(1.0f));
+        store_ps(&output[i * L2_CHUNK_SIZE], mul_ps(c, c));
+    }
+#else
+    int sums[L2_SIZE] = {0};
+    for (int i = 0; i < L1_SIZE; ++i) {
+        for (int j = 0; j < L2_SIZE; ++j) {
+            sums[j] += static_cast<int32_t>(inputs[i] * weights[j * L1_SIZE + i]);
+        }
+    }
+
+    for (int i = 0; i < L2_SIZE; ++i) {
+        float c = std::clamp(float(sums[i]) * L1_MUL + biases[i], 0.0f, 1.0f);
+        output[i] = c * c;
+    }
+#endif
+}
+
+void NNUE::forwardL2(const float* inputs, const float* weights, const float* biases, float* output) {
+
+#ifndef AUTOVEC
+    vps32 sumVecs[L3_SIZE / L3_CHUNK_SIZE];
+
+    for (int i = 0; i < L3_SIZE / L3_CHUNK_SIZE; ++i)
+        sumVecs[i] = load_ps(&biases[i * L3_CHUNK_SIZE]);
+
+    for (int i = 0; i < L2_SIZE; ++i) {
+        const vps32 inputVec = set1_ps(inputs[i]);
+        const vps32 *weight = reinterpret_cast<const vps32*>(&weights[i * L3_SIZE]);
+        for (int j = 0; j < L3_SIZE / L3_CHUNK_SIZE; ++j)
+            sumVecs[j] = mul_add_ps(inputVec, weight[j], sumVecs[j]);
+    }
+
+    for (int i = 0; i < L3_SIZE / L3_CHUNK_SIZE; ++i) {
+        const vps32 c = min_ps(max_ps(sumVecs[i], zero_ps()), set1_ps(1.0f));
+        store_ps(&output[i * L3_CHUNK_SIZE],  mul_ps(c, c));
+    }
+#else
+    float sums[L3_SIZE];
+
+    for (int i = 0; i < L3_SIZE; ++i)
+        sums[i] = biases[i];
+
+    for (int i = 0; i < L2_SIZE; ++i) {
+        const float *weight = &weights[i * L3_SIZE];
+        for (int out = 0; out < L3_SIZE; ++out) {
+            sums[out] += inputs[i] * weight[out];
+        }
+    }
+
+    for (int i = 0; i < L3_SIZE; ++i) {
+        float c = std::clamp(sums[i], 0.0f, 1.0f);
+        output[i] = c * c;
+    }
+#endif
+}
+
+void NNUE::forwardL3(const float* inputs, const float* weights, const float bias, float& output) {
+    constexpr int chunk = 512 / 32;
+    
+#ifndef AUTOVEC
+    constexpr int numSums = chunk / (sizeof(vps32) / sizeof(float));
+    vps32 sumVecs[numSums] = {0};
+    for (int i = 0; i < L3_SIZE / L3_CHUNK_SIZE; ++i) {
+        const vps32 weightVec = load_ps(&weights[i * L3_CHUNK_SIZE]);
+        const vps32 inputsVec = load_ps(&inputs[i * L3_CHUNK_SIZE]);
+        sumVecs[i % numSums] = mul_add_ps(inputsVec, weightVec, sumVecs[i % numSums]);
+    }
+    output = reduce_add_ps(sumVecs) + bias;
+#else
+    constexpr int numSums = chunk;
+    float sums[numSums] = {0};
+
+    for (int i = 0; i < L3_SIZE; ++i) {
+        sums[i % numSums] += inputs[i] * weights[i];
+    }
+    output = reduce_add(sums, numSums) + bias;
+#endif
+}
 
 int NNUE::inference(Board& board, Accumulator& accumulator) {
 
     Color stm = board.sideToMove();
+    const size_t outputBucket = (board.occ().count() - 2) / (32 / OUTPUT_BUCKETS);
+    alignas (64) uint8_t FTOutputs[L1_SIZE];
+    alignas (64) float L1Outputs[L2_SIZE];
+    alignas (64) float L2Outputs[L3_SIZE];
+    float output;
 
-    const std::array<int16_t, HL_N>& accumulatorSTM =
-        stm == Color::WHITE ? accumulator.white : accumulator.black;
-    const std::array<int16_t, HL_N>& accumulatorOPP =
-        stm == Color::BLACK ? accumulator.white : accumulator.black;
-
-    // Output buckets are calculated using piececount. Each bucket corresponds
-    // to (cnt-2)/(32/N)
-    const size_t outputBucket =
-        (board.occ().count() - 2) / (32 / OUTPUT_BUCKETS);
-
-    int64_t eval = 0;
-
-    if (ACTIVATION != SCReLU) {
-
-        for (int i = 0; i < HL_N; i++) {
-            if (ACTIVATION == CReLU) {
-                eval += CReLU_(accumulatorSTM[i]) * OW[outputBucket][i];
-                eval += CReLU_(accumulatorOPP[i]) * OW[outputBucket][HL_N + i];
-            }
-        }
-    } else {
-        eval =
-            optimizedSCReLU(accumulatorSTM, accumulatorOPP, stm, outputBucket);
-        eval /= QA;
-    }
-
-    eval += outputBias[outputBucket];
-    return (eval * NNUE_SCALE) / (QA * QB);
+    activateL1(accumulator, stm, FTOutputs);
+    forwardL1(FTOutputs, permutedNet->L1Weights[outputBucket], permutedNet->L1Biases[outputBucket], L1Outputs);
+    forwardL2(L1Outputs, permutedNet->L2Weights[outputBucket], permutedNet->L2Biases[outputBucket], L2Outputs);
+    forwardL3(L2Outputs, permutedNet->L3Weights[outputBucket], permutedNet->L3Biases[outputBucket], output);
+    return output * NNUE_SCALE;
 }
 
 // ------ Accumulator -------
@@ -182,7 +272,7 @@ void Accumulator::refresh(Board& board, Color persp) {
     computed[int(persp)] = true;
 
     // Obviously the bias is commutative so just add it first
-    accPerspective = network.H1Bias;
+    accPerspective = std::to_array(permutedNet->FTBiases);
 
     Square kingSq = board.kingSq(persp);
 
@@ -193,9 +283,9 @@ void Accumulator::refresh(Board& board, Color persp) {
         int feature = NNUE::feature(persp, Color::WHITE,
                                board.at<PieceType>(sq), sq, kingSq);
 
-        for (int i = 0; i < HL_N; i++) {
+        for (int i = 0; i < L1_SIZE; i++) {
             // Do the matrix mutliply for the next layer
-            accPerspective[i] += network.H1[feature * HL_N + i];
+            accPerspective[i] += permutedNet->FTWeights[feature * L1_SIZE + i];
         }
     }
 
@@ -206,9 +296,9 @@ void Accumulator::refresh(Board& board, Color persp) {
         int feature = NNUE::feature(persp, Color::BLACK,
                                board.at<PieceType>(sq), sq, kingSq);
         
-        for (int i = 0; i < HL_N; i++) {
+        for (int i = 0; i < L1_SIZE; i++) {
             // Do the matrix mutliply for the next layer
-            accPerspective[i] += network.H1[feature * HL_N + i];
+            accPerspective[i] += permutedNet->FTWeights[feature * L1_SIZE + i];
         }
     }
 }
@@ -225,7 +315,7 @@ void Accumulator::refresh(Board& board, Color persp, InputBucketCache& bucketCac
     BucketCacheEntry& cache = bucketCache.cache[int(persp)][kingSq.file() >= File::FILE_E][kingBucket(kingSq, persp)];
 
     if (!cache.isInit) {
-        cache.features = network.H1Bias;
+        cache.features = std::to_array(permutedNet->FTBiases);
         cache.isInit = true;
     }
 
@@ -265,8 +355,8 @@ void Accumulator::refresh(Board& board, Color persp, InputBucketCache& bucketCac
     }
     // add remaining individually
     while (addIndex > 0) {
-        for (int i = 0; i < HL_N; i++) {
-            accPerspective[i] += network.H1[adds[addIndex - 1] * HL_N + i];
+        for (int i = 0; i < L1_SIZE; i++) {
+            accPerspective[i] += permutedNet->FTWeights[adds[addIndex - 1] * L1_SIZE + i];
         }
         addIndex--;
     }
@@ -277,8 +367,8 @@ void Accumulator::refresh(Board& board, Color persp, InputBucketCache& bucketCac
     }
     // sub remaining individually
     while (subIndex > 0) {
-        for (int i = 0; i < HL_N; i++) {
-            accPerspective[i] -= network.H1[subs[subIndex - 1] * HL_N + i];
+        for (int i = 0; i < L1_SIZE; i++) {
+            accPerspective[i] -= permutedNet->FTWeights[subs[subIndex - 1] * L1_SIZE + i];
         }
         subIndex--;
     }
@@ -293,27 +383,27 @@ void Accumulator::refresh(Board& board) {
 }
 
 void Accumulator::print() {
-    for (int i = 0; i < HL_N; i++) {
+    for (int i = 0; i < L1_SIZE; i++) {
         std::cout << "White: " << white[i] << " Black: " << black[i]
                   << std::endl;
     }
 }
 
 
-void Accumulator::refreshAdd4(std::array<int16_t, HL_N>& acc, int add0, int add1, int add2, int add3) {
-    for (int i = 0; i < HL_N; i++) {
-        acc[i] += network.H1[add0 * HL_N + i];
-        acc[i] += network.H1[add1 * HL_N + i];
-        acc[i] += network.H1[add2 * HL_N + i];
-        acc[i] += network.H1[add3 * HL_N + i];
+void Accumulator::refreshAdd4(std::array<int16_t, L1_SIZE>& acc, int add0, int add1, int add2, int add3) {
+    for (int i = 0; i < L1_SIZE; i++) {
+        acc[i] += permutedNet->FTWeights[add0 * L1_SIZE + i];
+        acc[i] += permutedNet->FTWeights[add1 * L1_SIZE + i];
+        acc[i] += permutedNet->FTWeights[add2 * L1_SIZE + i];
+        acc[i] += permutedNet->FTWeights[add3 * L1_SIZE + i];
     }
 }
-void Accumulator::refreshSub4(std::array<int16_t, HL_N>& acc, int sub0, int sub1, int sub2, int sub3) {
-    for (int i = 0; i < HL_N; i++) {
-        acc[i] -= network.H1[sub0 * HL_N + i];
-        acc[i] -= network.H1[sub1 * HL_N + i];
-        acc[i] -= network.H1[sub2 * HL_N + i];
-        acc[i] -= network.H1[sub3 * HL_N + i];
+void Accumulator::refreshSub4(std::array<int16_t, L1_SIZE>& acc, int sub0, int sub1, int sub2, int sub3) {
+    for (int i = 0; i < L1_SIZE; i++) {
+        acc[i] -= permutedNet->FTWeights[sub0 * L1_SIZE + i];
+        acc[i] -= permutedNet->FTWeights[sub1 * L1_SIZE + i];
+        acc[i] -= permutedNet->FTWeights[sub2 * L1_SIZE + i];
+        acc[i] -= permutedNet->FTWeights[sub3 * L1_SIZE + i];
     }
 }
 
@@ -335,26 +425,26 @@ void Accumulator::applyDelta(Color persp, Accumulator& prev) {
 }
 void Accumulator::addSubDelta(Color persp, int addF, int subF) {
     auto& accPerspective = persp == Color::WHITE ? white : black;
-    for (int i = 0; i < HL_N; i++) {
-        accPerspective[i] += network.H1[addF * HL_N + i];
-        accPerspective[i] -= network.H1[subF * HL_N + i];
+    for (int i = 0; i < L1_SIZE; i++) {
+        accPerspective[i] += permutedNet->FTWeights[addF * L1_SIZE + i];
+        accPerspective[i] -= permutedNet->FTWeights[subF * L1_SIZE + i];
     }
 }
 void Accumulator::addSubSubDelta(Color persp, int addF, int subF1, int subF2) {
     auto& accPerspective = persp == Color::WHITE ? white : black;
-    for (int i = 0; i < HL_N; i++) {
-        accPerspective[i] += network.H1[addF * HL_N + i];
-        accPerspective[i] -= network.H1[subF1 * HL_N + i];
-        accPerspective[i] -= network.H1[subF2 * HL_N + i];
+    for (int i = 0; i < L1_SIZE; i++) {
+        accPerspective[i] += permutedNet->FTWeights[addF * L1_SIZE + i];
+        accPerspective[i] -= permutedNet->FTWeights[subF1 * L1_SIZE + i];
+        accPerspective[i] -= permutedNet->FTWeights[subF2 * L1_SIZE + i];
     }
 }
 void Accumulator::addAddSubSubDelta(Color persp, int addF1, int addF2, int subF1, int subF2) {
     auto& accPerspective = persp == Color::WHITE ? white : black;
-    for (int i = 0; i < HL_N; i++) {
-        accPerspective[i] += network.H1[addF1 * HL_N + i];
-        accPerspective[i] += network.H1[addF2 * HL_N + i];
-        accPerspective[i] -= network.H1[subF1 * HL_N + i];
-        accPerspective[i] -= network.H1[subF2 * HL_N + i];
+    for (int i = 0; i < L1_SIZE; i++) {
+        accPerspective[i] += permutedNet->FTWeights[addF1 * L1_SIZE + i];
+        accPerspective[i] += permutedNet->FTWeights[addF2 * L1_SIZE + i];
+        accPerspective[i] -= permutedNet->FTWeights[subF1 * L1_SIZE + i];
+        accPerspective[i] -= permutedNet->FTWeights[subF2 * L1_SIZE + i];
     }
 }
 

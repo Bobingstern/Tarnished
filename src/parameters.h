@@ -8,6 +8,7 @@
 #include <list>
 #include <sstream>
 #include <vector>
+#include "simd.h"
 
 const int MAX_PLY = 125;
 const int STACK_OVERHEAD = 6;
@@ -41,14 +42,32 @@ const int16_t DEFAULT_HISTORY = 0;
 constexpr int CORR_HIST_ENTRIES = 16384;
 constexpr int PAWN_HIST_ENTRIES = 1024;
 constexpr int MAX_CORR_HIST = 1024;
+
 // NNUE Parameters
-constexpr int16_t HL_N = 1536;
 constexpr int16_t QA = 255;
 constexpr int16_t QB = 64;
 constexpr int16_t NNUE_SCALE = 369;
 constexpr int OUTPUT_BUCKETS = 8;
 constexpr int INPUT_BUCKETS = 16;
 const bool HORIZONTAL_MIRROR = true;
+
+constexpr int L1_SIZE = 1536;
+constexpr int L2_SIZE = 16;
+constexpr int L3_SIZE = 32;
+
+constexpr int FT_SHIFT = 10;
+constexpr float L1_MUL = float(1 << FT_SHIFT) / float(QA * QA * QB);
+constexpr float WEIGHT_CLIPPING = 1.98f;
+
+#ifndef AUTOVEC
+constexpr int FT_CHUNK_SIZE = sizeof(vepi16) / sizeof(int16_t);
+constexpr int L1_CHUNK_SIZE = sizeof(vepi8 ) / sizeof(int8_t);
+constexpr int L2_CHUNK_SIZE = sizeof(vps32 ) / sizeof(float);
+constexpr int L3_CHUNK_SIZE = sizeof(vps32 ) / sizeof(float);
+constexpr int L1_CHUNK_PER_32 = sizeof(int32_t) / sizeof(int8_t);
+#else
+constexpr int L1_CHUNK_PER_32 = 1;
+#endif
 
 const std::array<int, 64> BUCKET_LAYOUT = {
   0,  1,  2,  3,  3,  2,  1,  0,
