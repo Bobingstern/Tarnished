@@ -6,7 +6,6 @@
     #include <immintrin.h>
     #if defined(__AVX512F__)
         #define USE_AVX512
-        #pragma message("Using AVX512 NNUE inference")
 using nativeVector = __m512i;
 using vepi8  = __m512i;
 using vepi16 = __m512i;
