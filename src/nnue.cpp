@@ -10,32 +10,14 @@ QuantisedNetwork quantisedNet;
 UnquantisedNetwork unquantisedNet;
 const Network* permutedNet;
 
-int16_t NNUE::ReLU_(int16_t x) {
-    return x < 0 ? 0 : x;
-}
-
-int16_t NNUE::CReLU_(int16_t x) {
-    if (x < 0)
-        return 0;
-    return x > QA ? QA : x;
-}
-
-int32_t NNUE::SCReLU_(int16_t x) {
-    if (x < 0)
-        return 0;
-    else if (x > QA)
-        return QA * QA;
-    return x * x;
-}
-
-
+// Multilayer inference heavily based off Alexandria
+// Thanks Zuppa and CJ
 void quantise_raw() {
     // https://github.com/PGG106/Alexandria/blob/fdf5dbd744ea601f9d7dbedcc9dfe1c391aba37c/src/nnue.cpp#L32
     std::ifstream stream{"raw.bin", std::ios::binary};
 
     stream.read(reinterpret_cast<char *>(&unquantisedNet), sizeof(UnquantisedNetwork));
 
-    // // Merge factoriser  + quantise FT weights
     for (int bucket = 0; bucket < INPUT_BUCKETS; ++bucket) {
         int bucket_offset = bucket * (768 * L1_SIZE);
 
@@ -46,37 +28,29 @@ void quantise_raw() {
         }
     }
 
-    // // Quantise FT Biases
     for (int i = 0; i < L1_SIZE; ++i)
         quantisedNet.FTBiases[i] = static_cast<int16_t>(std::round(unquantisedNet.FTBiases[i] * QA));
 
-    // // Quantise L1, L2 and L3 weights and biases
     for (int bucket = 0; bucket < OUTPUT_BUCKETS; ++bucket) {
-        // Quantise L1 Weights
         for (int i = 0; i < L1_SIZE; ++i)
             for (int j = 0; j < L2_SIZE; ++j)
-                quantisedNet.L1Weights[i][bucket][j] = static_cast<int8_t>(std::round(
-                    unquantisedNet.L1Weights[i][bucket][j] * 64));
+                quantisedNet.L1Weights[i][bucket][j] = 
+                        static_cast<int8_t>(std::round(unquantisedNet.L1Weights[i][bucket][j] * 64));
 
-        // Quantise L1 Biases
         for (int i = 0; i < L2_SIZE; ++i) {
             quantisedNet.L1Biases[bucket][i] = unquantisedNet.L1Biases[bucket][i];
         }
 
-        // Quantise L2 Weights
         for (int i = 0; i < L2_SIZE; ++i)
             for (int j = 0; j < L3_SIZE; ++j)
                 quantisedNet.L2Weights[i][bucket][j] = unquantisedNet.L2Weights[i][bucket][j];
 
-        // Quantise L2 Biases
         for (int i = 0; i < L3_SIZE; ++i)
             quantisedNet.L2Biases[bucket][i] = unquantisedNet.L2Biases[bucket][i];
 
-        // Quantise L3 Weights
         for (int i = 0; i < L3_SIZE; ++i)
             quantisedNet.L3Weights[i][bucket] = unquantisedNet.L3Weights[i][bucket];
 
-        // Quantise L3 Biases
         quantisedNet.L3Biases[bucket] = unquantisedNet.L3Biases[bucket];
     }
 
@@ -96,9 +70,9 @@ int NNUE::feature(Color persp, Color color, PieceType p, Square sq, Square king)
 
 
 void NNUE::activateL1(Accumulator& acc, Color col, uint8_t* output) {
-    const std::array<int16_t, HL_N>& stm =
+    const std::array<int16_t, L1_SIZE>& stm =
         col == Color::WHITE ? acc.white : acc.black;
-    const std::array<int16_t, HL_N>& opp =
+    const std::array<int16_t, L1_SIZE>& opp =
         col == Color::BLACK ? acc.white : acc.black;
 
 #ifndef AUTOVEC
@@ -107,20 +81,18 @@ void NNUE::activateL1(Accumulator& acc, Color col, uint8_t* output) {
     int offset = 0;
     for (auto& side : {stm, opp}) {
         for (int i = 0; i < L1_SIZE / 2; i += 2 * FT_CHUNK_SIZE) {
-            const vepi16 input0a = load_epi16(reinterpret_cast<const vepi16*>(&side[i]));
-            const vepi16 input0b = load_epi16(reinterpret_cast<const vepi16*>(&side[i + FT_CHUNK_SIZE]));
-            const vepi16 input1a = load_epi16(reinterpret_cast<const vepi16*>(&side[i + L1_SIZE / 2]));
-            const vepi16 input1b = load_epi16(reinterpret_cast<const vepi16*>(&side[i + FT_CHUNK_SIZE + L1_SIZE / 2]));
+            const vepi16 i0a = load_epi16(reinterpret_cast<const vepi16*>(&side[i]));
+            const vepi16 i0b = load_epi16(reinterpret_cast<const vepi16*>(&side[i + FT_CHUNK_SIZE]));
+            const vepi16 i1a = load_epi16(reinterpret_cast<const vepi16*>(&side[i + L1_SIZE / 2]));
+            const vepi16 i1b = load_epi16(reinterpret_cast<const vepi16*>(&side[i + FT_CHUNK_SIZE + L1_SIZE / 2]));
 
-            const vepi16 clipped0a = min_epi16(max_epi16(input0a, vecZero), vecOne);
-            const vepi16 clipped0b = min_epi16(max_epi16(input0b, vecZero), vecOne);
-            const vepi16 clipped1a = min_epi16(input1a, vecOne);
-            const vepi16 clipped1b = min_epi16(input1b, vecOne);
+            const vepi16 c0a = min_epi16(max_epi16(i0a, vecZero), vecOne);
+            const vepi16 c0b = min_epi16(max_epi16(i0b, vecZero), vecOne);
+            const vepi16 c1a = min_epi16(i1a, vecOne);
+            const vepi16 c1b = min_epi16(i1b, vecOne);
 
-            const vepi16 producta  = mulhi_epi16(slli_epi16(clipped0a, 16 - FT_SHIFT), clipped1a);
-            const vepi16 productb  = mulhi_epi16(slli_epi16(clipped0b, 16 - FT_SHIFT), clipped1b);
-
-            const vepi8  product   = packus_epi16(producta, productb);
+            const vepi8  product = packus_epi16(mulhi_epi16(slli_epi16(c0a, 16 - FT_SHIFT), c1a), 
+                                                    mulhi_epi16(slli_epi16(c0b, 16 - FT_SHIFT), c1b));
             store_epi16(reinterpret_cast<vepi8*>(&output[i + offset]), product);
         }
         offset += L1_SIZE / 2;
@@ -144,38 +116,31 @@ void NNUE::activateL1(Accumulator& acc, Color col, uint8_t* output) {
 void NNUE::forwardL1(const uint8_t* inputs, const int8_t* weights, const float* biases, float* output) {
 
 #ifndef AUTOVEC
-    vepi32 sums[L2_SIZE / L2_CHUNK_SIZE] = {};
+    vepi32 sums[L2_SIZE / L2_CHUNK_SIZE] = {0};
     const int32_t *inputs32 = reinterpret_cast<const int32_t*>(inputs);
     int i = 0;
     for (; i + 1 < L1_SIZE / L1_CHUNK_PER_32; i += 2){
-        const uint16_t indexa = i;
-        const uint16_t indexb = i + 1;
-        const vepi32 input32a = set1_epi32(inputs32[indexa]);
-        const vepi32 input32b = set1_epi32(inputs32[indexb]);
-        const vepi8 *weighta  = reinterpret_cast<const vepi8*>(&weights[indexa * L1_CHUNK_PER_32 * L2_SIZE]);
-        const vepi8 *weightb  = reinterpret_cast<const vepi8*>(&weights[indexb * L1_CHUNK_PER_32 * L2_SIZE]);
+        const vepi32 ia = set1_epi32(inputs32[i]);
+        const vepi32 ib = set1_epi32(inputs32[i + 1]);
+        const vepi8 *wa = reinterpret_cast<const vepi8*>(&weights[i * L1_CHUNK_PER_32 * L2_SIZE]);
+        const vepi8 *wb = reinterpret_cast<const vepi8*>(&weights[(i + 1) * L1_CHUNK_PER_32 * L2_SIZE]);
         for (int j = 0; j < L2_SIZE / L2_CHUNK_SIZE; ++j)
-            sums[j] = dpbusdx2_epi32(sums[j], input32a, weighta[j], input32b, weightb[j]);
+            sums[j] = dpbusdx2_epi32(sums[j], ia, wa[j], ib, wb[j]);
     }
 
     for (; i < L1_SIZE / L1_CHUNK_PER_32; ++i) {
-        const uint16_t index = i;
-        const vepi32 input32 = set1_epi32(inputs32[index]);
-        const vepi8 *weight  = reinterpret_cast<const vepi8*>(&weights[index * L1_CHUNK_PER_32 * L2_SIZE]);
+        const vepi32 input32 = set1_epi32(inputs32[i]);
+        const vepi8 *weight = reinterpret_cast<const vepi8*>(&weights[i * L1_CHUNK_PER_32 * L2_SIZE]);
         for (int j = 0; j < L2_SIZE / L2_CHUNK_SIZE; ++j)
             sums[j] = dpbusd_epi32(sums[j], input32, weight[j]);
     }
 
     for (i = 0; i < L2_SIZE / L2_CHUNK_SIZE; ++i) {
-        // Convert into floats, and activate L1
-        const vps32 biasVec = load_ps(&biases[i * L2_CHUNK_SIZE]);
-        const vps32 sumMul  = set1_ps(L1_MUL);
-        const vps32 sumPs   = mul_add_ps(cvtepi32_ps(sums[i]), sumMul, biasVec);
-        const vps32 Zero    = zero_ps();
-        const vps32 One     = set1_ps(1.0f);
-        const vps32 clipped = min_ps(max_ps(sumPs, Zero), One);
-        const vps32 squared = mul_ps(clipped, clipped);
-        store_ps(&output[i * L2_CHUNK_SIZE], squared);
+        const vps32 sumPs = mul_add_ps(cvtepi32_ps(sums[i]), 
+                                        set1_ps(L1_MUL), 
+                                        load_ps(&biases[i * L2_CHUNK_SIZE]));
+        const vps32 c = min_ps(max_ps(sumPs, zero_ps()), set1_ps(1.0f));
+        store_ps(&output[i * L2_CHUNK_SIZE], mul_ps(c, c));
     }
 #else
     int sums[L2_SIZE] = {0};
@@ -202,18 +167,14 @@ void NNUE::forwardL2(const float* inputs, const float* weights, const float* bia
 
     for (int i = 0; i < L2_SIZE; ++i) {
         const vps32 inputVec = set1_ps(inputs[i]);
-        const vps32 *weight  = reinterpret_cast<const vps32*>(&weights[i * L3_SIZE]);
+        const vps32 *weight = reinterpret_cast<const vps32*>(&weights[i * L3_SIZE]);
         for (int j = 0; j < L3_SIZE / L3_CHUNK_SIZE; ++j)
             sumVecs[j] = mul_add_ps(inputVec, weight[j], sumVecs[j]);
     }
 
-    // Activate L2
     for (int i = 0; i < L3_SIZE / L3_CHUNK_SIZE; ++i) {
-        const vps32 Zero    = zero_ps();
-        const vps32 One     = set1_ps(1.0f);
-        const vps32 clipped = min_ps(max_ps(sumVecs[i], Zero), One);
-        const vps32 squared = mul_ps(clipped, clipped);
-        store_ps(&output[i * L3_CHUNK_SIZE], squared);
+        const vps32 c = min_ps(max_ps(sumVecs[i], zero_ps()), set1_ps(1.0f));
+        store_ps(&output[i * L3_CHUNK_SIZE],  mul_ps(c, c));
     }
 #else
     float sums[L3_SIZE];
@@ -236,12 +197,11 @@ void NNUE::forwardL2(const float* inputs, const float* weights, const float* bia
 }
 
 void NNUE::forwardL3(const float* inputs, const float* weights, const float bias, float& output) {
-    constexpr int avx512chunk = 512 / 32;
+    constexpr int chunk = 512 / 32;
     
 #ifndef AUTOVEC
-    constexpr int numSums = avx512chunk / (sizeof(vps32) / sizeof(float));
-    vps32 sumVecs[numSums] = {};
-    // Affine transform for L3
+    constexpr int numSums = chunk / (sizeof(vps32) / sizeof(float));
+    vps32 sumVecs[numSums] = {0};
     for (int i = 0; i < L3_SIZE / L3_CHUNK_SIZE; ++i) {
         const vps32 weightVec = load_ps(&weights[i * L3_CHUNK_SIZE]);
         const vps32 inputsVec = load_ps(&inputs[i * L3_CHUNK_SIZE]);
@@ -249,10 +209,9 @@ void NNUE::forwardL3(const float* inputs, const float* weights, const float bias
     }
     output = reduce_add_ps(sumVecs) + bias;
 #else
-    constexpr int numSums = avx512chunk;
+    constexpr int numSums = chunk;
     float sums[numSums] = {0};
 
-    // Affine transform for L3
     for (int i = 0; i < L3_SIZE; ++i) {
         sums[i % numSums] += inputs[i] * weights[i];
     }
@@ -274,36 +233,6 @@ int NNUE::inference(Board& board, Accumulator& accumulator) {
     forwardL2(L1Outputs, permutedNet->L2Weights[outputBucket], permutedNet->L2Biases[outputBucket], L2Outputs);
     forwardL3(L2Outputs, permutedNet->L3Weights[outputBucket], permutedNet->L3Biases[outputBucket], output);
     return output * NNUE_SCALE;
-    // Color stm = board.sideToMove();
-
-    // const std::array<int16_t, HL_N>& accumulatorSTM =
-    //     stm == Color::WHITE ? accumulator.white : accumulator.black;
-    // const std::array<int16_t, HL_N>& accumulatorOPP =
-    //     stm == Color::BLACK ? accumulator.white : accumulator.black;
-
-    // // Output buckets are calculated using piececount. Each bucket corresponds
-    // // to (cnt-2)/(32/N)
-    // const size_t outputBucket =
-    //     (board.occ().count() - 2) / (32 / OUTPUT_BUCKETS);
-
-    // int64_t eval = 0;
-
-    // if (ACTIVATION != SCReLU) {
-
-    //     for (int i = 0; i < HL_N; i++) {
-    //         if (ACTIVATION == CReLU) {
-    //             eval += CReLU_(accumulatorSTM[i]) * OW[outputBucket][i];
-    //             eval += CReLU_(accumulatorOPP[i]) * OW[outputBucket][HL_N + i];
-    //         }
-    //     }
-    // } else {
-    //     eval =
-    //         optimizedSCReLU(accumulatorSTM, accumulatorOPP, stm, outputBucket);
-    //     eval /= QA;
-    // }
-
-    // eval += outputBias[outputBucket];
-    // return (eval * NNUE_SCALE) / (QA * QB);
 }
 
 // ------ Accumulator -------
@@ -354,9 +283,9 @@ void Accumulator::refresh(Board& board, Color persp) {
         int feature = NNUE::feature(persp, Color::WHITE,
                                board.at<PieceType>(sq), sq, kingSq);
 
-        for (int i = 0; i < HL_N; i++) {
+        for (int i = 0; i < L1_SIZE; i++) {
             // Do the matrix mutliply for the next layer
-            accPerspective[i] += permutedNet->FTWeights[feature * HL_N + i];
+            accPerspective[i] += permutedNet->FTWeights[feature * L1_SIZE + i];
         }
     }
 
@@ -367,9 +296,9 @@ void Accumulator::refresh(Board& board, Color persp) {
         int feature = NNUE::feature(persp, Color::BLACK,
                                board.at<PieceType>(sq), sq, kingSq);
         
-        for (int i = 0; i < HL_N; i++) {
+        for (int i = 0; i < L1_SIZE; i++) {
             // Do the matrix mutliply for the next layer
-            accPerspective[i] += permutedNet->FTWeights[feature * HL_N + i];
+            accPerspective[i] += permutedNet->FTWeights[feature * L1_SIZE + i];
         }
     }
 }
@@ -426,8 +355,8 @@ void Accumulator::refresh(Board& board, Color persp, InputBucketCache& bucketCac
     }
     // add remaining individually
     while (addIndex > 0) {
-        for (int i = 0; i < HL_N; i++) {
-            accPerspective[i] += permutedNet->FTWeights[adds[addIndex - 1] * HL_N + i];
+        for (int i = 0; i < L1_SIZE; i++) {
+            accPerspective[i] += permutedNet->FTWeights[adds[addIndex - 1] * L1_SIZE + i];
         }
         addIndex--;
     }
@@ -438,8 +367,8 @@ void Accumulator::refresh(Board& board, Color persp, InputBucketCache& bucketCac
     }
     // sub remaining individually
     while (subIndex > 0) {
-        for (int i = 0; i < HL_N; i++) {
-            accPerspective[i] -= permutedNet->FTWeights[subs[subIndex - 1] * HL_N + i];
+        for (int i = 0; i < L1_SIZE; i++) {
+            accPerspective[i] -= permutedNet->FTWeights[subs[subIndex - 1] * L1_SIZE + i];
         }
         subIndex--;
     }
@@ -454,27 +383,27 @@ void Accumulator::refresh(Board& board) {
 }
 
 void Accumulator::print() {
-    for (int i = 0; i < HL_N; i++) {
+    for (int i = 0; i < L1_SIZE; i++) {
         std::cout << "White: " << white[i] << " Black: " << black[i]
                   << std::endl;
     }
 }
 
 
-void Accumulator::refreshAdd4(std::array<int16_t, HL_N>& acc, int add0, int add1, int add2, int add3) {
-    for (int i = 0; i < HL_N; i++) {
-        acc[i] += permutedNet->FTWeights[add0 * HL_N + i];
-        acc[i] += permutedNet->FTWeights[add1 * HL_N + i];
-        acc[i] += permutedNet->FTWeights[add2 * HL_N + i];
-        acc[i] += permutedNet->FTWeights[add3 * HL_N + i];
+void Accumulator::refreshAdd4(std::array<int16_t, L1_SIZE>& acc, int add0, int add1, int add2, int add3) {
+    for (int i = 0; i < L1_SIZE; i++) {
+        acc[i] += permutedNet->FTWeights[add0 * L1_SIZE + i];
+        acc[i] += permutedNet->FTWeights[add1 * L1_SIZE + i];
+        acc[i] += permutedNet->FTWeights[add2 * L1_SIZE + i];
+        acc[i] += permutedNet->FTWeights[add3 * L1_SIZE + i];
     }
 }
-void Accumulator::refreshSub4(std::array<int16_t, HL_N>& acc, int sub0, int sub1, int sub2, int sub3) {
-    for (int i = 0; i < HL_N; i++) {
-        acc[i] -= permutedNet->FTWeights[sub0 * HL_N + i];
-        acc[i] -= permutedNet->FTWeights[sub1 * HL_N + i];
-        acc[i] -= permutedNet->FTWeights[sub2 * HL_N + i];
-        acc[i] -= permutedNet->FTWeights[sub3 * HL_N + i];
+void Accumulator::refreshSub4(std::array<int16_t, L1_SIZE>& acc, int sub0, int sub1, int sub2, int sub3) {
+    for (int i = 0; i < L1_SIZE; i++) {
+        acc[i] -= permutedNet->FTWeights[sub0 * L1_SIZE + i];
+        acc[i] -= permutedNet->FTWeights[sub1 * L1_SIZE + i];
+        acc[i] -= permutedNet->FTWeights[sub2 * L1_SIZE + i];
+        acc[i] -= permutedNet->FTWeights[sub3 * L1_SIZE + i];
     }
 }
 
@@ -496,26 +425,26 @@ void Accumulator::applyDelta(Color persp, Accumulator& prev) {
 }
 void Accumulator::addSubDelta(Color persp, int addF, int subF) {
     auto& accPerspective = persp == Color::WHITE ? white : black;
-    for (int i = 0; i < HL_N; i++) {
-        accPerspective[i] += permutedNet->FTWeights[addF * HL_N + i];
-        accPerspective[i] -= permutedNet->FTWeights[subF * HL_N + i];
+    for (int i = 0; i < L1_SIZE; i++) {
+        accPerspective[i] += permutedNet->FTWeights[addF * L1_SIZE + i];
+        accPerspective[i] -= permutedNet->FTWeights[subF * L1_SIZE + i];
     }
 }
 void Accumulator::addSubSubDelta(Color persp, int addF, int subF1, int subF2) {
     auto& accPerspective = persp == Color::WHITE ? white : black;
-    for (int i = 0; i < HL_N; i++) {
-        accPerspective[i] += permutedNet->FTWeights[addF * HL_N + i];
-        accPerspective[i] -= permutedNet->FTWeights[subF1 * HL_N + i];
-        accPerspective[i] -= permutedNet->FTWeights[subF2 * HL_N + i];
+    for (int i = 0; i < L1_SIZE; i++) {
+        accPerspective[i] += permutedNet->FTWeights[addF * L1_SIZE + i];
+        accPerspective[i] -= permutedNet->FTWeights[subF1 * L1_SIZE + i];
+        accPerspective[i] -= permutedNet->FTWeights[subF2 * L1_SIZE + i];
     }
 }
 void Accumulator::addAddSubSubDelta(Color persp, int addF1, int addF2, int subF1, int subF2) {
     auto& accPerspective = persp == Color::WHITE ? white : black;
-    for (int i = 0; i < HL_N; i++) {
-        accPerspective[i] += permutedNet->FTWeights[addF1 * HL_N + i];
-        accPerspective[i] += permutedNet->FTWeights[addF2 * HL_N + i];
-        accPerspective[i] -= permutedNet->FTWeights[subF1 * HL_N + i];
-        accPerspective[i] -= permutedNet->FTWeights[subF2 * HL_N + i];
+    for (int i = 0; i < L1_SIZE; i++) {
+        accPerspective[i] += permutedNet->FTWeights[addF1 * L1_SIZE + i];
+        accPerspective[i] += permutedNet->FTWeights[addF2 * L1_SIZE + i];
+        accPerspective[i] -= permutedNet->FTWeights[subF1 * L1_SIZE + i];
+        accPerspective[i] -= permutedNet->FTWeights[subF2 * L1_SIZE + i];
     }
 }
 

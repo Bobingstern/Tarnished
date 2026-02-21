@@ -71,7 +71,5 @@ avx2:
 avx512:
 	$(MAKE) ARCH_LEVEL=v4
 
-power9:
-	$(MAKE) ARCH_LEVEL=power9
 
 
