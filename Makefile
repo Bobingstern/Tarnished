@@ -16,6 +16,17 @@ else
 	$(error Invalid ARCH_LEVEL: $(ARCH_LEVEL). Use native, avx2 or avx512)
 endif
 
+ifeq ($(OS),Windows_NT)
+	STACK_FLAGS := -Wl,/STACK:8388608
+	RM = del /Q /F
+	EXE_SUFFIX := .exe
+	fixpath = $(subst /,\,$1)
+else
+	STACK_FLAGS :=
+	RM = rm -f
+	fixpath = $(subst /,\,$1)
+endif
+
 cat := $(if $(filter $(OS),Windows_NT),type,cat)
 DEFAULT_NET := $(shell $(cat) network.txt)
 EVALFILE_PROCESSED = processed.bin
@@ -30,21 +41,6 @@ $(EVALFILE):
 	@true
 endif
 
-ifeq ($(OS),Windows_NT)
-	STACK_FLAGS := -Wl,/STACK:8388608
-else
-	STACK_FLAGS :=
-endif
-
-ifeq ($(OS),Windows_NT)
-	RM = del /Q /F
-	EXE_SUFFIX = .exe
-	fixpath = $(subst /,\,$1)
-else
-	RM = rm -f
-	EXE_SUFFIX =
-	fixpath = $1
-endif
 
 CXXFLAGS := -O3 $(ARCH) -fno-finite-math-only -funroll-loops -flto -fuse-ld=lld -std=c++20 -DNDEBUG -pthread -DEVALFILE=\"$(EVALFILE_PROCESSED)\"
 
@@ -66,13 +62,13 @@ endif
 $(EVALFILE_PROCESSED):
 	$(MAKE) -C preprocess ARCH_LEVEL=$(ARCH_LEVEL)
 	./preprocess/permute$(EXE_SUFFIX) $(EVALFILE) $(EVALFILE_PROCESSED)
-	$(RM) $(call fixpath,preprocess/permute$(EXE_SUFFIX))
+	-$(RM) $(call fixpath,preprocess/permute$(EXE_SUFFIX))
 
 .NOTPARALLEL: $(EVALFILE_PROCESSED)
 
 $(EXE): $(EVALFILE) $(EVALFILE_PROCESSED) $(SOURCES) 
 	$(CXX) $(CXXFLAGS) $(STACK_FLAGS) $(LDFLAGS) $(SOURCES) -o $@
-	$(RM) $(call fixpath,$(EVALFILE_PROCESSED))
+	-$(RM) $(call fixpath,$(EVALFILE_PROCESSED))
 
 native: $(EXE)
 

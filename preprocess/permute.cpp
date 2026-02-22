@@ -61,7 +61,7 @@ void permute_transpose() {
         for (int i = 0; i < L2_SIZE; ++i)
             net.L1Biases[bucket][i] = quantisedNet.L1Biases[bucket][i];
 
-        for (int i = 0; i < L2_SIZE; ++i)
+        for (int i = 0; i < L2_SIZE * 2; ++i)
             for (int j = 0; j < L3_SIZE; ++j)
                 net.L2Weights[bucket][i * L3_SIZE + j] = quantisedNet.L2Weights[i][bucket][j];
 

@@ -41,7 +41,7 @@ void quantise_raw() {
             quantisedNet.L1Biases[bucket][i] = unquantisedNet.L1Biases[bucket][i];
         }
 
-        for (int i = 0; i < L2_SIZE; ++i)
+        for (int i = 0; i < L2_SIZE * 2; ++i)
             for (int j = 0; j < L3_SIZE; ++j)
                 quantisedNet.L2Weights[i][bucket][j] = unquantisedNet.L2Weights[i][bucket][j];
 
@@ -140,7 +140,11 @@ void NNUE::forwardL1(const uint8_t* inputs, const int8_t* weights, const float* 
                                         set1_ps(L1_MUL), 
                                         load_ps(&biases[i * L2_CHUNK_SIZE]));
         const vps32 c = min_ps(max_ps(sumPs, zero_ps()), set1_ps(1.0f));
-        store_ps(&output[i * L2_CHUNK_SIZE], mul_ps(c, c));
+
+        const vps32 sqc = min_ps(max_ps(mul_ps(sumPs, sumPs), zero_ps()), set1_ps(1.0f));
+
+        store_ps(&output[i * L2_CHUNK_SIZE], c);
+        store_ps(&output[L2_SIZE + i * L2_CHUNK_SIZE], sqc);
     }
 #else
     int sums[L2_SIZE] = {0};
@@ -151,8 +155,9 @@ void NNUE::forwardL1(const uint8_t* inputs, const int8_t* weights, const float* 
     }
 
     for (int i = 0; i < L2_SIZE; ++i) {
-        float c = std::clamp(float(sums[i]) * L1_MUL + biases[i], 0.0f, 1.0f);
-        output[i] = c * c;
+        const float z = float(sums[i]) * L1_MUL + biases[i];
+        output[i] = std::clamp(z, 0.0f, 1.0f);
+        output[i + L2_SIZE] = std::clamp(z * z, 0.0f, 1.0f);
     }
 #endif
 }
@@ -165,7 +170,7 @@ void NNUE::forwardL2(const float* inputs, const float* weights, const float* bia
     for (int i = 0; i < L3_SIZE / L3_CHUNK_SIZE; ++i)
         sumVecs[i] = load_ps(&biases[i * L3_CHUNK_SIZE]);
 
-    for (int i = 0; i < L2_SIZE; ++i) {
+    for (int i = 0; i < L2_SIZE * 2; ++i) {
         const vps32 inputVec = set1_ps(inputs[i]);
         const vps32 *weight = reinterpret_cast<const vps32*>(&weights[i * L3_SIZE]);
         for (int j = 0; j < L3_SIZE / L3_CHUNK_SIZE; ++j)
@@ -182,7 +187,7 @@ void NNUE::forwardL2(const float* inputs, const float* weights, const float* bia
     for (int i = 0; i < L3_SIZE; ++i)
         sums[i] = biases[i];
 
-    for (int i = 0; i < L2_SIZE; ++i) {
+    for (int i = 0; i < L2_SIZE * 2; ++i) {
         const float *weight = &weights[i * L3_SIZE];
         for (int out = 0; out < L3_SIZE; ++out) {
             sums[out] += inputs[i] * weight[out];
@@ -224,7 +229,7 @@ int NNUE::inference(Board& board, Accumulator& accumulator) {
     Color stm = board.sideToMove();
     const size_t outputBucket = (board.occ().count() - 2) / (32 / OUTPUT_BUCKETS);
     alignas (64) uint8_t FTOutputs[L1_SIZE];
-    alignas (64) float L1Outputs[L2_SIZE];
+    alignas (64) float L1Outputs[L2_SIZE * 2];
     alignas (64) float L2Outputs[L3_SIZE];
     float output;
 
