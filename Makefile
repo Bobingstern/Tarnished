@@ -24,7 +24,8 @@ ifeq ($(OS),Windows_NT)
 else
 	STACK_FLAGS :=
 	RM = rm -f
-	fixpath = $(subst /,\,$1)
+	EXE_SUFFIX = 
+	fixpath = $1
 endif
 
 cat := $(if $(filter $(OS),Windows_NT),type,cat)
