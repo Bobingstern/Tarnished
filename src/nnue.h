@@ -147,6 +147,8 @@ struct NNUE {
         void forwardL1(const uint8_t* inputs, const int8_t* weights, const float* biases, float* output);
         void forwardL2(const float* inputs, const float* weights, const float* biases, float* output);
         void forwardL3(const float* inputs, const float* weights, const float bias, float& output);
+
+        void computeScale(const std::string& filename);
 };
 
 extern NNUE network;

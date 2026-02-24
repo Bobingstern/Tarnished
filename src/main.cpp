@@ -404,6 +404,7 @@ int main(int agrc, char* argv[]) {
             case WAIT       : searcher.waitForSearchFinished();           break;
             case CONFIG     : printOBConfig();                            break;
             case QUANT      : quantise_raw();                             break;
+            case NETSCALE : network.computeScale("data/lichess.book");    break;
 
         }
     }

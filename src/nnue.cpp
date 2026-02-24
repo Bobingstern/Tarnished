@@ -240,6 +240,40 @@ int NNUE::inference(Board& board, Accumulator& accumulator) {
     return output * NNUE_SCALE;
 }
 
+void NNUE::computeScale(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Unable to open file" << std::endl;
+    }
+    std::string line;
+    int64_t cnt = 1;
+    int64_t sum = 0;
+    int64_t absSum = 0;
+
+    Board board = Board();
+    Accumulator acc;
+
+    while (std::getline(file, line)) {
+        board.setFen(line);
+
+        if (board.inCheck())
+            continue;
+
+        acc.refresh(board);
+
+        int eval = inference(board, acc);
+        sum += eval;
+        absSum += std::abs(eval);
+
+        if (cnt % 1024 == 0) {
+            std::cout << "Pos: " << cnt << " Average: " << float(sum) / cnt << " Abs Average: " << float(absSum) / cnt << std::endl;
+        }
+
+        cnt++;
+    }
+    file.close();
+}
+
 // ------ Accumulator -------
 
 bool Accumulator::needRefresh(Move kingMove, Color stm) {
