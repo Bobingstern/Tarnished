@@ -734,25 +734,27 @@ namespace Search {
                 ss->failHighs++;
                 if (isQuiet)
                     ss->killer = bestMove;
-
+                
+                int historyDepth = depth + (score > beta + HIST_BONUS_MARGIN());
                 if (isQuiet) {
-                    thread.updateQuietHistory(ss, move, depth, true);
+                    thread.updateQuietHistory(ss, move, historyDepth, true);
                     for (const Move quietMove : seenQuiets) {
                         if (quietMove == move)
                             continue;
-                        thread.updateQuietHistory(ss, quietMove, depth, false);
+                        thread.updateQuietHistory(ss, quietMove, historyDepth, false);
                     }
                 } else {
-                    thread.updateCapthist(ss, thread.board, move, depth, true);
+                    thread.updateCapthist(ss, thread.board, move, historyDepth, true);
                 }
                 // Always malus captures
                 for (const Move noisyMove : seenCaptures) {
                     if (noisyMove == move)
                         continue;
-                    thread.updateCapthist(ss, thread.board, noisyMove, depth, false);
+                    thread.updateCapthist(ss, thread.board, noisyMove, historyDepth, false);
                 }
                 break;
             }
+
         }
         if (!moveCount) {
             if (!moveIsNull(ss->excluded))
