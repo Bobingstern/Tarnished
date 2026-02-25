@@ -34,7 +34,7 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
 
 - Move Generation
     - Internally uses [chess-library](https://disservin.github.io/chess-library/)
-- NNUE `(768x16hm->1536)x2->(16->32->32)x8`
+- NNUE `(768x16hm->1792)x2->(16->32->32)x8`
     - Trained with [bullet](https://github.com/jw1912/bullet)
     - Self generated training data
     - `(piece, square, color)` input features, 16 king buckets, 8 output buckets
@@ -42,6 +42,7 @@ You can easily build Tarnished with `make`. NNUE files are stored at [tarnished-
     - Finny Tables
     - Lazy Updates
     - Fused Refresh
+    - Dual Activation
     - 5000/20000 soft nodes for self play
     - 8 random plies for opening
     - Relabeled with `(768x8hm->4096)x2->(96->192->192->1)x8` network
