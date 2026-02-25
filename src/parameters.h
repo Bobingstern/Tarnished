@@ -51,7 +51,7 @@ constexpr int OUTPUT_BUCKETS = 8;
 constexpr int INPUT_BUCKETS = 16;
 const bool HORIZONTAL_MIRROR = true;
 
-constexpr int L1_SIZE = 1536;
+constexpr int L1_SIZE = 1792;
 constexpr int L2_SIZE = 16;
 constexpr int L3_SIZE = 32;
 
