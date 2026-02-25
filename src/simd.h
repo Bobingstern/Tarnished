@@ -69,6 +69,7 @@ using nativeVector = __m128i;
 // POWER / VSX implementation (Power9)
 #elif defined(__powerpc64__) || defined(__PPC64__) || defined(__powerpc__)
     #pragma message("Using POWER/VSX NNUE inference")
+    #define USE_VSX
     #include <altivec.h>
     // avoid the altivec 'vector' macro colliding with std::vector in C++
     #ifdef __cplusplus

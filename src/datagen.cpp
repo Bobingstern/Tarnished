@@ -187,11 +187,11 @@ void handleGenfens(Searcher& searcher, std::string params) {
 
     for (int i = 0; i < N; i++) {
         std::string fen;
-        bool dfrcFen = dist(engine) < 10;
+        bool dfrcFen = dist(engine) < 50;
         while (true) {
             Board board;
+            board.set960(true);
             if (dfrcFen) {
-                board.set960(true);
                 board.setFen(randomDFRC(engine));
             }
             for (int m = 0; m < 8; m++) {

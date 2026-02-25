@@ -38,7 +38,11 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
     const nativeVector VEC_QA = set1_epi16(QA);
     const nativeVector VEC_ZERO = set1_epi16(0);
 
+#ifdef USE_VSX
+    accVector accumulator = (accVector)vec_splats((int)0);
+#else
     nativeVector accumulator{};
+#endif
     for (size_t i = 0; i < HL_N; i += VECTOR_SIZE) {
         // load a SIMD vector of inputs, x
         const nativeVector stmAccumValues =
@@ -59,9 +63,9 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
             reinterpret_cast<const nativeVector*>(&OW[bucket][i + HL_N]));
 
         // SCReLU it
-        const nativeVector stmActivated =
+        const accVector stmActivated =
             madd_epi16(stmClamped, mullo_epi16(stmClamped, stmWeights));
-        const nativeVector nstmActivated =
+        const accVector nstmActivated =
             madd_epi16(nstmClamped, mullo_epi16(nstmClamped, nstmWeights));
 
         accumulator = add_epi32(accumulator, stmActivated);
