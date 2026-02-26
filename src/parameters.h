@@ -25,7 +25,7 @@ using u128 = unsigned __int128;
 #define TUNE
 // #define LMR_TUNE
 
-const int TWO_WAY_COUNT = 9;
+const int TWO_WAY_COUNT = 11;
 const int TWO_WAY_WEIGHT_COUNT = TWO_WAY_COUNT + TWO_WAY_COUNT * (TWO_WAY_COUNT - 1) / 2;
 // Struct for tunable parameters
 struct TunableParam {
@@ -38,7 +38,7 @@ struct TunableParam {
 };
 
 
-// {isPV, ttPV, improving, ttHit, cutnode, ttMove, ttBound = EXACT, ttBound = FAIL_LOW, ttBound = BETA_CUT}
+// // {isPV, ttPV, improving, oppWorsening, ttHit, cutnode, inCheck, ttMove, ttBound = EXACT, ttBound = FAIL_LOW, ttBound = BETA_CUT}
 struct TwoWayParam {
     // flattened one way and two interactions
     std::array<int, TWO_WAY_WEIGHT_COUNT> weights = {0};
@@ -327,7 +327,8 @@ TUNABLE_PARAM(LMR_BASE_NOISY, 26, -50, 200, 5)
 TUNABLE_PARAM(LMR_DIVISOR_NOISY, 330, 150, 350, 5)
 
 // Reduction Constants
-TUNABLE_PARAM(LMR_HIST_DIVISOR, 8212, 4096, 16385, 650)
+TUNABLE_PARAM(LMR_QUIET_HIST_DIVISOR, 8212, 4096, 16385, 650)
+TUNABLE_PARAM(LMR_NOISY_HIST_DIVISOR, 8212, 4096, 16385, 650)
 TUNABLE_PARAM(LMR_BASE_SCALE, 1103, 256, 2048, 64)
 TUNABLE_PARAM(LMR_CORR_MARGIN, 82, 32, 256, 9)
 
@@ -345,8 +346,46 @@ TUNABLE_PARAM(ASP_WIDENING_FACTOR, 1, 1, 32, 2)
 
 // Two way parameters
 // Order is
-// {isPV, ttPV, improving, ttHit, cutnode, ttMove, ttBound = EXACT, ttBound = FAIL_LOW, ttBound = BETA_CUT}
+// {isPV, ttPV, improving, oppWorsening, ttHit, cutnode, inCheck, ttMove, ttBound = EXACT, ttBound = FAIL_LOW, ttBound = BETA_CUT}
 TUNABLE_TWOWAY(
-    TEST_TWO_WAY,
-    std::array<int, TWO_WAY_WEIGHT_COUNT>{67}
+    RFP_TWO_WAY,
+    std::array<int, TWO_WAY_WEIGHT_COUNT>{0, 0, -70}
+);
+TUNABLE_TWOWAY(
+    RAZORING_TWO_WAY,
+    std::array<int, TWO_WAY_WEIGHT_COUNT>{0}
+);
+TUNABLE_TWOWAY(
+    NMP_TWO_WAY,
+    std::array<int, TWO_WAY_WEIGHT_COUNT>{0}
+);
+TUNABLE_TWOWAY(
+    SMALL_PC_TWO_WAY,
+    std::array<int, TWO_WAY_WEIGHT_COUNT>{0}
+);
+TUNABLE_TWOWAY(
+    HP_TWO_WAY,
+    std::array<int, TWO_WAY_WEIGHT_COUNT>{0}
+);
+TUNABLE_TWOWAY(
+    FORWARD_FP_TWO_WAY,
+    std::array<int, TWO_WAY_WEIGHT_COUNT>{0}
+);
+TUNABLE_TWOWAY(
+    BNFP_TWO_WAY,
+    std::array<int, TWO_WAY_WEIGHT_COUNT>{0}
+);
+TUNABLE_TWOWAY(
+    SBETA_TWO_WAY,
+    std::array<int, TWO_WAY_WEIGHT_COUNT>{0}
+);
+
+TUNABLE_TWOWAY(
+    DEXT_TWO_WAY,
+    std::array<int, TWO_WAY_WEIGHT_COUNT>{0}
+);
+
+TUNABLE_TWOWAY(
+    TEXT_TWO_WAY,
+    std::array<int, TWO_WAY_WEIGHT_COUNT>{0}
 );
