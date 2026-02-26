@@ -461,6 +461,14 @@ namespace Search {
         int corrplexity = 0;
         if (inCheck) {
             ss->staticEval = EVAL_NONE;
+            // Attempt RFP if possible
+            if (ttHit && (ttData.bound == TTFlag::EXACT || (ttData.bound == TTFlag::BETA_CUT && ttData.score >= beta) || (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= alpha))) {
+                int eval = ttData.score;
+                int rfpMargin = RFP_SCALE() * depth;
+                if (!root && depth <= 8 && !isMateScore(beta) && eval - rfpMargin >= beta)
+                    return (eval + beta) / 2;
+
+            }
         } else if (!moveIsNull(ss->excluded)) {
             rawStaticEval = ss->eval = ss->staticEval;
         } else {
@@ -607,7 +615,8 @@ namespace Search {
                     break;
                 }
 
-                int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth - ss->historyScore / SEE_QUIET_HIST_DIVISOR() : SEE_NOISY_SCALE() * lmrDepth - ss->historyScore / SEE_NOISY_HIST_DIVISOR();
+                int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth - ss->historyScore / SEE_QUIET_HIST_DIVISOR() 
+                                                                                : SEE_NOISY_SCALE() * lmrDepth - ss->historyScore / SEE_NOISY_HIST_DIVISOR();
                 if (!SEE(thread.board, move, seeMargin))
                     continue;
 
