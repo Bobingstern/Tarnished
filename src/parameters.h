@@ -48,6 +48,13 @@ struct TwoWayParam {
     int max;
     int step;
 
+    TwoWayParam() = default;
+
+    TwoWayParam(const std::array<int, TWO_WAY_WEIGHT_COUNT>& def,
+                int min_ = -2048, int max_ = 2048, int step_ = 200)
+        : weights(def), defaults(def), min(min_), max(max_), step(step_)
+    {}
+
     inline int operator()(const uint16_t& f) const {
         return lookup[f];
     }
@@ -212,20 +219,9 @@ inline void registerTwoWay(
 
 inline TwoWayParam makeTwoWay(
     const std::array<int, TWO_WAY_WEIGHT_COUNT>& defaults,
-    int min = -2048,
-    int max = 2048,
-    int step = 200)
+    int min = -2048, int max = 2048, int step = 200)
 {
-    TwoWayParam p;
-
-    p.defaults = defaults;
-    p.weights  = defaults;
-
-    p.min = min;
-    p.max = max;
-    p.step = step;
-    
-    return p;
+    return TwoWayParam(defaults, min, max, step);
 }
 
 
@@ -235,13 +231,13 @@ inline TwoWayParam makeTwoWay(
         addTunableParam(#name, name##_value, min, max, step); \
     inline int name() { return name##_value; }
 
-#define TUNABLE_TWOWAY(name, ...)            \
-    inline TwoWayParam name =               \
-        makeTwoWay(__VA_ARGS__);            \
-    inline bool name##_registered = [](){   \
-        registerTwoWay(#name, name);        \
-        return true;                        \
-    }()
+#define TUNABLE_TWOWAY(name, ...)                     \
+    inline TwoWayParam& name() {                     \
+        static TwoWayParam p(__VA_ARGS__);          \
+        static bool registered =                     \
+            (registerTwoWay(#name, p), true);       \
+        return p;                                   \
+    }
 
 TUNABLE_PARAM(PAWN_CORR_WEIGHT, 187, 64, 2048, 32)
 TUNABLE_PARAM(MAJOR_CORR_WEIGHT, 197, 64, 2048, 32)
@@ -400,3 +396,16 @@ TUNABLE_TWOWAY(
     TEXT_TWO_WAY,
     std::array<int, TWO_WAY_WEIGHT_COUNT>{0}
 );
+
+inline void initializeTwoWayParams() {
+    RFP_TWO_WAY();
+    RAZORING_TWO_WAY();
+    NMP_TWO_WAY();
+    SMALL_PC_TWO_WAY();
+    HP_TWO_WAY();
+    FORWARD_FP_TWO_WAY();
+    BNFP_TWO_WAY();
+    SBETA_TWO_WAY();
+    DEXT_TWO_WAY();
+    TEXT_TWO_WAY();
+}

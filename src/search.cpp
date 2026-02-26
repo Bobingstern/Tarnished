@@ -508,13 +508,13 @@ namespace Search {
             int rfpMargin = RFP_SCALE() * depth;
             //rfpMargin -= RFP_IMPROVING_SCALE() * improving;
             rfpMargin += corrplexity * RFP_CORRPLEXITY_SCALE() / 128;
-            rfpMargin += RFP_TWO_WAY(twoWayFeature);
+            rfpMargin += RFP_TWO_WAY()(twoWayFeature);
 
             if (depth <= 8 && ss->eval - rfpMargin >= beta)
                 return (ss->eval + beta) / 2;
 
             int razoringMargin = RAZORING_SCALE() * depth;
-            razoringMargin += RAZORING_TWO_WAY(twoWayFeature);
+            razoringMargin += RAZORING_TWO_WAY()(twoWayFeature);
 
             if (depth <= 4 && std::abs(alpha) < 2000 && ss->staticEval + razoringMargin <= alpha) {
                 int score = qsearch<isPV>(ply, alpha, alpha + 1, ss, thread, limit);
@@ -527,7 +527,7 @@ namespace Search {
                                 thread.board.pieces(PieceType::PAWN, thread.board.sideToMove());
 
             int nmpMargin = NMP_BETA_M_OFFSET() - NMP_BETA_M_SCALE() * depth;
-            nmpMargin += NMP_TWO_WAY(twoWayFeature);
+            nmpMargin += NMP_TWO_WAY()(twoWayFeature);
             if (depth >= 2 && ss->staticEval >= beta + nmpMargin
                             && ply > thread.minNmpPly && !nonPawns.empty() && ttData.bound != TTFlag::FAIL_LOW) {
 
@@ -572,7 +572,7 @@ namespace Search {
 
         // Small Probcut
         int spcBeta = beta + SPROBCUT_MARGIN();
-        spcBeta += SMALL_PC_TWO_WAY(twoWayFeature);
+        spcBeta += SMALL_PC_TWO_WAY()(twoWayFeature);
 
         if (moveIsNull(ss->excluded) && !isPV && ttData.bound == TTFlag::BETA_CUT && ttData.depth >= depth - 4 && 
             ttData.score >= spcBeta && !isMateScore(ttData.score) && !isMateScore(beta))
@@ -614,13 +614,13 @@ namespace Search {
                 if (!isPV && !inCheck && moveCount >= 2 + depth * depth / (2 - improving))
                     break;
 
-                if (!isPV && isQuiet && depth <= 4 && thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth + HP_TWO_WAY(twoWayFeature)) {
+                if (!isPV && isQuiet && depth <= 4 && thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth + HP_TWO_WAY()(twoWayFeature)) {
                     skipQuiets = true;
                     continue;
                 }
 
                 int futility = ss->staticEval + FP_SCALE() * depth + FP_OFFSET() + ss->historyScore / FP_HIST_DIVISOR();
-                futility += FORWARD_FP_TWO_WAY(twoWayFeature);
+                futility += FORWARD_FP_TWO_WAY()(twoWayFeature);
                 if (!inCheck && isQuiet && lmrDepth <= 8 && std::abs(alpha) < 2000 && futility <= alpha) {
                     skipQuiets = true;
                     continue;
@@ -628,7 +628,7 @@ namespace Search {
                 // Reckless idea 
                 // Bad noisy futility pruning
                 futility = ss->staticEval + BNFP_DEPTH_SCALE() * depth + BNFP_MOVECOUNT_SCALE() * moveCount / 128;
-                futility += BNFP_TWO_WAY(twoWayFeature);
+                futility += BNFP_TWO_WAY()(twoWayFeature);
 
                 if (!inCheck && depth <= 5 && picker.stage == MPStage::BAD_NOISY && std::abs(alpha) < 2000 && futility <= alpha) {
                     if (!isMateScore(bestScore) && bestScore <= futility)
@@ -650,7 +650,7 @@ namespace Search {
 
             if (doSE) {
                 int sBetaMargin = SE_BETA_SCALE() * depth / 16;
-                sBetaMargin += SBETA_TWO_WAY(twoWayFeature);
+                sBetaMargin += SBETA_TWO_WAY()(twoWayFeature);
 
                 int sBeta = std::max(-MATE, ttData.score - sBetaMargin);
                 int sDepth = (depth - 1) / 2;
@@ -660,8 +660,8 @@ namespace Search {
                 ss->excluded = Move::NO_MOVE;
 
                 if (seScore < sBeta) {
-                    if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN() + DEXT_TWO_WAY(twoWayFeature))
-                        extension = 2 + (isQuiet && seScore < sBeta - SE_TRIPLE_MARGIN() + TEXT_TWO_WAY(twoWayFeature)); // Double and Triple extension
+                    if (!isPV && seScore < sBeta - SE_DOUBLE_MARGIN() + DEXT_TWO_WAY()(twoWayFeature))
+                        extension = 2 + (isQuiet && seScore < sBeta - SE_TRIPLE_MARGIN() + TEXT_TWO_WAY()(twoWayFeature)); // Double and Triple extension
                     else
                         extension = 1; // Singular Extension
 

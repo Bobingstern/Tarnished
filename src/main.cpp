@@ -365,6 +365,7 @@ int main(int agrc, char* argv[]) {
 #endif
 
     Search::fillLmr();
+    initializeTwoWayParams();
     Searcher searcher = Searcher();
     searcher.toggleWDL(true); // Default display wdl
     searcher.initialize(1);   // Default one thread

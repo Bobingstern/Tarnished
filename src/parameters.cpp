@@ -59,6 +59,15 @@ void printOBConfig() {
         std::cout << param.step << ", ";
         std::cout << "0.002" << std::endl;
     }
+    // for (auto& param : twoWayParams()) {
+    //     std::cout << param->name << ", ";
+    //     std::cout << "int, ";
+    //     std::cout << param->defaultValue << ", ";
+    //     std::cout << param->min << ", ";
+    //     std::cout << param->max << ", ";
+    //     std::cout << param->step << ", ";
+    //     std::cout << "0.002" << std::endl;
+    // }
     for (int i = 0; i < LMR_ONE_PAIR.size(); i++) {
         std::cout << "LMR_ONE_PAIR_" + std::to_string(i) << ", int, " << LMR_ONE_PAIR[i];
         std::cout << ", -2048, 2048, 200, 0.002" << std::endl;
