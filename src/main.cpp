@@ -137,7 +137,7 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
         for (auto& param : tunables()) {
             const char* p = param.name.c_str();
             if (OptionName(str, p)) {
-                param.value = atoi(OptionValue(str));
+                *param.value = atoi(OptionValue(str));
             }
         }
         for (int i = 0; i < LMR_THREE_PAIR.size(); i++) {
@@ -164,6 +164,8 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
         PieceValue[2] = BISHOP_VALUE();
         PieceValue[3] = ROOK_VALUE();
         PieceValue[4] = QUEEN_VALUE();
+        for (auto* p : twoWayParams())
+            p->rebuildLookup();
     }
 }
 void UCIInfo() {
@@ -195,17 +197,17 @@ void UCIInfo() {
     // For pair
     for (int i = 0; i < LMR_ONE_PAIR.size(); i++) {
         std::string s = "LMR_ONE_PAIR_" + std::to_string(i);
-        std::cout << "option name " << s << " type spin default " << LMR_ONE_PAIR[i] << " min -2048 max 2048"
+        std::cout << "option name " << s << " type spin default " << LMR_ONE_PAIR_DEFAULT[i] << " min -2048 max 2048"
                   << std::endl;
     }
     for (int i = 0; i < LMR_TWO_PAIR.size(); i++) {
         std::string s = "LMR_TWO_PAIR_" + std::to_string(i);
-        std::cout << "option name " << s << " type spin default " << LMR_TWO_PAIR[i] << " min -2048 max 2048"
+        std::cout << "option name " << s << " type spin default " << LMR_TWO_PAIR_DEFAULT[i] << " min -2048 max 2048"
                   << std::endl;
     }
     for (int i = 0; i < LMR_THREE_PAIR.size(); i++) {
         std::string s = "LMR_THREE_PAIR_" + std::to_string(i);
-        std::cout << "option name " << s << " type spin default " << LMR_THREE_PAIR[i] << " min -2048 max 2048"
+        std::cout << "option name " << s << " type spin default " << LMR_THREE_PAIR_DEFAULT[i] << " min -2048 max 2048"
                   << std::endl;
     }
 #endif

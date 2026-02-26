@@ -22,18 +22,59 @@ using u128 = std::_Unsigned128;
 using u128 = unsigned __int128;
 #endif
 
-// #define TUNE
+#define TUNE
 // #define LMR_TUNE
 
+const int TWO_WAY_COUNT = 9;
+const int TWO_WAY_WEIGHT_COUNT = TWO_WAY_COUNT + TWO_WAY_COUNT * (TWO_WAY_COUNT - 1) / 2;
 // Struct for tunable parameters
 struct TunableParam {
-        std::string name;
-        int value;
-        int defaultValue;
-        int min;
-        int max;
-        int step;
+    std::string name;
+    int* value;
+    int defaultValue;
+    int min;
+    int max;
+    int step;
 };
+
+
+// {isPV, ttPV, improving, ttHit, cutnode, ttMove, ttBound = EXACT, ttBound = FAIL_LOW, ttBound = BETA_CUT}
+struct TwoWayParam {
+    // flattened one way and two interactions
+    std::array<int, TWO_WAY_WEIGHT_COUNT> weights = {0};
+    std::array<int, TWO_WAY_WEIGHT_COUNT> defaults = {0};
+    std::array<int, 1 << TWO_WAY_COUNT> lookup;
+    int min;
+    int max;
+    int step;
+
+    inline int operator()(const uint16_t& f) const {
+        return lookup[f];
+    }
+    int twoWayConvolve(std::array<bool, TWO_WAY_COUNT>& features) {
+        int output = 0;
+        int twoIndex = 0;
+        for (int i = 0; i < TWO_WAY_COUNT; i++) {
+            output += weights[i] * features[i];
+            for (int j = i + 1; j < TWO_WAY_COUNT; j++) {
+                output += weights[TWO_WAY_COUNT + twoIndex] * (features[i] && features[j]);
+                twoIndex++;
+            }
+        }
+        return output;
+    }
+    void rebuildLookup() {
+        for (uint32_t i = 0; i < lookup.size(); i++) {
+            // Compute convolution
+            std::array<bool, TWO_WAY_COUNT> f = {0};
+            for (int j = 0; j < TWO_WAY_COUNT; j++) {
+                f[j] = i & (1 << j);
+            }
+            lookup[i] = twoWayConvolve(f);
+        }
+    }
+};
+
 
 // History Constants
 constexpr int16_t MAX_HISTORY = 16384;
@@ -61,9 +102,9 @@ constexpr float WEIGHT_CLIPPING = 1.98f;
 
 #ifndef AUTOVEC
 constexpr int FT_CHUNK_SIZE = sizeof(vepi16) / sizeof(int16_t);
-constexpr int L1_CHUNK_SIZE = sizeof(vepi8 ) / sizeof(int8_t);
-constexpr int L2_CHUNK_SIZE = sizeof(vps32 ) / sizeof(float);
-constexpr int L3_CHUNK_SIZE = sizeof(vps32 ) / sizeof(float);
+constexpr int L1_CHUNK_SIZE = sizeof(vepi8) / sizeof(int8_t);
+constexpr int L2_CHUNK_SIZE = sizeof(vps32) / sizeof(float);
+constexpr int L3_CHUNK_SIZE = sizeof(vps32) / sizeof(float);
 constexpr int L1_CHUNK_PER_32 = sizeof(int32_t) / sizeof(int8_t);
 #else
 constexpr int L1_CHUNK_PER_32 = 1;
@@ -87,23 +128,118 @@ const int LMR_TWO_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) / 2;
 const int LMR_THREE_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) * (LMR_ONE_COUNT - 2) / 6;
 const int TOTAL_LMR_FEATURES = 1 << LMR_ONE_COUNT;
 
-extern std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR;
-extern std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR;
-extern std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR;
+// LMR
+inline std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR = {128, 1019, -880, 1835, -945, 211, 477, -522};
+inline std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR = {
+                                235, -227, 433, -177, -18, -1, 16, -529,
+                                483, -47, 267, -159, -188, 155, -39, 234,
+                                67, 123, 173, 125, 589, -628, 672, -32,
+                                58, -193, -69, 60
+                            };
+inline std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR = {
+                                -80, -556, 90, -69, -325, -75, 385, -399,
+                                -117, -208, -271, -164, 516, 70, 115, 47,
+                                -224, 244, -423, -152, -245, -120, 522, -99,
+                                271, 123, 106, -194, -720, -12, 121, -286,
+                                -160, 152, -176, 297, -314, -237, -220, -68,
+                                -638, 127, 393, 263, 120, 229, 193, -151,
+                                -531, -55, -69, -44, 365, -267, 254, -34
+                            };
+
+const std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR_DEFAULT = LMR_ONE_PAIR;
+const std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR_DEFAULT = LMR_TWO_PAIR;
+const std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR_DEFAULT = LMR_THREE_PAIR;
 
 extern bool PRETTY_PRINT;
 
-std::list<TunableParam>& tunables();
-TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);
 int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features);
 void printOBConfig();
 void printWeatherFactoryConfig();
 
-#define TUNABLE_PARAM(name, val, min, max, step)                                                                       \
-    inline TunableParam& name##Param = addTunableParam(#name, val, min, max, step);                                    \
-    inline int name() {                                                                                                \
-        return name##Param.value;                                                                                      \
+
+inline std::list<TunableParam>& tunables() {
+    static std::list<TunableParam> params;
+    return params;
+}
+
+inline std::vector<TwoWayParam*>& twoWayParams()
+{
+    static std::vector<TwoWayParam*> list;
+    return list;
+}
+
+inline TunableParam& addTunableParam(
+    std::string name,
+    int& value,
+    int min,
+    int max,
+    int step)
+{
+    tunables().push_back({
+        name,
+        &value,
+        value,
+        min,
+        max,
+        step
+    });
+
+    return tunables().back();
+}
+
+
+inline void registerTwoWay(
+    const std::string& baseName,
+    TwoWayParam& param)
+{
+    for (int i = 0; i < TWO_WAY_WEIGHT_COUNT; ++i)
+    {
+        auto& t = addTunableParam(
+            baseName + "[" + std::to_string(i) + "]",
+            param.weights[i],
+            param.min,
+            param.max,
+            param.step
+        );
+
+        t.defaultValue = param.defaults[i];
     }
+    twoWayParams().push_back(&param);
+    param.rebuildLookup();
+}
+
+inline TwoWayParam makeTwoWay(
+    const std::array<int, TWO_WAY_WEIGHT_COUNT>& defaults,
+    int min = -2048,
+    int max = 2048,
+    int step = 200)
+{
+    TwoWayParam p;
+
+    p.defaults = defaults;
+    p.weights  = defaults;
+
+    p.min = min;
+    p.max = max;
+    p.step = step;
+    
+    return p;
+}
+
+
+#define TUNABLE_PARAM(name, val, min, max, step) \
+    inline int name##_value = val; \
+    inline TunableParam& name##Param = \
+        addTunableParam(#name, name##_value, min, max, step); \
+    inline int name() { return name##_value; }
+
+#define TUNABLE_TWOWAY(name, ...)            \
+    inline TwoWayParam name =               \
+        makeTwoWay(__VA_ARGS__);            \
+    inline bool name##_registered = [](){   \
+        registerTwoWay(#name, name);        \
+        return true;                        \
+    }()
 
 TUNABLE_PARAM(PAWN_CORR_WEIGHT, 187, 64, 2048, 32)
 TUNABLE_PARAM(MAJOR_CORR_WEIGHT, 197, 64, 2048, 32)
@@ -206,3 +342,11 @@ TUNABLE_PARAM(QS_SEE_MARGIN, -71, -2000, 200, 30)
 TUNABLE_PARAM(MIN_ASP_WINDOW_DEPTH, 3, 3, 8, 1)
 TUNABLE_PARAM(INITIAL_ASP_WINDOW, 28, 8, 64, 4)
 TUNABLE_PARAM(ASP_WIDENING_FACTOR, 1, 1, 32, 2)
+
+// Two way parameters
+// Order is
+// {isPV, ttPV, improving, ttHit, cutnode, ttMove, ttBound = EXACT, ttBound = FAIL_LOW, ttBound = BETA_CUT}
+TUNABLE_TWOWAY(
+    TEST_TWO_WAY,
+    std::array<int, TWO_WAY_WEIGHT_COUNT>{67}
+);
