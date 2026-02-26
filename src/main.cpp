@@ -164,6 +164,13 @@ void UCISetOption(Searcher& searcher, Board& board, char* str) {
         PieceValue[2] = BISHOP_VALUE();
         PieceValue[3] = ROOK_VALUE();
         PieceValue[4] = QUEEN_VALUE();
+
+        MVV_VALUES[0] = MVV_PAWN_VALUE();
+        MVV_VALUES[1] = MVV_KNIGHT_VALUE();
+        MVV_VALUES[2] = MVV_BISHOP_VALUE();
+        MVV_VALUES[3] = MVV_ROOK_VALUE();
+        MVV_VALUES[4] = MVV_QUEEN_VALUE();
+        
         for (auto* p : twoWayParams())
             p->rebuildLookup();
     }

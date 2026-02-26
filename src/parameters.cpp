@@ -10,6 +10,7 @@
 
 using namespace chess;
 
+std::array<int, 6> MVV_VALUES = {MVV_PAWN_VALUE(), MVV_KNIGHT_VALUE(), MVV_BISHOP_VALUE(), MVV_ROOK_VALUE(), MVV_QUEEN_VALUE(), 0};
 
 int lmrConvolution(std::array<bool, LMR_ONE_COUNT> features) {
     int output = 0;
