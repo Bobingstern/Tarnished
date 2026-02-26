@@ -3,6 +3,7 @@ EXE_SUFFIX =
 LDFLAGS = -fuse-ld=lld
 SOURCES := $(wildcard src/*.cpp)
 SOURCES += src/external/format.cpp
+_ROOT := $(_THIS)
 CXX := clang++
 
 ARCH_LEVEL ?= native
