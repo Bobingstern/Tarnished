@@ -46,6 +46,39 @@ void printWeatherFactoryConfig() {
             std::cout << ",";
         std::cout << "\n";
     }
+    for (int i = 0; i < LMR_ONE_PAIR.size(); i++) {
+        std::cout << "  \"" << ("LMR_ONE_PAIR_" + std::to_string(i)) << "\": {\n";
+        std::cout << "    \"value\": " << LMR_ONE_PAIR[i] << ",\n";
+        std::cout << "    \"min_value\": " << (-2048) << ",\n";
+        std::cout << "    \"max_value\": " << (2048) << ",\n";
+        std::cout << "    \"step\": " << (200) << "\n";
+        std::cout << "  }";
+        if (i != LMR_ONE_PAIR.size() - 1)
+            std::cout << ",";
+        std::cout << "\n";
+    }
+    for (int i = 0; i < LMR_TWO_PAIR.size(); i++) {
+        std::cout << "  \"" << ("LMR_TWO_PAIR_" + std::to_string(i)) << "\": {\n";
+        std::cout << "    \"value\": " << LMR_TWO_PAIR[i] << ",\n";
+        std::cout << "    \"min_value\": " << (-2048) << ",\n";
+        std::cout << "    \"max_value\": " << (2048) << ",\n";
+        std::cout << "    \"step\": " << (200) << "\n";
+        std::cout << "  }";
+        if (i != LMR_TWO_PAIR.size() - 1)
+            std::cout << ",";
+        std::cout << "\n";
+    }
+    for (int i = 0; i < LMR_THREE_PAIR.size(); i++) {
+        std::cout << "  \"" << ("LMR_THREE_PAIR_" + std::to_string(i)) << "\": {\n";
+        std::cout << "    \"value\": " << LMR_THREE_PAIR[i] << ",\n";
+        std::cout << "    \"min_value\": " << (-2048) << ",\n";
+        std::cout << "    \"max_value\": " << (2048) << ",\n";
+        std::cout << "    \"step\": " << (200) << "\n";
+        std::cout << "  }";
+        if (i != LMR_THREE_PAIR.size() - 1)
+            std::cout << ",";
+        std::cout << "\n";
+    }
     std::cout << "}" << std::endl;
 }
 
@@ -59,15 +92,6 @@ void printOBConfig() {
         std::cout << param.step << ", ";
         std::cout << "0.002" << std::endl;
     }
-    // for (auto& param : twoWayParams()) {
-    //     std::cout << param->name << ", ";
-    //     std::cout << "int, ";
-    //     std::cout << param->defaultValue << ", ";
-    //     std::cout << param->min << ", ";
-    //     std::cout << param->max << ", ";
-    //     std::cout << param->step << ", ";
-    //     std::cout << "0.002" << std::endl;
-    // }
     for (int i = 0; i < LMR_ONE_PAIR.size(); i++) {
         std::cout << "LMR_ONE_PAIR_" + std::to_string(i) << ", int, " << LMR_ONE_PAIR[i];
         std::cout << ", -2048, 2048, 200, 0.002" << std::endl;

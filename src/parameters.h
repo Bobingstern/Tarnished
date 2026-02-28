@@ -51,7 +51,7 @@ struct TwoWayParam {
     TwoWayParam() = default;
 
     TwoWayParam(const std::array<int, TWO_WAY_WEIGHT_COUNT>& def,
-                int min_ = -2048, int max_ = 2048, int step_ = 200)
+                int min_ = -256, int max_ = 256, int step_ = 16)
         : weights(def), defaults(def), min(min_), max(max_), step(step_)
     {}
 
@@ -219,7 +219,7 @@ inline void registerTwoWay(
 
 inline TwoWayParam makeTwoWay(
     const std::array<int, TWO_WAY_WEIGHT_COUNT>& defaults,
-    int min = -2048, int max = 2048, int step = 200)
+    int min = -256, int max = 256, int step = 16)
 {
     return TwoWayParam(defaults, min, max, step);
 }
