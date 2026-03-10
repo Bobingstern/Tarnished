@@ -394,6 +394,7 @@ int main(int agrc, char* argv[]) {
     // Print Ascii
     tarnishedAscii();
 
+    
     char str[INPUT_SIZE];
     while (GetInput(str)) {
         switch (HashInput(str)) {
@@ -414,6 +415,7 @@ int main(int agrc, char* argv[]) {
             case WAIT       : searcher.waitForSearchFinished();           break;
             case CONFIG     : printOBConfig();                            break;
             case QUANT      : quantise_raw();                             break;
+            case SPSAOut    : readSPSAOutput("data/params.txt");          break;
 
         }
     }

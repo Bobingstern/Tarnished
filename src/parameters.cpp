@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstring>
 #include <sstream>
+#include <fstream>
 #include <vector>
 
 using namespace chess;
@@ -104,4 +105,67 @@ void printOBConfig() {
         std::cout << "LMR_THREE_PAIR_" + std::to_string(i) << ", int, " << LMR_THREE_PAIR[i];
         std::cout << ", -2048, 2048, 200, 0.002" << std::endl;
     }
+}
+
+void readSPSAOutput(const std::string& filename) {
+    std::ifstream file(filename);
+    std::string line;
+    std::array<int, LMR_ONE_COUNT> unus = {0};
+    std::array<int, LMR_TWO_COUNT> duo = {0};
+    std::array<int, LMR_THREE_COUNT> tres = {0};
+
+    while (std::getline(file, line)) {
+        std::string name = line.substr(0, line.find(","));
+        int value = std::stoi(line.substr(line.find(",") + 2));
+        if (name.find("[") == std::string::npos && name.find("PAIR") == std::string::npos) {
+            // Find max min step etc
+            for (auto& param : tunables()) {
+                if (param.name == name)
+                    std::cout << "TUNABLE_PARAM(" << name << ", " 
+                                                    << value << ", " 
+                                                    << param.min << ", " 
+                                                    << param.max << ", " 
+                                                    << param.step << ")" << std::endl;
+            }
+            
+        }
+        else if (name.find("[") != std::string::npos) {
+            int index = std::stoi(line.substr(line.find("[") + 1, line.find("]")));
+            std::string strip = name.substr(0, line.find("["));
+            if (index == 0) {
+                std::cout << "TUNABLE_TWOWAY(\n    " 
+                            << strip << ",\n    "
+                            << "std::array<int, TWO_WAY_WEIGHT_COUNT>{";
+            }
+            std::cout << value;
+            if (index == TWO_WAY_WEIGHT_COUNT - 1) {
+                std::cout << "}\n);" << std::endl;
+            }
+            else {
+                std::cout << ", ";
+            }
+        }
+        else {
+            int index = std::stoi(line.substr(line.rfind("_") + 1, line.rfind(",")));
+            if (line.find("ONE") != std::string::npos)
+                unus[index] = value;
+            else if (line.find("TWO") != std::string::npos)
+                duo[index] = value;
+            else
+                tres[index] = value;
+        }
+    }
+    std::cout << "inline std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR = {";
+    for (int& v : unus)
+        std::cout << v << ", ";
+    std::cout << "};" << std::endl;
+
+    std::cout << "inline std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR = {";
+    for (int& v : duo)
+        std::cout << v << ", ";
+    std::cout << "};" << std::endl;
+    std::cout << "inline std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR = {";
+    for (int& v : tres)
+        std::cout << v << ", ";
+    std::cout << "};" << std::endl;
 }
