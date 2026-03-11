@@ -12,13 +12,10 @@ else ifeq ($(ARCH_LEVEL),v4)
 	ARCH := -march=x86-64-v4 -static
 endif
 
-CXXFLAGS := -O3 $(ARCH) -fno-finite-math-only -funroll-loops -flto -fuse-ld=lld -std=c++20 -DNDEBUG -pthread
+CXXFLAGS := -O3 $(ARCH) -fno-finite-math-only -funroll-loops -flto -fuse-ld=lld -std=c++20 -DNDEBUG -pthread -I$(PARENT_DIR)
 
-ifndef EXE
-	EXE = permute$(EXE_SUFFIX)
-endif
 
-$(EXE): $(SOURCES) 
+permute$(EXE_SUFFIX): $(SOURCES) 
 	$(CXX) $(CXXFLAGS) $(STACK_FLAGS) $(LDFLAGS) $(SOURCES) -o $@
 
 permute_net: $(EXE)
