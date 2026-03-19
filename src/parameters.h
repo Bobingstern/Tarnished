@@ -61,9 +61,9 @@ constexpr float WEIGHT_CLIPPING = 1.98f;
 
 #ifndef AUTOVEC
 constexpr int FT_CHUNK_SIZE = sizeof(vepi16) / sizeof(int16_t);
-constexpr int L1_CHUNK_SIZE = sizeof(vepi8 ) / sizeof(int8_t);
-constexpr int L2_CHUNK_SIZE = sizeof(vps32 ) / sizeof(float);
-constexpr int L3_CHUNK_SIZE = sizeof(vps32 ) / sizeof(float);
+constexpr int L1_CHUNK_SIZE = sizeof(vepi8) / sizeof(int8_t);
+constexpr int L2_CHUNK_SIZE = sizeof(vps32) / sizeof(float);
+constexpr int L3_CHUNK_SIZE = sizeof(vps32) / sizeof(float);
 constexpr int L1_CHUNK_PER_32 = sizeof(int32_t) / sizeof(int8_t);
 #else
 constexpr int L1_CHUNK_PER_32 = 1;
