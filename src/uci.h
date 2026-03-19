@@ -30,6 +30,7 @@ enum InputCommands {
     WAIT = 15,
     CONFIG = 13,
     QUANT = 126,
+    NETSCALE = 121
 };
 static bool GetInput(char* str) {
     memset(str, 0, INPUT_SIZE);
