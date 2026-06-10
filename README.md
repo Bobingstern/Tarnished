@@ -11,7 +11,7 @@
 
 <p>Strong UCI Chess Engine written in C++ featuring NNUE evaluation trained from scratch. </p>
 
-As of `2026-02-13`, Tarnished places at **#14** on [SP-CC](https://www.sp-cc.de/index.htm). It can be found playing at [TCEC](https://tcec-chess.com/#) and [CCC](https://www.chess.com/computer-chess-championship)
+As of `2026-02-13`, Tarnished placed at **#14** on [SP-CC](https://www.sp-cc.de/index.htm). It can be found playing at [TCEC](https://tcec-chess.com/#) and [CCC](https://www.chess.com/computer-chess-championship)
 
 | Version | Release Date | [CCRL 40/15](https://www.computerchess.org.uk/ccrl/4040/cgi/compare_engines.cgi?family=Tarnished&print=Rating+list&print=Results+table&print=LOS+table&print=Ponder+hit+table&print=Eval+difference+table&print=Comopp+gamenum+table&print=Overlap+table&print=Score+with+common+opponents) | [CCRL Blitz](https://www.computerchess.org.uk/ccrl/404/cgi/compare_engines.cgi?class=Single-CPU+engines&only_best_in_class=on&num_best_in_class=1&print=Rating+list) |
 | --- | --- | --- | --- |
@@ -20,7 +20,8 @@ As of `2026-02-13`, Tarnished places at **#14** on [SP-CC](https://www.sp-cc.de/
 | 2.1 | 2025-05-24 | 3375 | -
 | 3.0 | 2025-06-29 | 3495 | 3605
 | 4.0 | 2025-08-22 | 3571 | 3663
-| 5.0 | 2026-02-07 | -    | 3700*
+| 5.0 | 2026-02-07 | 3585 | 3728
+| 6.0 | 2026-06-10 | -    | -
 
 </div>
 
