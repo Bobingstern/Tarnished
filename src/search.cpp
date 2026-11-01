@@ -566,6 +566,9 @@ namespace Search {
         bool skipQuiets = false;
 
         while (!moveIsNull(move = picker.nextMove())) {
+            if (root && limit.search_moves &&
+                std::find(limit.search_moves->begin(), limit.search_moves->end(), move) == limit.search_moves->end())
+                continue;
 
             bool isQuiet = !thread.board.isCapture(move);
             if (move == ss->excluded)

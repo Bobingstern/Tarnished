@@ -12,7 +12,9 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <random>
+#include <sstream>
 
 using namespace chess;
 using namespace std::chrono;
@@ -220,10 +222,47 @@ void UCIEvaluate(Board& board) {
     std::cout << "Normalized: " << scaleEval(eval, board) << std::endl;
 }
 
+bool ParseSearchMoves(const Board& board, const char* str, Search::Limit& limit) {
+    std::istringstream input(str);
+    std::string token;
+    while (input >> token) {
+        if (token != "searchmoves")
+            continue;
+
+        Movelist legal;
+        movegen::legalmoves(legal, board);
+        limit.search_moves.emplace();
+        constexpr std::string_view keywords[] = {
+            "searchmoves", "ponder", "wtime", "btime", "winc", "binc", "movestogo",
+            "depth", "nodes", "mate", "movetime", "infinite", "softnodes"
+        };
+        while (input >> token) {
+            if (std::find(std::begin(keywords), std::end(keywords), token) != std::end(keywords))
+                break;
+            auto move = std::find_if(legal.begin(), legal.end(), [&](Move move) {
+                return uci::moveToUci(move, board.chess960()) == token;
+            });
+            if (move == legal.end()) {
+                std::cout << "info string Invalid searchmove: " << token << std::endl;
+                return false;
+            }
+            limit.search_moves->push_back(*move);
+        }
+        break;
+    }
+    return true;
+}
+
 void UCIGo(Searcher& searcher, Board& board, char* str) {
     // searcher.stop();
 
     Search::Limit limit = Search::Limit();
+    if (!ParseSearchMoves(board, str, limit))
+        return;
+    if (limit.search_moves && limit.search_moves->empty()) {
+        std::cout << "bestmove 0000" << std::endl;
+        return;
+    }
     ParseTimeControl(str, board.sideToMove(), limit, searcher.useSoft);
 
     searcher.startSearching(board, limit);
