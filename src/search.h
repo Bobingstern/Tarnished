@@ -12,7 +12,9 @@
 #include <condition_variable>
 #include <cstring>
 #include <mutex>
+#include <optional>
 #include <thread>
+#include <vector>
 
 using namespace chess;
 
@@ -155,6 +157,7 @@ namespace Search {
             int64_t softtime;
             bool enableClock;
             Color color;
+            std::optional<std::vector<Move>> search_moves;
 
             std::array<uint64_t, 4096> nodeCounts;
 
